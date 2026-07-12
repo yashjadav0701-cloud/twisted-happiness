@@ -31,12 +31,12 @@
     <script src="./js/app.js" defer></script>
 
     <style>
-        /* Essential utilities not covered by Tailwind config */
         .scrollbar-hide::-webkit-scrollbar { display: none; } 
         .custom-scroll::-webkit-scrollbar { width: 4px; } 
         .custom-scroll::-webkit-scrollbar-track { background: transparent; } 
         .custom-scroll::-webkit-scrollbar-thumb { background-color: theme('colors.luxury.rose'); border-radius: 20px; }
         details > summary::-webkit-details-marker { display: none; }
+        .touch-action-manipulation { touch-action: manipulation; }
     </style>
 </head>
 <body class="bg-luxury-bg text-luxury-dark font-sans selection:bg-luxury-blush selection:text-luxury-dark overflow-x-hidden w-full min-h-screen">
@@ -113,8 +113,10 @@
             </div>
         </header>
 
+        <!-- Spacer for Fixed Header -->
         <div class="w-full h-[220px] md:h-[180px] lg:h-[140px]" aria-hidden="true"></div>
 
+        <!-- Store Grid Layout -->
         <section class="w-full max-w-[1600px] mx-auto flex flex-row relative z-20 mt-4 md:mt-6 px-0 lg:px-4">
             <!-- Desktop Filters -->
             <aside class="hidden lg:flex flex-col w-[200px] shrink-0 sticky top-[140px] self-start h-[calc(100vh-140px)] px-2 pb-6 overflow-y-auto custom-scroll border-r border-luxury-blush mr-4 z-40">
@@ -141,20 +143,17 @@
 
             <!-- Product Grid -->
             <div class="flex-grow w-full min-w-0 pb-12 sm:pb-20">
-                <div id="product-grid" class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-3 sm:gap-4 md:gap-[18px] lg:gap-5 px-3 w-full"></div>
+                <div id="product-grid" class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-3 sm:gap-4 md:gap-[18px] lg:gap-5 px-3 w-full">
+                    <!-- Products rendered via JS -->
+                </div>
             </div>
         </section>
         
         <footer class="text-center w-full py-16 bg-luxury-dark text-luxury-bg border-t-4 border-luxury-rose">
             <h3 class="font-logo font-normal text-3xl sm:text-4xl text-luxury-blush mb-5 tracking-wide">Twisted Happiness</h3>
-            <!-- Security Fix: Hard redirect to dedicated admin portal -->
             <a href="/admin.html" class="text-white/50 hover:text-luxury-rose transition-colors uppercase tracking-[0.2em] font-medium text-[9px] cursor-pointer mb-8 block mx-auto w-max">Admin Studio</a>
             <p class="font-medium tracking-[0.2em] text-white/30 text-[8px] uppercase">© 2026. Handcrafted in India.</p>
         </footer>
-
-        <a id="floating-whatsapp" href="#" target="_blank" aria-label="Contact us on WhatsApp" class="fixed bottom-6 right-6 bg-luxury-rose text-white rounded-full w-14 h-14 flex items-center justify-center shadow-lg hover:bg-luxury-dark transition-colors z-[900]">
-            <i class="fab fa-whatsapp text-3xl" aria-hidden="true"></i>
-        </a>
     </main>
 
     <!-- 🚨 PRODUCT DETAIL PAGE 🚨 -->
@@ -387,8 +386,47 @@
                     <label for="comm-colors" class="block text-[8px] font-bold text-gray-500 uppercase tracking-[0.1em] mb-1 pl-1">Custom Notes / Inspiration</label>
                     <textarea id="comm-colors" placeholder="Any specific colors or customizations?" class="w-full px-3.5 py-2.5 bg-white border border-luxury-blush rounded-xl outline-none text-[11px] font-medium text-luxury-dark h-20 resize-none focus:ring-2 focus:ring-luxury-rose/30 focus:border-luxury-rose"></textarea>
                 </div>
-                <button type="submit" id="final-checkout-btn" class="bg-luxury-rose text-white hover:bg-luxury-dark w-full mt-6 py-4 rounded-xl font-bold text-[10px] uppercase flex items-center justify-center gap-2 tracking-[0.15em] shadow-md transition-colors">Confirm on WhatsApp <i class="fab fa-whatsapp text-base"></i></button>
+                <!-- WhatsApp button changed to generic Order Placement -->
+                <button type="submit" id="final-checkout-btn" class="bg-luxury-dark text-white hover:bg-luxury-gold w-full mt-6 py-4 rounded-xl font-bold text-[10px] uppercase flex items-center justify-center gap-2 tracking-[0.15em] shadow-md transition-colors">Place Order & Pay <i class="fas fa-lock text-xs"></i></button>
             </form>
+        </div>
+    </div>
+
+    <!-- 🚨 NEW: UPI PAYMENT MODAL 🚨 -->
+    <div id="payment-modal" role="dialog" aria-modal="true" class="hidden transition-opacity duration-200 opacity-0 fixed inset-0 bg-luxury-dark/80 p-4 flex items-center justify-center z-[1100]">
+        <div class="transform scale-95 translate-y-2 transition-all duration-300 bg-white rounded-3xl w-full max-w-sm p-8 shadow-2xl relative border border-luxury-rose flex flex-col items-center" id="payment-box">
+            <button id="btn-close-payment" class="absolute top-4 right-4 text-gray-400 min-w-[44px] min-h-[44px] bg-luxury-bg rounded-full flex items-center justify-center border border-luxury-blush hover:text-luxury-dark" aria-label="Close"><i class="fas fa-times text-xs"></i></button>
+            
+            <div class="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mb-4 border-4 border-white shadow-sm">
+                <i class="fas fa-check text-green-500 text-2xl"></i>
+            </div>
+            
+            <h2 class="font-logo font-normal text-2xl text-center text-luxury-dark mb-2">Order Reserved!</h2>
+            <p class="text-[11px] text-gray-500 text-center font-sans font-medium mb-6 leading-relaxed">
+                Your creation is temporarily reserved. Complete the secure payment of <span class="font-poppins font-bold text-luxury-dark" id="payment-amount">₹0</span> to permanently secure your order and begin curation.
+            </p>
+
+            <!-- Desktop QR Code -->
+            <div id="payment-qr-container" class="hidden flex-col items-center w-full">
+                <div class="p-3 bg-white border-2 border-luxury-blush rounded-2xl shadow-sm mb-3">
+                    <img id="payment-qr-img" src="" alt="UPI QR Code" class="w-48 h-48 object-contain">
+                </div>
+                <p class="text-[9px] font-bold text-luxury-rose uppercase tracking-widest text-center">Scan with any UPI App</p>
+            </div>
+
+            <!-- Mobile UPI Button -->
+            <div id="payment-mobile-container" class="hidden w-full">
+                <a id="payment-mobile-btn" href="#" class="w-full bg-luxury-dark text-white hover:bg-luxury-gold py-4 rounded-xl font-bold text-[11px] uppercase flex items-center justify-center gap-2 tracking-[0.1em] shadow-md transition-colors">
+                    Pay with UPI App <i class="fas fa-mobile-alt"></i>
+                </a>
+            </div>
+
+            <div class="mt-6 text-center border-t border-luxury-blush pt-4 w-full">
+                <p class="text-[10px] text-gray-400 font-sans">
+                    Ref: <span id="payment-ref-note" class="font-poppins font-bold text-luxury-dark"></span>
+                </p>
+                <p class="text-[8px] text-gray-400 uppercase tracking-widest mt-2">Our artisan will verify payment shortly.</p>
+            </div>
         </div>
     </div>
 

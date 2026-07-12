@@ -1,6 +1,6 @@
 /**
  * Twisted Happiness - Enterprise Storefront Engine
- * Phase 6 & 7 Complete: Modularized, SEO-optimized, Touch-enabled.
+ * Phase 6 & 7 Complete: Modularized, SEO-optimized, Touch-enabled, Automated UPI Payments.
  */
 
 const SUPABASE_URL = "https://gvrfucjtnyqfkdynrmqs.supabase.co"; 
@@ -37,6 +37,7 @@ let currentCommissionContext = 'cart'; let singleProductToCommission = null;
 document.addEventListener('DOMContentLoaded', () => {
     _supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
     bindDOMEvents();
+    injectSkeletons(); // Pinterest style skeletons
     fetchDatabase();
     updateCartCount();
     setupWhatsAppLink();
@@ -59,6 +60,8 @@ function bindDOMEvents() {
     document.getElementById('btn-close-profile')?.addEventListener('click', () => { forceCloseProfileModal(); safeBack(); });
     document.getElementById('btn-close-commission')?.addEventListener('click', () => { forceCloseCommissionForm(); safeBack(); });
     document.getElementById('btn-close-offers')?.addEventListener('click', () => { forceCloseOffersModal(); safeBack(); });
+    document.getElementById('btn-close-payment')?.addEventListener('click', () => { forceClosePaymentModal(); safeBack(); });
+    
     document.getElementById('profile-form')?.addEventListener('submit', saveProfileAndContinue);
     document.getElementById('commission-form')?.addEventListener('submit', submitCommission);
     document.getElementById('btn-cart-checkout')?.addEventListener('click', routeCheckoutFromCart);
@@ -72,8 +75,8 @@ function bindDOMEvents() {
     window.addEventListener('popstate', function(e) {
         const level = e.state ? e.state.level : 0;
         requestAnimationFrame(() => {
-            if (level === 0) { closeProductPage(); forceCloseCart(); forceCloseCommissionForm(); forceCloseProfileModal(); forceCloseLightbox(); forceCloseOffersModal(); } 
-            else if (level === 1) { forceCloseLightbox(); forceCloseCommissionForm(); forceCloseOffersModal(); forceCloseProfileModal(); }
+            if (level === 0) { closeProductPage(); forceCloseCart(); forceCloseCommissionForm(); forceCloseProfileModal(); forceCloseLightbox(); forceCloseOffersModal(); forceClosePaymentModal(); } 
+            else if (level === 1) { forceCloseLightbox(); forceCloseCommissionForm(); forceCloseOffersModal(); forceCloseProfileModal(); forceClosePaymentModal(); }
             currentModalLevel = level;
         });
     });
@@ -93,11 +96,34 @@ function bindDOMEvents() {
 function safeJSONParse(key, fallback) { try { const item = localStorage.getItem(key); return item ? JSON.parse(item) : fallback; } catch (e) { localStorage.removeItem(key); return fallback; } }
 function safePushState(level) { try { history.pushState({ level: level }, ""); statePushed = true; } catch(e) { statePushed = false; } }
 function safeBack() { if (statePushed) { try { history.back(); } catch(e) {} statePushed = false; } }
+function isMobileDevice() { return /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent); }
 
 function setupWhatsAppLink() {
     const adminPhone = (settings.countryCode || '+91').replace(/\+/g, '') + settings.whatsapp;
     const waLink = document.getElementById('floating-whatsapp');
     if(waLink) waLink.href = `https://wa.me/${adminPhone}?text=Hello!%20I%20am%20exploring%20your%20beautiful%20collection.`;
+}
+
+// 🚨 Pinterest Style Skeleton Loaders
+function injectSkeletons() {
+    const loadingGrid = document.getElementById('product-grid');
+    if(!loadingGrid) return;
+    let skeletonHTML = '';
+    // Creating 12 aesthetic, image-heavy skeleton blocks
+    for(let i=0; i<12; i++) {
+        const delay = (i % 6) * 0.05;
+        skeletonHTML += `
+        <div class="w-full relative opacity-100 transform translate-y-0" style="animation: fadeInUp 0.4s ease-out forwards; animation-delay: ${delay}s;">
+            <!-- Aesthetic Image Block -->
+            <div class="w-full bg-luxury-blush/30 rounded-2xl aspect-[4/5] skeleton-layer mb-3"></div>
+            <!-- Minimalist Text Lines -->
+            <div class="px-1">
+                <div class="h-3 rounded-full bg-luxury-blush/60 w-3/4 mb-2.5 skeleton-layer"></div>
+                <div class="h-4 rounded-full bg-luxury-blush/60 w-1/3 skeleton-layer"></div>
+            </div>
+        </div>`;
+    }
+    loadingGrid.innerHTML = skeletonHTML;
 }
 
 async function fetchDatabase() { 
@@ -137,54 +163,31 @@ function generateProductCardHTML(p) {
     const card = document.createElement('div'); card.className = `w-full relative cursor-pointer opacity-0 transform translate-y-4 transition-all duration-400 ease-out group scroll-reveal`; 
     card.addEventListener('click', () => openProductPage(p.id));
     card.innerHTML = `
-        <div class="w-full relative rounded-[12px] md:rounded-t-[14px] md:rounded-b-none overflow-hidden group shadow-sm bg-gradient-to-tr from-luxury-bg to-white border border-luxury-blush aspect-[4/5]">
+        <div class="w-full relative rounded-2xl overflow-hidden group shadow-sm bg-gradient-to-tr from-luxury-bg to-white border border-luxury-blush aspect-[4/5] mb-2">
             <span class="absolute top-2.5 left-2.5 z-10 bg-white/95 text-luxury-dark text-[7px] sm:text-[8px] font-bold px-2.5 py-1 rounded-md uppercase tracking-[0.15em] border border-luxury-blush truncate max-w-[80%] shadow-sm">${p.category}</span>
             <img loading="lazy" decoding="async" src="${mainImg}" alt="${p.name}" width="400" height="500" onerror="this.src='https://placehold.co/400x500/F8E9EA/423133';" class="absolute inset-0 w-full h-full object-cover opacity-0 transition-opacity duration-500 pointer-events-none" onload="this.classList.remove('opacity-0')">
         </div>
-        <div class="pt-2 pb-1 px-1 flex flex-col justify-start text-left w-full md:bg-white md:px-3 md:pb-3 md:pt-3">
+        <div class="px-1 flex flex-col justify-start text-left w-full">
             <h3 class="font-bitter font-semibold text-[11px] sm:text-[12px] text-luxury-dark leading-snug w-full transition-colors group-hover:text-luxury-rose mb-0.5 line-clamp-2">${p.name}</h3>
             <div class="flex items-center md:items-baseline gap-1.5 flex-wrap w-full">
-                <span class="font-poppins font-extrabold text-luxury-dark text-[14px] sm:text-[16px] tracking-tight leading-none">₹${cleanPrice}</span>
+                <span class="font-poppins font-extrabold text-luxury-dark text-[14px] sm:text-[15px] tracking-tight leading-none">₹${cleanPrice}</span>
                 <span class="font-poppins text-gray-400 text-[9px] font-medium line-through leading-none">₹${originalPrice}</span>
             </div>
         </div>`;
     return card;
 }
 
-// SEO JSON-LD Injector
 function injectProductSchema(p, cleanPrice) {
     let schemaScript = document.getElementById('product-schema');
-    if (!schemaScript) {
-        schemaScript = document.createElement('script');
-        schemaScript.type = 'application/ld+json';
-        schemaScript.id = 'product-schema';
-        document.head.appendChild(schemaScript);
-    }
-    const schema = {
-        "@context": "https://schema.org/",
-        "@type": "Product",
-        "name": p.name,
-        "image": [p.image1],
-        "description": p.specs || "Handcrafted fine art by Twisted Happiness.",
-        "sku": p.id,
-        "offers": {
-            "@type": "Offer",
-            "url": window.location.href,
-            "priceCurrency": "INR",
-            "price": cleanPrice,
-            "availability": "https://schema.org/InStock",
-            "seller": { "@type": "Organization", "name": "Twisted Happiness" }
-        }
-    };
+    if (!schemaScript) { schemaScript = document.createElement('script'); schemaScript.type = 'application/ld+json'; schemaScript.id = 'product-schema'; document.head.appendChild(schemaScript); }
+    const schema = { "@context": "https://schema.org/", "@type": "Product", "name": p.name, "image": [p.image1], "description": p.specs || "Handcrafted fine art by Twisted Happiness.", "sku": p.id, "offers": { "@type": "Offer", "url": window.location.href, "priceCurrency": "INR", "price": cleanPrice, "availability": "https://schema.org/InStock", "seller": { "@type": "Organization", "name": "Twisted Happiness" } } };
     schemaScript.textContent = JSON.stringify(schema);
 }
 
 function openProductPage(id) { 
     const p = products.find(x => x.id == id); 
     const cleanPrice = Number(p.price.toString().replace(/[^0-9.,]/g, '')); const discountPercent = getDiscountPercent(p.id.toString()); const originalPrice = Math.round(cleanPrice * (1 + (discountPercent / 100)));
-    
-    injectProductSchema(p, cleanPrice); // SEO Injection
-
+    injectProductSchema(p, cleanPrice);
     modalImages = [p.image1, p.image2, p.image3, p.image4, p.image5].filter(img => typeof img === 'string' && img.trim() !== '');
     if (modalImages.length === 0) modalImages.push('https://placehold.co/400x500/F8E9EA/423133');
     
@@ -223,50 +226,27 @@ function openProductPage(id) {
     else if (p.mainCategory === 'Clay Art Paintings') { careGuide.innerHTML = `<li><strong>Highly fragile.</strong> Handle edges with care.</li><li>Keep strictly away from moisture.</li><li>Dust very lightly using a soft brush.</li>`; } 
     else { careGuide.innerHTML = `<li>Keep away from direct, harsh sunlight.</li><li>Lightly dust with a soft, dry brush.</li><li>Do not expose to moisture.</li>`; }
 
-    renderRelatedProducts(p.id, p.mainCategory);
-    updateProductButtons(p.id);
-
-    document.getElementById('customer-view').classList.add('hidden');
-    document.getElementById('product-view').classList.remove('hidden');
-    window.scrollTo(0, 0);
-    currentModalLevel = 1; safePushState(1); 
+    renderRelatedProducts(p.id, p.mainCategory); updateProductButtons(p.id);
+    document.getElementById('customer-view').classList.add('hidden'); document.getElementById('product-view').classList.remove('hidden');
+    window.scrollTo(0, 0); currentModalLevel = 1; safePushState(1); 
 }
 
-function closeProductPage() {
-    document.getElementById('product-view').classList.add('hidden');
-    document.getElementById('customer-view').classList.remove('hidden');
-    window.scrollTo(0, 0);
-}
+function closeProductPage() { document.getElementById('product-view').classList.add('hidden'); document.getElementById('customer-view').classList.remove('hidden'); window.scrollTo(0, 0); }
 
 function updateProductButtons(id) {
-    const actionContainer = document.getElementById('modal-action-buttons');
-    if(!actionContainer) return;
+    const actionContainer = document.getElementById('modal-action-buttons'); if(!actionContainer) return;
     const cartItem = cart.find(item => item.id === id); const qty = cartItem ? parseInt(cartItem.qty || 1) : 0;
     if(qty > 0) {
-        actionContainer.innerHTML = `
-            <div class="flex items-center justify-between w-full h-full bg-white border border-luxury-rose rounded-full px-2 sm:px-4 py-3 shadow-sm min-h-[44px]">
-                <button onclick="window.th_updateCartQty('${id}', -1, event)" class="w-8 h-8 rounded-full bg-luxury-bg hover:bg-luxury-blush border border-luxury-blush text-luxury-dark active:scale-90 flex items-center justify-center shrink-0"><i class="fas fa-minus text-xs"></i></button>
-                <span class="text-base sm:text-lg font-bold text-luxury-rose font-poppins min-w-[20px] text-center">${qty}</span>
-                <button onclick="window.th_updateCartQty('${id}', 1, event)" class="w-8 h-8 rounded-full bg-luxury-bg hover:bg-luxury-blush border border-luxury-blush text-luxury-dark active:scale-90 flex items-center justify-center shrink-0"><i class="fas fa-plus text-xs"></i></button>
-            </div>
-            <button onclick="window.th_routeCheckoutFromModal('${id}', event)" class="w-full bg-luxury-dark text-white hover:bg-luxury-gold font-bold px-2 py-3.5 sm:px-4 rounded-full flex items-center justify-center gap-2 text-[11px] sm:text-[12px] uppercase tracking-wider shadow-md active:scale-[0.98] transition-colors min-h-[44px]"><i class="fas fa-bolt text-luxury-gold"></i> Checkout</button>
-        `;
+        actionContainer.innerHTML = `<div class="flex items-center justify-between w-full h-full bg-white border border-luxury-rose rounded-full px-2 sm:px-4 py-3 shadow-sm min-h-[44px]"><button onclick="window.th_updateCartQty('${id}', -1, event)" class="w-8 h-8 rounded-full bg-luxury-bg hover:bg-luxury-blush border border-luxury-blush text-luxury-dark active:scale-90 flex items-center justify-center shrink-0"><i class="fas fa-minus text-xs"></i></button><span class="text-base sm:text-lg font-bold text-luxury-rose font-poppins min-w-[20px] text-center">${qty}</span><button onclick="window.th_updateCartQty('${id}', 1, event)" class="w-8 h-8 rounded-full bg-luxury-bg hover:bg-luxury-blush border border-luxury-blush text-luxury-dark active:scale-90 flex items-center justify-center shrink-0"><i class="fas fa-plus text-xs"></i></button></div><button onclick="window.th_routeCheckoutFromModal('${id}', event)" class="w-full bg-luxury-dark text-white hover:bg-luxury-gold font-bold px-2 py-3.5 sm:px-4 rounded-full flex items-center justify-center gap-2 text-[11px] sm:text-[12px] uppercase tracking-wider shadow-md active:scale-[0.98] transition-colors min-h-[44px]"><i class="fas fa-bolt text-luxury-gold"></i> Checkout</button>`;
     } else {
-        actionContainer.innerHTML = `
-            <button onclick="window.th_updateCartQty('${id}', 1, event)" class="w-full bg-white border border-luxury-dark text-luxury-dark hover:bg-luxury-bg font-bold px-2 py-3.5 sm:px-4 rounded-full flex items-center justify-center gap-2 text-[11px] sm:text-[12px] uppercase tracking-wider transition-colors shadow-sm active:scale-[0.98] min-h-[44px]"><i class="fas fa-shopping-bag"></i> Add to Bag</button>
-            <button onclick="window.th_routeCheckoutFromModal('${id}', event)" class="w-full bg-luxury-dark text-white hover:bg-luxury-gold font-bold px-2 py-3.5 sm:px-4 rounded-full flex items-center justify-center gap-2 text-[11px] sm:text-[12px] uppercase tracking-wider shadow-md active:scale-[0.98] transition-colors min-h-[44px]"><i class="fas fa-bolt text-luxury-gold"></i> Buy Now</button>
-        `;
+        actionContainer.innerHTML = `<button onclick="window.th_updateCartQty('${id}', 1, event)" class="w-full bg-white border border-luxury-dark text-luxury-dark hover:bg-luxury-bg font-bold px-2 py-3.5 sm:px-4 rounded-full flex items-center justify-center gap-2 text-[11px] sm:text-[12px] uppercase tracking-wider transition-colors shadow-sm active:scale-[0.98] min-h-[44px]"><i class="fas fa-shopping-bag"></i> Add to Bag</button><button onclick="window.th_routeCheckoutFromModal('${id}', event)" class="w-full bg-luxury-dark text-white hover:bg-luxury-gold font-bold px-2 py-3.5 sm:px-4 rounded-full flex items-center justify-center gap-2 text-[11px] sm:text-[12px] uppercase tracking-wider shadow-md active:scale-[0.98] transition-colors min-h-[44px]"><i class="fas fa-bolt text-luxury-gold"></i> Buy Now</button>`;
     }
 }
 
 function renderRelatedProducts(currentId, mainCategory) {
     const grid = document.getElementById('related-products-grid'); grid.innerHTML = '';
-    let related = products.filter(p => p.id !== currentId);
-    let sameCat = related.filter(p => p.mainCategory === mainCategory);
-    let others = related.filter(p => p.mainCategory !== mainCategory);
-    let finalRelated = [...sameCat, ...others].slice(0, 12); 
-    const fragment = document.createDocumentFragment();
-    finalRelated.forEach(p => { fragment.appendChild(generateProductCardHTML(p)); });
+    let related = products.filter(p => p.id !== currentId); let sameCat = related.filter(p => p.mainCategory === mainCategory); let others = related.filter(p => p.mainCategory !== mainCategory); let finalRelated = [...sameCat, ...others].slice(0, 12); 
+    const fragment = document.createDocumentFragment(); finalRelated.forEach(p => { fragment.appendChild(generateProductCardHTML(p)); });
     requestAnimationFrame(() => { grid.appendChild(fragment); setupScrollReveal(); });
 }
 
@@ -325,7 +305,7 @@ function renderCart() {
 
 function toggleCart() { const sidebar = document.getElementById('cart-sidebar'); if (sidebar.classList.contains('translate-x-full')) { currentModalLevel = 1; safePushState(1); forceOpenCart(); } else { safeBack(); forceCloseCart(); } }
 function forceOpenCart() { const overlay = document.getElementById('cart-overlay'); const sidebar = document.getElementById('cart-sidebar'); renderCart(); requestAnimationFrame(() => { overlay.classList.remove('hidden'); document.body.classList.add('overflow-hidden'); requestAnimationFrame(() => { overlay.classList.remove('opacity-0'); sidebar.classList.remove('translate-x-full'); }); }); }
-function forceCloseCart() { const overlay = document.getElementById('cart-overlay'); const sidebar = document.getElementById('cart-sidebar'); requestAnimationFrame(() => { overlay.classList.add('opacity-0'); sidebar.classList.add('translate-x-full'); setTimeout(() => { overlay.classList.add('hidden'); if(document.getElementById('commission-modal').classList.contains('hidden') && document.getElementById('profile-modal').classList.contains('hidden')){ document.body.classList.remove('overflow-hidden'); } }, 300); }); }
+function forceCloseCart() { const overlay = document.getElementById('cart-overlay'); const sidebar = document.getElementById('cart-sidebar'); requestAnimationFrame(() => { overlay.classList.add('opacity-0'); sidebar.classList.add('translate-x-full'); setTimeout(() => { overlay.classList.add('hidden'); if(document.getElementById('commission-modal').classList.contains('hidden') && document.getElementById('profile-modal').classList.contains('hidden') && document.getElementById('payment-modal').classList.contains('hidden')){ document.body.classList.remove('overflow-hidden'); } }, 300); }); }
 
 function openLightboxFromCarousel() { currentLightboxIndex = currentSlideIndex; const lb = document.getElementById('lightbox-modal'); const track = document.getElementById('lightbox-track'); track.innerHTML = ''; modalImages.forEach((src) => { track.innerHTML += `<div class="w-full h-full flex-shrink-0 flex items-center justify-center p-2 md:p-8"><img loading="lazy" decoding="async" src="${src}" class="max-w-full max-h-full object-contain"></div>`; }); track.style.transition = 'none'; track.style.transform = `translateX(-${currentLightboxIndex * 100}%)`; updateLightboxCounter(); currentModalLevel = 2; safePushState(2); lb.classList.remove('hidden'); requestAnimationFrame(() => { lb.classList.remove('opacity-0'); }); setupLightboxTouch(); }
 function forceCloseLightbox() { const lb = document.getElementById('lightbox-modal'); requestAnimationFrame(() => { lb.classList.add('opacity-0'); setTimeout(() => { lb.classList.add('hidden'); }, 200); }); }
@@ -338,10 +318,12 @@ function setupTouchCarousel() { let startX = 0; let endX = 0; const track = docu
 function setupLightboxTouch() { let lbStartX = 0; let lbEndX = 0; const track = document.getElementById('lightbox-track'); if(track) { track.replaceWith(track.cloneNode(true)); const newTrack = document.getElementById('lightbox-track'); newTrack.addEventListener('touchstart', (e) => { lbStartX = e.changedTouches[0].screenX; }, {passive: true}); newTrack.addEventListener('touchend', (e) => { lbEndX = e.changedTouches[0].screenX; requestAnimationFrame(() => { if (lbEndX < lbStartX - 30) moveLightboxSlide(1); else if (lbEndX > lbStartX + 30) moveLightboxSlide(-1); }); }, {passive: true}); } }
 function updateActiveThumb(activeIndex, totalImages) { requestAnimationFrame(() => { for(let i = 0; i < totalImages; i++) { const thumb = document.getElementById(`thumb-${i}`); if(thumb) { if(i === activeIndex) { thumb.classList.add('border-luxury-rose', 'scale-105', 'opacity-100'); thumb.classList.remove('border-transparent', 'opacity-60'); } else { thumb.classList.remove('border-luxury-rose', 'scale-105', 'opacity-100'); thumb.classList.add('border-transparent', 'opacity-60'); } } } }); }
 
-function forceCloseProfileModal() { const modal = document.getElementById('profile-modal'); const box = document.getElementById('profile-box'); requestAnimationFrame(() => { modal.classList.add('opacity-0'); box.classList.remove('modal-open-state'); box.classList.add('modal-closed'); setTimeout(() => { modal.classList.add('hidden'); if(document.getElementById('cart-overlay').classList.contains('hidden') && document.getElementById('commission-modal').classList.contains('hidden')){ document.body.classList.remove('overflow-hidden'); } }, 300); }); }
-function forceCloseCommissionForm() { const modal = document.getElementById('commission-modal'); const box = document.getElementById('commission-box'); requestAnimationFrame(() => { modal.classList.add('opacity-0'); box.classList.remove('modal-open-state'); box.classList.add('modal-closed'); setTimeout(() => { modal.classList.add('hidden'); if(document.getElementById('cart-overlay').classList.contains('hidden') && document.getElementById('profile-modal').classList.contains('hidden')){ document.body.classList.remove('overflow-hidden'); } }, 300); }); }
+function forceCloseProfileModal() { const modal = document.getElementById('profile-modal'); const box = document.getElementById('profile-box'); requestAnimationFrame(() => { modal.classList.add('opacity-0'); box.classList.remove('modal-open-state'); box.classList.add('modal-closed'); setTimeout(() => { modal.classList.add('hidden'); if(document.getElementById('cart-overlay').classList.contains('hidden') && document.getElementById('commission-modal').classList.contains('hidden') && document.getElementById('payment-modal').classList.contains('hidden')){ document.body.classList.remove('overflow-hidden'); } }, 300); }); }
+function forceCloseCommissionForm() { const modal = document.getElementById('commission-modal'); const box = document.getElementById('commission-box'); requestAnimationFrame(() => { modal.classList.add('opacity-0'); box.classList.remove('modal-open-state'); box.classList.add('modal-closed'); setTimeout(() => { modal.classList.add('hidden'); if(document.getElementById('cart-overlay').classList.contains('hidden') && document.getElementById('profile-modal').classList.contains('hidden') && document.getElementById('payment-modal').classList.contains('hidden')){ document.body.classList.remove('overflow-hidden'); } }, 300); }); }
 function showOffersModal() { currentModalLevel = 2; safePushState(2); const modal = document.getElementById('offers-modal'); const box = document.getElementById('offers-box'); modal.classList.remove('hidden'); requestAnimationFrame(() => { modal.classList.remove('opacity-0'); box.classList.remove('modal-closed'); box.classList.add('modal-open-state'); }); }
 function forceCloseOffersModal() { const modal = document.getElementById('offers-modal'); const box = document.getElementById('offers-box'); requestAnimationFrame(() => { modal.classList.add('opacity-0'); box.classList.remove('modal-open-state'); box.classList.add('modal-closed'); setTimeout(() => { modal.classList.add('hidden'); }, 300); }); }
+
+function forceClosePaymentModal() { const modal = document.getElementById('payment-modal'); const box = document.getElementById('payment-box'); requestAnimationFrame(() => { modal.classList.add('opacity-0'); box.classList.remove('modal-open-state'); box.classList.add('modal-closed'); setTimeout(() => { modal.classList.add('hidden'); document.body.classList.remove('overflow-hidden'); }, 300); }); }
 
 function isProfileComplete() { return shiprocketProfile.first_name && shiprocketProfile.email && shiprocketProfile.phone && shiprocketProfile.address_1 && shiprocketProfile.city && shiprocketProfile.pincode; }
 function routeCheckoutFromModal(id, event) { if(event) { event.preventDefault(); event.stopPropagation(); } const p = products.find(x => x.id == id); routeCheckout(p); }
@@ -356,9 +338,11 @@ function saveProfileAndContinue() { shiprocketProfile.first_name = document.getE
 
 function showCommissionModal() { const modal = document.getElementById('commission-modal'); const box = document.getElementById('commission-box'); modal.classList.remove('hidden'); document.body.classList.add('overflow-hidden'); requestAnimationFrame(() => { modal.classList.remove('opacity-0'); box.classList.remove('modal-closed'); box.classList.add('modal-open-state'); }); document.getElementById('summary-name').textContent = `${shiprocketProfile.first_name} ${shiprocketProfile.last_name}`.trim(); document.getElementById('comm-type').value = 'Standard Order (No Framing)'; document.getElementById('comm-colors').value = ''; document.getElementById('comm-dimensions').value = ''; let hasCustomizable = false; if (currentCommissionContext === 'single' && singleProductToCommission) { hasCustomizable = singleProductToCommission.isCustomizable; } else { hasCustomizable = cart.some(item => item.isCustomizable); } const dimWrapper = document.getElementById('comm-dimensions-wrapper'); if (hasCustomizable) { dimWrapper.classList.remove('hidden'); } else { dimWrapper.classList.add('hidden'); } }
 
-function submitCommission() {
+// 🚨 Automated Payment Processing Logic
+async function submitCommission() {
     const type = document.getElementById('comm-type').value; const colors = document.getElementById('comm-colors').value.trim() || 'No notes'; const dims = document.getElementById('comm-dimensions').value.trim();
-    const btn = document.getElementById('final-checkout-btn'); btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Preparing...'; btn.disabled = true;
+    const btn = document.getElementById('final-checkout-btn'); 
+    btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Preparing...'; btn.disabled = true;
 
     let orderDetailsText = ""; let trueSubtotal = 0; let sellingSubtotal = 0; let totalPrepTime = ""; let itemsToSave = [];
 
@@ -373,25 +357,55 @@ function submitCommission() {
         totalPrepTime = calculateTotalPrepTime(cart);
     }
     
-    const productDiscountTotal = trueSubtotal - sellingSubtotal; const { discount: vipDiscount } = calculateCartDiscount(sellingSubtotal); const finalTotal = sellingSubtotal - vipDiscount; const totalSavings = productDiscountTotal + vipDiscount;
+    const { discount: vipDiscount } = calculateCartDiscount(sellingSubtotal); const finalTotal = sellingSubtotal - vipDiscount; 
     const safeCountryCode = (settings.countryCode || '+91'); const fullContactPhone = safeCountryCode + " " + shiprocketProfile.phone;
 
     let fullAddress = `${shiprocketProfile.address_1}, ${shiprocketProfile.address_2 ? shiprocketProfile.address_2 + ', ' : ''}${shiprocketProfile.city}, ${shiprocketProfile.state} - ${shiprocketProfile.pincode}`;
     let artDetails = `Phone: ${fullContactPhone} | Patron: ${shiprocketProfile.first_name} ${shiprocketProfile.last_name} | Email: ${shiprocketProfile.email} | Address: ${fullAddress} | Purpose: ${type} | Notes: ${colors}`;
     if(dims && !document.getElementById('comm-dimensions-wrapper').classList.contains('hidden')) { artDetails += ` | Size: ${dims}`; } artDetails += ` | Est. Prep: ${totalPrepTime}`; 
 
-    _supabase.from('orders').insert([{ order_details: JSON.stringify(itemsToSave), subtotal: sellingSubtotal, discount: vipDiscount, total: finalTotal, customer_reqs: artDetails, status: 'pending' }]).then(({ error }) => { if (error) console.error("Order log error:", error); });
+    // Insert order to database
+    const { error } = await _supabase.from('orders').insert([{ order_details: JSON.stringify(itemsToSave), subtotal: sellingSubtotal, discount: vipDiscount, total: finalTotal, customer_reqs: artDetails, status: 'pending' }]);
     
-    let waArtDetails = `👤 ${shiprocketProfile.first_name} ${shiprocketProfile.last_name}\n📍 ${fullAddress}\n⏱️ Prep: ${totalPrepTime}\n📝 Notes: ${colors}`;
+    if (error) {
+        showToast("Error securing order.", "fa-times", "text-red-500");
+        btn.innerHTML = 'Place Order & Pay <i class="fas fa-lock text-xs"></i>'; btn.disabled = false;
+        return;
+    }
+    
+    // Payment Setup
     const formattedTotal = Number(finalTotal).toFixed(2); const cleanUpiId = (settings.upiId || "khushisj315@oksbi").trim();
     const cleanNameForNote = shiprocketProfile.first_name.replace(/[^a-zA-Z0-9]/g, '').substring(0, 10); const safeNote = `TH_${cleanNameForNote}_${String(Date.now()).slice(-4)}`; 
     const upiLink = `upi://pay?pa=${cleanUpiId}&pn=Twisted_Happiness&am=${formattedTotal}&cu=INR&tn=${safeNote}`;
     
-    const msg = `✨ *New Order: Twisted Happiness*\n\n*Items:*\n${orderDetailsText.trim()}\n\n*Total:* ₹${finalTotal} (Saved ₹${totalSavings}!)\n\n*Details:*\n${waArtDetails}\n\n🚨 *ACTION REQUIRED* 🚨\nPay ₹${formattedTotal} to confirm order:\n\n*💳 UPI ID:* ${cleanUpiId}\n\n*🔗 UPI Auto-Link:*\n${upiLink}\n_(If the link doesn't click, copy the UPI ID and use your app)_ \n\n*Note to add:* ${safeNote}\n\n*(Please share the payment screenshot here!)* 🕊️`;
+    btn.innerHTML = 'Place Order & Pay <i class="fas fa-lock text-xs"></i>'; btn.disabled = false; 
+    forceCloseCommissionForm();
     
-    btn.innerHTML = 'Confirm on WhatsApp <i class="fab fa-whatsapp text-base"></i>'; btn.disabled = false; forceCloseCommissionForm(); safeBack();
-    const adminPhone = (settings.countryCode || '+91').replace(/\+/g, '') + settings.whatsapp; window.open(`https://wa.me/${adminPhone}?text=${encodeURIComponent(msg)}`, '_blank');
-    if(currentCommissionContext === 'cart') { cart = []; localStorage.setItem('th_cart', JSON.stringify(cart)); updateCartCount(); }
+    // Launch Payment UI
+    setTimeout(() => {
+        document.getElementById('payment-amount').textContent = `₹${formattedTotal}`;
+        document.getElementById('payment-ref-note').textContent = safeNote;
+        
+        if (isMobileDevice()) {
+            document.getElementById('payment-mobile-btn').href = upiLink;
+            document.getElementById('payment-mobile-container').classList.remove('hidden');
+            document.getElementById('payment-mobile-container').classList.add('flex');
+            document.getElementById('payment-qr-container').classList.add('hidden');
+        } else {
+            const qrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=250x250&data=${encodeURIComponent(upiLink)}`;
+            document.getElementById('payment-qr-img').src = qrUrl;
+            document.getElementById('payment-qr-container').classList.remove('hidden');
+            document.getElementById('payment-qr-container').classList.add('flex');
+            document.getElementById('payment-mobile-container').classList.add('hidden');
+        }
+
+        const pModal = document.getElementById('payment-modal'); const pBox = document.getElementById('payment-box');
+        pModal.classList.remove('hidden'); document.body.classList.add('overflow-hidden'); 
+        requestAnimationFrame(() => { pModal.classList.remove('opacity-0'); pBox.classList.remove('modal-closed'); pBox.classList.add('modal-open-state'); });
+        
+        // Empty the cart
+        if(currentCommissionContext === 'cart') { cart = []; localStorage.setItem('th_cart', JSON.stringify(cart)); updateCartCount(); }
+    }, 300);
 }
 
 function showToast(msg, icon = 'fa-check', color = 'text-luxury-rose') { const t = document.getElementById('toast'); document.getElementById('toast-msg').textContent = msg; document.getElementById('toast-icon').className = `fas ${icon} ${color} text-sm drop-shadow-sm`; requestAnimationFrame(() => { t.classList.remove('opacity-0', 'translate-y-10'); setTimeout(() => t.classList.add('opacity-0', 'translate-y-10'), 3000); }); }
