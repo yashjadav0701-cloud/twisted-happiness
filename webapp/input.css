@@ -1,0 +1,32 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer utilities {
+  /* Premium Scrollbar */
+  .scrollbar-hide::-webkit-scrollbar { display: none; }
+  .custom-scroll::-webkit-scrollbar { width: 4px; }
+  .custom-scroll::-webkit-scrollbar-track { background: transparent; }
+  .custom-scroll::-webkit-scrollbar-thumb { background-color: theme('colors.luxury.rose'); border-radius: 20px; }
+
+  /* Hardware Accelerated Modal Transitions */
+  .modal-backdrop-transition { transition: opacity 0.2s ease-out; }
+  .modal-card-transition { transition: transform 0.3s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.2s ease-out; transform-origin: center; }
+  .modal-closed { transform: scale(0.95) translateY(10px); opacity: 0; pointer-events: none; }
+  .modal-open-state { transform: scale(1) translateY(0); opacity: 1; pointer-events: auto; }
+
+  /* Touch Optimizations */
+  .touch-pan-y { touch-action: pan-y; }
+  .touch-action-manipulation { touch-action: manipulation; }
+
+  /* Skeleton Loading Animation */
+  .skeleton-layer { position: relative; overflow: hidden; }
+  .skeleton-layer::after {
+    content: '';
+    position: absolute;
+    top: 0; right: 0; bottom: 0; left: 0;
+    transform: translateX(-100%);
+    background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.6), transparent);
+    animation: shimmer 1.2s infinite;
+  }
+}
