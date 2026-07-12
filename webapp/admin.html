@@ -1,431 +1,201 @@
-/**
- * Twisted Happiness - Studio Admin Engine
- * Secure CRUD operations, Order Lifecycle Management, and Logistics Integration.
- */
-
-// --- 1. Global State & Initialization ---
-const SUPABASE_URL = "https://gvrfucjtnyqfkdynrmqs.supabase.co"; 
-const SUPABASE_ANON_KEY = "sb_publishable_8jru2BqvTdE9bcwNOLIHAA_dx6aUCM0";
-let _supabase;
-
-const countryCodeMapping = {
-    "+91": "🇮🇳 IN (+91)", "+1": "🇺🇸 US (+1)", "+44": "🇬🇧 UK (+44)",
-    "+61": "🇦🇺 AU (+61)", "+971": "🇦🇪 AE (+971)", "+966": "🇸🇦 SA (+966)",
-    "+65": "🇸🇬 SG (+65)", "+60": "🇲🇾 MY (+60)", "+49": "🇩🇪 DE (+49)",
-    "+33": "🇫🇷 FR (+33)", "+39": "🇮🇹 IT (+39)", "+81": "🇯🇵 JP (+81)",
-    "+82": "🇰🇷 KR (+82)", "+64": "🇳🇿 NZ (+64)", "+27": "🇿🇦 ZA (+27)"
-};
-
-let settings = safeJSONParse('th_settings', { whatsapp: "9909310501", upiId: "khushisj315@oksbi", countryCode: "+91" });
-let products = []; 
-let allOrders = []; 
-let selectedFilesData = []; 
-let editModeId = null; 
-let mainImageIndex = 0;
-
-document.addEventListener('DOMContentLoaded', () => {
-    _supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
-    populateCountryCodes();
-    bindAdminEvents();
-    checkSession(); // Gatekeeper
-});
-
-function safeJSONParse(key, fallback) {
-    try { const item = localStorage.getItem(key); return item ? JSON.parse(item) : fallback; } 
-    catch (e) { localStorage.removeItem(key); return fallback; }
-}
-
-function populateCountryCodes() {
-    const select = document.getElementById('admin-country-code');
-    if (!select) return;
-    for (const [code, label] of Object.entries(countryCodeMapping)) {
-        const option = document.createElement('option');
-        option.value = code; option.textContent = label;
-        select.appendChild(option);
-    }
-}
-
-// --- 2. Security & Auth ---
-async function checkSession() {
-    const { data: { session } } = await _supabase.auth.getSession();
-    if (session) {
-        unlockDashboard();
-    } else {
-        document.getElementById('login-view').classList.remove('hidden');
-    }
-}
-
-async function attemptLogin(e) { 
-    e.preventDefault();
-    const email = document.getElementById('admin-user').value.trim(); 
-    const pass = document.getElementById('admin-pass').value.trim(); 
-    const btn = document.getElementById('login-btn'); 
+<!DOCTYPE html>
+<html lang="en" class="scroll-smooth antialiased">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     
-    if(!email || !pass) return; 
-    btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Verifying...'; 
-    btn.disabled = true; 
+    <title>Twisted Happiness | Studio Admin</title>
+    <meta name="robots" content="noindex, nofollow"> <!-- Crucial: Keep out of search engines -->
     
-    try {
-        const { data, error } = await _supabase.auth.signInWithPassword({ email: email, password: pass });
-        if (error) throw error;
-        if (data.session) unlockDashboard();
-    } catch (err) {
-        alert("Access Denied: Check your credentials.");
-        btn.innerHTML = 'Enter Studio'; 
-        btn.disabled = false; 
-    }
-}
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="./output.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Marcellus&family=Bitter:wght@400;600&family=Poppins:wght@500;600;700&family=Montserrat:wght@400;500;600;700&display=swap" rel="stylesheet">
 
-async function logoutAdmin() { 
-    await _supabase.auth.signOut();
-    window.location.href = '/'; // Hard redirect out of secure area
-}
+    <!-- Deferred Scripts -->
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2" defer></script>
+    <script src="./js/admin.js" defer></script>
 
-function unlockDashboard() {
-    document.getElementById('login-view').classList.add('hidden');
-    const dashboard = document.getElementById('admin-dashboard');
-    dashboard.classList.remove('hidden');
-    requestAnimationFrame(() => {
-        dashboard.classList.remove('opacity-0');
-        document.getElementById('admin-wa').value = settings.whatsapp; 
-        document.getElementById('admin-country-code').value = settings.countryCode || '+91'; 
-        document.getElementById('admin-upi').value = settings.upiId || 'khushisj315@oksbi';
-        
-        fetchDatabase(); 
-        fetchOrders(); 
-        showToast('Studio Unlocked', 'fa-unlock'); 
-    });
-}
+    <style>
+        .custom-scroll::-webkit-scrollbar { width: 4px; } 
+        .custom-scroll::-webkit-scrollbar-track { background: transparent; } 
+        .custom-scroll::-webkit-scrollbar-thumb { background-color: theme('colors.luxury.rose'); border-radius: 20px; }
+    </style>
+</head>
+<body class="bg-luxury-bg text-luxury-dark font-sans selection:bg-luxury-blush min-h-screen flex flex-col items-center">
 
-function bindAdminEvents() {
-    document.getElementById('admin-login-form')?.addEventListener('submit', attemptLogin);
-    document.getElementById('btn-logout')?.addEventListener('click', logoutAdmin);
-    
-    document.getElementById('tab-inventory')?.addEventListener('click', () => switchAdminTab('inventory'));
-    document.getElementById('tab-orders')?.addEventListener('click', () => switchAdminTab('orders'));
-    document.getElementById('subtab-active')?.addEventListener('click', () => switchOrderTab('active'));
-    document.getElementById('subtab-completed')?.addEventListener('click', () => switchOrderTab('completed'));
-    
-    document.getElementById('settings-form')?.addEventListener('submit', saveSettings);
-    document.getElementById('inventory-form')?.addEventListener('submit', saveProduct);
-    document.getElementById('p-image-file')?.addEventListener('change', handleFileSelection);
-    document.getElementById('p-main-category')?.addEventListener('change', togglePaintingFields);
-    document.getElementById('cancel-edit-btn')?.addEventListener('click', cancelEdit);
-}
-
-function saveSettings(e) { 
-    e.preventDefault();
-    settings.whatsapp = document.getElementById('admin-wa').value; 
-    settings.countryCode = document.getElementById('admin-country-code').value; 
-    settings.upiId = document.getElementById('admin-upi').value; 
-    localStorage.setItem('th_settings', JSON.stringify(settings)); 
-    showToast('Settings Saved', 'fa-check'); 
-}
-
-// --- 3. Inventory Management ---
-async function fetchDatabase() { 
-    try { 
-        const { data, error } = await _supabase.from('creations').select('*').order('created_at', { ascending: false }); 
-        if (error) throw error;
-        products = data.map(row => {
-            let parsedImages = []; 
-            try { parsedImages = JSON.parse(row.image_url) || []; } catch(e) {}
-            return {
-                id: row.id, name: row.name, category: row.category, mainCategory: row.main_category || 'Pipe Cleaner Crafts', price: row.price, prepTime: row.prep_time, specs: row.specs, dimensions: row.dimensions || '', isCustomizable: row.is_customizable || false,
-                image1: parsedImages[0] ? parsedImages[0].data : '', image2: parsedImages[1] ? parsedImages[1].data : '', image3: parsedImages[2] ? parsedImages[2].data : '', image4: parsedImages[3] ? parsedImages[3].data : '', image5: parsedImages[4] ? parsedImages[4].data : ''
-            };
-        });
-        renderAdminProducts(); 
-        renderAdminCategories();
-    } catch (error) { console.error("Admin DB Fetch Error:", error); } 
-}
-
-function renderAdminProducts() { 
-    const list = document.getElementById('admin-product-list'); 
-    list.innerHTML = ''; 
-    if(products.length === 0) { 
-        list.innerHTML = '<div class="text-center text-gray-400 py-10 text-[10px] uppercase tracking-[0.2em] font-medium">No creations in gallery.</div>'; 
-        return; 
-    } 
-    
-    const fragment = document.createDocumentFragment();
-    [...products].forEach(p => { 
-        const cleanPrice = p.price.toString().replace(/[^0-9.,]/g, ''); 
-        const adminImg = (p.image1 && typeof p.image1 === 'string' && p.image1.trim() !== '') ? p.image1 : 'https://placehold.co/100/F8E9EA/423133?text=Twisted';
-        
-        const item = document.createElement('div');
-        item.className = "flex justify-between bg-white p-4 hover:bg-luxury-bg transition-colors duration-400";
-        item.innerHTML = `
-            <div class="flex gap-3 items-center">
-                <img loading="lazy" decoding="async" src="${adminImg}" alt="${p.name}" width="48" height="48" class="w-12 h-12 object-cover bg-luxury-bg border border-luxury-blush rounded-lg">
-                <div class="flex flex-col justify-center">
-                    <h4 class="font-bitter text-[12px] font-semibold text-luxury-dark leading-tight w-36 sm:w-48 truncate mb-0.5">${p.name}</h4>
-                    <p class="font-poppins text-[10px] text-luxury-rose font-bold">₹${cleanPrice}</p>
+    <!-- LOGIN GATE -->
+    <main id="login-view" class="flex-grow flex items-center justify-center w-full p-4 transition-opacity duration-300">
+        <div class="bg-white p-8 sm:p-10 rounded-3xl shadow-xl w-full max-w-xs text-center border border-luxury-blush">
+            <i class="fas fa-lock text-luxury-rose text-3xl mb-4 block" aria-hidden="true"></i>
+            <span class="block text-center text-[8px] font-bold text-gray-400 uppercase tracking-[0.3em] mb-1">Restricted Access</span>
+            <h1 class="font-logo font-normal text-2xl mb-6 text-luxury-dark">Admin Studio</h1>
+            
+            <form id="admin-login-form" class="flex flex-col gap-4">
+                <label for="admin-user" class="sr-only">Email</label>
+                <input type="email" id="admin-user" required autocomplete="email" placeholder="Admin Email" 
+                    class="w-full text-center text-[13px] font-medium bg-luxury-bg px-4 py-3 rounded-xl border border-luxury-blush outline-none text-luxury-dark placeholder-gray-400 focus:ring-2 focus:ring-luxury-rose/30 focus:border-luxury-rose">
+                
+                <label for="admin-pass" class="sr-only">Password</label>
+                <input type="password" id="admin-pass" required autocomplete="current-password" placeholder="Password" 
+                    class="w-full text-center text-[13px] font-medium bg-luxury-bg px-4 py-3 rounded-xl border border-luxury-blush outline-none text-luxury-dark placeholder-gray-400 focus:ring-2 focus:ring-luxury-rose/30 focus:border-luxury-rose">
+                
+                <div class="flex flex-col gap-2.5 mt-2">
+                    <button type="submit" id="login-btn" class="bg-luxury-dark text-white hover:bg-luxury-gold transition-colors w-full rounded-full py-3 font-bold text-[9px] uppercase tracking-[0.2em] shadow-md">Enter Studio</button>
+                    <a href="/" class="w-full py-2 text-gray-400 hover:text-luxury-rose transition-colors font-bold text-[8px] uppercase tracking-[0.1em]">Return to Store</a>
                 </div>
+            </form>
+        </div>
+    </main>
+
+    <!-- SECURE ADMIN DASHBOARD -->
+    <div id="admin-dashboard" class="hidden w-full max-w-[1200px] mx-auto p-4 sm:p-6 opacity-0 transition-opacity duration-500">
+        
+        <!-- Header -->
+        <header class="flex flex-col sm:flex-row justify-between items-center bg-white p-4 sm:p-5 shadow-sm mb-6 border border-luxury-blush rounded-2xl gap-3">
+            <div class="flex items-center gap-3">
+                <img src="https://i.ibb.co/0RRrFK9N/TH-logo-1.png" class="w-10 h-10 rounded-full object-cover border-2 border-luxury-rose" alt="Logo">
+                <h1 class="font-logo font-normal text-xl text-luxury-dark">Twisted Happiness <span class="text-gray-400 font-sans font-bold text-[8px] uppercase tracking-[0.2em] ml-1">Studio</span></h1>
             </div>
-            <div class="flex gap-4 items-center pr-2">
-                <button onclick="window.th_triggerEdit('${p.id}')" class="text-gray-400 hover:text-luxury-rose text-sm cursor-pointer transition-colors duration-400 w-8 h-8 rounded-full bg-white border border-luxury-blush flex items-center justify-center" aria-label="Edit"><i class="fas fa-pen text-[10px]"></i></button>
-                <button onclick="window.th_triggerDelete('${p.id}')" class="text-gray-400 hover:text-red-500 text-sm cursor-pointer transition-colors duration-400 w-8 h-8 rounded-full bg-white border border-luxury-blush flex items-center justify-center" aria-label="Delete"><i class="fas fa-trash text-[10px]"></i></button>
+            <nav class="flex gap-2">
+                <button type="button" id="tab-inventory" class="text-white bg-luxury-dark font-bold text-[9px] uppercase tracking-[0.1em] px-4 py-2.5 rounded-full border border-luxury-dark shadow-sm transition-colors">Inventory</button>
+                <button type="button" id="tab-orders" class="text-gray-500 bg-luxury-bg hover:text-luxury-dark font-bold text-[9px] uppercase tracking-[0.1em] px-4 py-2.5 rounded-full border border-luxury-blush shadow-sm relative transition-colors">
+                    Orders <span id="admin-order-badge" class="absolute -top-1 -right-1 bg-luxury-rose text-white w-4 h-4 flex items-center justify-center rounded-full text-[7px] hidden">0</span>
+                </button>
+                <button type="button" id="btn-logout" class="text-gray-500 bg-white hover:text-red-500 font-bold text-[9px] uppercase tracking-[0.1em] px-4 py-2.5 rounded-full border border-luxury-blush shadow-sm transition-colors" title="Log Out"><i class="fas fa-sign-out-alt"></i></button>
+            </nav>
+        </header>
+
+        <!-- Inventory Management Section -->
+        <section id="admin-inventory-section" class="grid lg:grid-cols-12 gap-6 w-full">
+            <!-- Add/Edit Form -->
+            <div class="lg:col-span-8 bg-white p-5 sm:p-8 shadow-sm border border-luxury-blush rounded-2xl h-fit">
+                <div class="flex justify-between items-center mb-5 border-b border-luxury-blush pb-3">
+                    <h2 id="form-title" class="font-logo font-normal text-xl text-luxury-dark">Add New Art Piece</h2>
+                    <button type="button" id="cancel-edit-btn" class="hidden text-[9px] bg-luxury-bg text-gray-500 px-3 py-1.5 rounded-full font-bold border border-luxury-blush uppercase tracking-[0.1em] hover:bg-luxury-rose hover:text-white transition-colors">Cancel Edit</button>
+                </div>
+
+                <form id="inventory-form" class="space-y-4">
+                    <div>
+                        <label for="p-main-category" class="block font-bold mb-1.5 text-gray-400 text-[9px] uppercase tracking-[0.1em]">Main Category</label>
+                        <select id="p-main-category" required class="w-full bg-luxury-bg border border-luxury-blush rounded-xl px-4 py-3 text-[12px] font-medium outline-none focus:ring-2 focus:ring-luxury-rose/30 focus:border-luxury-rose">
+                            <option value="Pipe Cleaner Crafts">Pipe Cleaner Crafts</option>
+                            <option value="Canvas Paintings">Canvas Paintings</option>
+                            <option value="Clay Art Paintings">Clay Art Paintings</option>
+                        </select>
+                    </div>
+                    
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div>
+                            <label for="p-name" class="block font-bold mb-1.5 text-gray-400 text-[9px] uppercase tracking-[0.1em]">Product Name</label>
+                            <input type="text" id="p-name" required class="w-full bg-luxury-bg border border-luxury-blush rounded-xl px-4 py-3 text-[12px] font-medium font-bitter outline-none focus:ring-2 focus:ring-luxury-rose/30 focus:border-luxury-rose">
+                        </div>
+                        <div>
+                            <label for="p-category" class="block font-bold mb-1.5 text-gray-400 text-[9px] uppercase tracking-[0.1em]">Sub-Category</label>
+                            <input type="text" id="p-category" list="category-list" class="w-full bg-luxury-bg border border-luxury-blush rounded-xl px-4 py-3 text-[12px] font-medium outline-none focus:ring-2 focus:ring-luxury-rose/30 focus:border-luxury-rose" placeholder="Select or type new...">
+                            <datalist id="category-list"></datalist>
+                        </div>
+                    </div>
+                    
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div>
+                            <label for="p-price" class="block font-bold mb-1.5 text-gray-400 text-[9px] uppercase tracking-[0.1em]">Selling Price (₹)</label>
+                            <input type="number" id="p-price" required min="1" class="w-full bg-luxury-bg border border-luxury-blush rounded-xl px-4 py-3 text-[12px] font-medium font-poppins outline-none focus:ring-2 focus:ring-luxury-rose/30 focus:border-luxury-rose">
+                        </div>
+                        <div>
+                            <label for="p-prep" class="block font-bold mb-1.5 text-gray-400 text-[9px] uppercase tracking-[0.1em]">Prep Time (Days)</label>
+                            <input type="text" id="p-prep" required class="w-full bg-luxury-bg border border-luxury-blush rounded-xl px-4 py-3 text-[12px] font-medium outline-none focus:ring-2 focus:ring-luxury-rose/30 focus:border-luxury-rose" placeholder="e.g. 3-5">
+                        </div>
+                    </div>
+
+                    <div id="painting-fields-container" class="grid grid-cols-1 md:grid-cols-2 gap-4 hidden p-4 bg-gradient-to-r from-luxury-blush/50 to-transparent border border-luxury-blush rounded-xl">
+                        <div>
+                            <label for="p-dimensions" class="block font-bold mb-1.5 text-luxury-rose text-[9px] uppercase tracking-[0.1em]">Dimensions</label>
+                            <input type="text" id="p-dimensions" class="w-full bg-white border border-luxury-blush rounded-lg px-4 py-2.5 text-[11px] font-medium outline-none focus:ring-2 focus:ring-luxury-rose/30 focus:border-luxury-rose" placeholder="e.g. 16x20 Inches">
+                        </div>
+                        <div class="flex items-center mt-6">
+                            <label class="flex items-center gap-2 cursor-pointer">
+                                <input type="checkbox" id="p-customizable" class="w-4 h-4 accent-luxury-rose rounded border-gray-300 focus:ring-luxury-rose">
+                                <span class="text-[11px] font-bold text-luxury-dark">Allow Custom Sizes</span>
+                            </label>
+                        </div>
+                    </div>
+                    
+                    <div>
+                        <label class="block font-bold mb-2 text-luxury-dark text-[9px] uppercase tracking-[0.1em]">Imagery (Max 5)</label>
+                        <div class="relative border-2 border-dashed border-luxury-blush p-5 text-center rounded-xl bg-luxury-bg hover:border-luxury-rose transition-colors group cursor-pointer overflow-hidden">
+                            <i class="fas fa-cloud-upload-alt text-2xl text-luxury-rose mb-2 opacity-70 group-hover:opacity-100 transition-all"></i>
+                            <p class="text-[10px] text-gray-400 font-medium group-hover:text-luxury-dark">Tap here to upload imagery to Cloud.</p>
+                            <input type="file" id="p-image-file" accept="image/*" multiple max="5" class="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10">
+                        </div>
+                        <div id="image-preview-container" class="mt-4 grid grid-cols-3 sm:grid-cols-5 gap-3 hidden"></div>
+                        <p id="image-help-text" class="text-luxury-rose text-[9px] mt-2 font-bold hidden tracking-widest uppercase">Tap an image to set as cover.</p>
+                    </div>
+                    
+                    <div>
+                        <label for="p-specs" class="block font-bold mb-1.5 text-gray-400 text-[9px] uppercase tracking-[0.1em]">Product Details</label>
+                        <textarea id="p-specs" required class="w-full bg-luxury-bg border border-luxury-blush rounded-xl p-4 h-28 text-[12px] font-medium outline-none focus:ring-2 focus:ring-luxury-rose/30 focus:border-luxury-rose resize-none"></textarea>
+                    </div>
+                    
+                    <button type="submit" id="btn-save-product" class="bg-luxury-dark text-white hover:bg-luxury-gold w-full py-3.5 rounded-full font-bold text-[10px] uppercase tracking-[0.1em] shadow-md transition-colors mt-2">Publish to Collection</button>
+                </form>
             </div>
-        `;
-        fragment.appendChild(item);
-    }); 
-    list.appendChild(fragment);
-}
-// Expose dynamically bound functions
-window.th_triggerEdit = triggerEdit;
-window.th_triggerDelete = triggerDelete;
-window.th_setMainImage = setMainImage;
-window.th_removeSelectedImage = removeSelectedImage;
-window.th_rejectOrder = rejectOrder;
-window.th_acceptOrder = acceptOrder;
-window.th_markOrderReady = markOrderReady;
-window.th_markOrderDelivered = markOrderDelivered;
-window.th_pushToShiprocket = pushToShiprocket;
 
-function togglePaintingFields() {
-    const val = document.getElementById('p-main-category').value; 
-    const container = document.getElementById('painting-fields-container');
-    if(val === 'Canvas Paintings' || val === 'Clay Art Paintings') { 
-        container.classList.remove('hidden'); 
-    } else { 
-        container.classList.add('hidden'); 
-        document.getElementById('p-dimensions').value = ''; 
-        document.getElementById('p-customizable').checked = false; 
-    }
-    document.getElementById('p-category').value = ''; 
-    renderAdminCategories(); 
-}
+            <!-- Settings & Master List -->
+            <aside class="lg:col-span-4 flex flex-col gap-6">
+                <!-- Settings -->
+                <div class="bg-white p-5 shadow-sm border border-luxury-blush rounded-2xl">
+                    <h3 class="font-bold text-[10px] text-luxury-dark uppercase tracking-[0.1em] mb-4 flex items-center gap-2"><i class="fas fa-cog text-luxury-rose"></i> Communication Settings</h3>
+                    <form id="settings-form" class="space-y-4">
+                        <div>
+                            <label for="admin-country-code" class="block font-bold mb-1.5 text-gray-400 text-[8px] uppercase tracking-[0.1em]">Default Country Code</label>
+                            <select id="admin-country-code" class="w-full bg-luxury-bg border border-luxury-blush rounded-lg px-3 py-2.5 text-[11px] font-medium outline-none focus:ring-2 focus:ring-luxury-rose/30 cursor-pointer"></select>
+                        </div>
+                        <div>
+                            <label for="admin-wa" class="block font-bold mb-1.5 text-gray-400 text-[8px] uppercase tracking-[0.1em]">WhatsApp Number</label>
+                            <input type="text" id="admin-wa" required class="w-full bg-luxury-bg border border-luxury-blush rounded-lg px-3 py-2.5 text-[11px] font-medium outline-none focus:ring-2 focus:ring-luxury-rose/30">
+                        </div>
+                        <div class="border-t border-luxury-blush pt-4">
+                            <label for="admin-upi" class="block font-bold mb-1.5 text-gray-400 text-[8px] uppercase tracking-[0.1em]">UPI Number / VPA</label>
+                            <input type="text" id="admin-upi" required placeholder="e.g. yourname@upi" class="w-full bg-luxury-bg border border-luxury-blush rounded-lg px-3 py-2.5 text-[11px] font-medium outline-none focus:ring-2 focus:ring-luxury-rose/30">
+                        </div>
+                        <button type="submit" class="border border-luxury-rose text-luxury-dark hover:bg-luxury-rose hover:text-white w-full py-2.5 rounded-full font-bold text-[9px] uppercase tracking-[0.1em] transition-colors shadow-sm mt-2">Save Settings</button>
+                    </form>
+                </div>
 
-function renderAdminCategories() {
-    const datalist = document.getElementById('category-list'); 
-    const mainCat = document.getElementById('p-main-category').value;
-    if(datalist) {
-        const relevantProducts = products.filter(p => p.mainCategory === mainCat); 
-        const allSubs = [...new Set(relevantProducts.map(p => p.category).filter(c => c))];
-        datalist.innerHTML = ''; 
-        allSubs.forEach(cat => { 
-            const option = document.createElement('option'); 
-            option.value = cat; 
-            datalist.appendChild(option); 
-        });
-    }
-}
+                <!-- Product List -->
+                <div class="bg-white p-5 shadow-sm border border-luxury-blush rounded-2xl flex flex-col h-[400px]">
+                    <h3 class="font-bold text-[10px] text-luxury-dark uppercase tracking-[0.1em] border-b border-luxury-blush pb-3 mb-3 flex items-center gap-2"><i class="fas fa-layer-group text-luxury-rose"></i> Master Inventory</h3>
+                    <div id="admin-product-list" class="flex flex-col gap-0 overflow-y-auto pr-1 flex-grow divide-y divide-luxury-blush custom-scroll">
+                        <!-- Rendered via JS -->
+                    </div>
+                </div>
+            </aside>
+        </section>
 
-// Complex File Upload & Compress Logic remains intact but optimized
-function compressImageToBlob(file, maxSize = 1600) { 
-    return new Promise((resolve) => { 
-        const reader = new FileReader(); reader.readAsDataURL(file); 
-        reader.onload = (e) => { 
-            const img = new Image(); img.src = e.target.result; 
-            img.onload = () => { 
-                const canvas = document.createElement('canvas'); let w = img.width; let h = img.height; 
-                if (w > h && w > maxSize) { h *= maxSize / w; w = maxSize; } else if (h > maxSize) { w *= maxSize / h; h = maxSize; } 
-                canvas.width = w; canvas.height = h; canvas.getContext('2d').drawImage(img, 0, 0, w, h); 
-                canvas.toBlob((blob) => { resolve(blob); }, 'image/webp', 0.85); 
-            }; 
-        }; 
-    }); 
-}
+        <!-- Orders Management Section -->
+        <section id="admin-orders-section" class="w-full hidden">
+            <div class="max-w-4xl mx-auto mt-4 mb-6 flex justify-center gap-3">
+                <button type="button" id="subtab-active" class="text-white bg-luxury-dark font-bold text-[9px] uppercase tracking-[0.1em] px-6 py-3 rounded-full border border-luxury-dark transition-colors shadow-sm">Active Commissions</button>
+                <button type="button" id="subtab-completed" class="text-gray-500 bg-luxury-bg hover:text-luxury-dark font-bold text-[9px] uppercase tracking-[0.1em] px-6 py-3 rounded-full border border-luxury-blush transition-colors shadow-sm">The Archives</button>
+            </div>
 
-async function handleFileSelection(e) { 
-    const files = e.target.files; if (files.length === 0) return; 
-    if (selectedFilesData.length + files.length > 5) { alert("Maximum 5 images allowed in total."); e.target.value = ""; return; } 
-    const btn = document.getElementById('btn-save-product');
-    btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Processing Imagery...'; 
-    btn.disabled = true; 
-    
-    for (let i = 0; i < files.length; i++) { 
-        const file = files[i]; 
-        const blob = await compressImageToBlob(file); 
-        const tempUrl = URL.createObjectURL(blob); 
-        selectedFilesData.push({ name: file.name, blob: blob, data: tempUrl, isNew: true }); 
-    } 
-    renderImagePreviews(); 
-    btn.innerHTML = editModeId ? 'Update Product' : 'Publish to Collection'; 
-    btn.disabled = false; 
-    e.target.value = ""; 
-}
+            <div class="max-w-4xl mx-auto bg-white p-5 sm:p-8 shadow-sm border border-luxury-blush rounded-2xl h-fit">
+                <h2 id="order-section-title" class="font-logo font-normal text-2xl text-luxury-dark border-b border-luxury-blush pb-3 mb-5">Concierge Desk: Active Workspace</h2>
+                
+                <div id="admin-active-orders" class="flex flex-col gap-4">
+                    <div class="text-center text-gray-400 py-10 text-[10px] uppercase tracking-[0.2em] font-medium"><i class="fas fa-spinner fa-spin mr-2"></i> Loading Desk...</div>
+                </div>
+                <div id="admin-completed-orders" class="flex flex-col gap-4 hidden"></div>
+            </div>
+        </section>
+    </div>
 
-function renderImagePreviews() {
-    const pContainer = document.getElementById('image-preview-container'); 
-    const helpText = document.getElementById('image-help-text'); 
-    pContainer.innerHTML = '';
-    
-    if (selectedFilesData.length === 0) { 
-        pContainer.classList.add('hidden'); helpText.classList.add('hidden'); return; 
-    }
-    
-    pContainer.classList.remove('hidden'); helpText.classList.remove('hidden');
-    if(mainImageIndex >= selectedFilesData.length) mainImageIndex = 0;
-    
-    selectedFilesData.forEach((fileObj, i) => {
-        pContainer.innerHTML += `
-        <div onclick="window.th_setMainImage(${i})" class="relative aspect-[4/5] bg-luxury-bg rounded-xl overflow-hidden border-2 cursor-pointer transition-all duration-400 ${i === mainImageIndex ? 'border-luxury-rose shadow-md scale-105 z-10' : 'border-luxury-blush opacity-60 hover:opacity-100 hover:scale-105'}">
-            ${i === mainImageIndex ? '<span class="absolute top-2 left-2 bg-luxury-rose text-white text-[7px] px-1.5 py-0.5 rounded-sm font-bold tracking-widest z-10 shadow-sm">COVER</span>' : ''}
-            <button type="button" onclick="window.th_removeSelectedImage(${i}, event)" class="absolute top-2 right-2 bg-white/90 text-luxury-dark hover:text-red-500 w-6 h-6 rounded-full flex items-center justify-center z-20 shadow-sm border border-luxury-blush transition-colors" aria-label="Remove"><i class="fas fa-times text-[10px]"></i></button>
-            <img src="${fileObj.data}" class="w-full h-full object-cover">
-        </div>`;
-    });
-}
-
-function setMainImage(index) { 
-    if (index === 0) return; 
-    const selectedImage = selectedFilesData.splice(index, 1)[0]; 
-    selectedFilesData.unshift(selectedImage); mainImageIndex = 0; 
-    renderImagePreviews(); 
-}
-
-function removeSelectedImage(index, event) { 
-    event.stopPropagation(); 
-    selectedFilesData.splice(index, 1); mainImageIndex = 0; 
-    renderImagePreviews(); 
-}
-
-async function saveProduct(e) { 
-    e.preventDefault();
-    const btn = document.getElementById('btn-save-product'); 
-    const name = document.getElementById('p-name').value; 
-    
-    if(!editModeId && selectedFilesData.length === 0) return alert("Please provide at least one image."); 
-    btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Uploading to Cloud...'; 
-    btn.disabled = true; 
-    
-    if (mainImageIndex !== 0 && selectedFilesData.length > 1) { 
-        const mainImg = selectedFilesData.splice(mainImageIndex, 1)[0]; 
-        selectedFilesData.unshift(mainImg); 
-    }
-
-    let uploadedUrls = [];
-    for(let i=0; i<selectedFilesData.length; i++) {
-        let item = selectedFilesData[i];
-        if(item.isNew) {
-            const fileName = `${Date.now()}_${Math.random().toString(36).substring(7)}.webp`;
-            const { data, error } = await _supabase.storage.from('art-images').upload(fileName, item.blob, { contentType: 'image/webp' });
-            if(error) { 
-                console.error("Upload error:", error); 
-                alert("Upload failed. Make sure you created the 'art-images' bucket and set it to Public!"); 
-                btn.innerHTML = 'Publish to Collection'; btn.disabled = false; 
-                return; 
-            }
-            const { data: publicUrlData } = _supabase.storage.from('art-images').getPublicUrl(fileName); 
-            uploadedUrls.push({ data: publicUrlData.publicUrl });
-        } else { 
-            uploadedUrls.push({ data: item.data }); 
-        }
-    }
-
-    const rawPrice = document.getElementById('p-price').value; 
-    const cleanNumericPrice = parseFloat(rawPrice) || 0; 
-    const mainCat = document.getElementById('p-main-category').value; 
-    const dims = document.getElementById('p-dimensions').value; 
-    const isCust = document.getElementById('p-customizable').checked;
-    
-    const payload = { 
-        name: name, 
-        main_category: mainCat, 
-        category: document.getElementById('p-category').value || 'General', 
-        price: cleanNumericPrice, 
-        prep_time: document.getElementById('p-prep').value || '3-5', 
-        specs: document.getElementById('p-specs').value || '', 
-        dimensions: (mainCat !== 'Pipe Cleaner Crafts') ? dims : '', 
-        is_customizable: (mainCat !== 'Pipe Cleaner Crafts') ? isCust : false, 
-        image_url: uploadedUrls.length > 0 ? JSON.stringify(uploadedUrls) : undefined 
-    };
-
-    let err;
-    if (editModeId) { 
-        if (uploadedUrls.length === 0) delete payload.image_url; 
-        const { error } = await _supabase.from('creations').update(payload).eq('id', editModeId); err = error; 
-    } else { 
-        const { error } = await _supabase.from('creations').insert([payload]); err = error; 
-    }
-
-    if(!err) { 
-        showToast("Added to Collection!", "fa-check"); 
-        cancelEdit(); 
-        fetchDatabase(); 
-    } else { 
-        showToast("Error saving product", "fa-times", "text-red-500"); 
-        console.error(err); 
-    }
-    btn.innerHTML = editModeId ? 'Update Product' : 'Publish to Collection'; 
-    btn.disabled = false; 
-}
-
-function triggerEdit(id) { 
-    const p = products.find(x => x.id === id); if(!p) return; editModeId = p.id; 
-    document.getElementById('p-main-category').value = p.mainCategory || 'Pipe Cleaner Crafts'; togglePaintingFields();
-    document.getElementById('p-name').value = p.name; document.getElementById('p-category').value = p.category; document.getElementById('p-price').value = p.price; document.getElementById('p-prep').value = p.prepTime || ''; document.getElementById('p-specs').value = p.specs; document.getElementById('p-dimensions').value = p.dimensions || ''; document.getElementById('p-customizable').checked = p.isCustomizable || false; document.getElementById('p-image-file').value = ''; 
-    
-    selectedFilesData = [];
-    if(p.image1) selectedFilesData.push({name: 'img1', data: p.image1, isNew: false}); if(p.image2) selectedFilesData.push({name: 'img2', data: p.image2, isNew: false});
-    if(p.image3) selectedFilesData.push({name: 'img3', data: p.image3, isNew: false}); if(p.image4) selectedFilesData.push({name: 'img4', data: p.image4, isNew: false}); if(p.image5) selectedFilesData.push({name: 'img5', data: p.image5, isNew: false});
-    
-    mainImageIndex = 0; renderImagePreviews();
-    document.getElementById('form-title').innerHTML = `Editing: <span class="text-luxury-rose font-serif italic font-medium text-lg tracking-wide">${p.name}</span>`; 
-    document.getElementById('cancel-edit-btn').classList.remove('hidden'); document.getElementById('btn-save-product').innerHTML = 'Update Product'; window.scrollTo({top: 0, behavior: 'smooth'}); 
-}
-
-function cancelEdit() { 
-    editModeId = null; mainImageIndex = 0; 
-    document.getElementById('inventory-form').reset();
-    document.getElementById('p-main-category').value = 'Pipe Cleaner Crafts'; togglePaintingFields();
-    selectedFilesData = []; renderImagePreviews(); 
-    document.getElementById('form-title').textContent = 'Add New Art Piece'; 
-    document.getElementById('cancel-edit-btn').classList.add('hidden'); 
-    document.getElementById('btn-save-product').innerHTML = 'Publish to Collection'; 
-}
-
-async function triggerDelete(id) { 
-    const p = products.find(x => x.id === id); 
-    if(!confirm(`Remove "${p.name}" from the collection?`)) return; 
-    showToast("Removing piece...", "fa-spinner fa-spin"); 
-    const { error } = await _supabase.from('creations').delete().eq('id', id);
-    if(!error) { showToast("Piece Removed", "fa-trash"); fetchDatabase(); } else { showToast("Error removing piece", "fa-times", "text-red-500"); }
-}
-
-// --- 4. Order Management ---
-// ... (Order functions fetchOrders, extractCustomerData, pushToShiprocket, renderActiveOrders, acceptOrder, etc. translate perfectly from your old inline script but now live safely here).
-
-function switchAdminTab(tab) {
-    const invBtn = document.getElementById('tab-inventory'); const ordBtn = document.getElementById('tab-orders');
-    const invSec = document.getElementById('admin-inventory-section'); const ordSec = document.getElementById('admin-orders-section');
-    if(tab === 'inventory') {
-        invBtn.className = "text-white bg-luxury-dark font-bold text-[9px] uppercase tracking-[0.1em] px-4 py-2.5 rounded-full border border-luxury-dark shadow-sm transition-colors";
-        ordBtn.className = "text-gray-500 bg-luxury-bg hover:text-luxury-dark font-bold text-[9px] uppercase tracking-[0.1em] px-4 py-2.5 rounded-full border border-luxury-blush shadow-sm relative transition-colors";
-        invSec.classList.remove('hidden'); ordSec.classList.add('hidden');
-    } else {
-        ordBtn.className = "text-white bg-luxury-dark font-bold text-[9px] uppercase tracking-[0.1em] px-4 py-2.5 rounded-full border border-luxury-dark shadow-sm relative transition-colors";
-        invBtn.className = "text-gray-500 bg-luxury-bg hover:text-luxury-dark font-bold text-[9px] uppercase tracking-[0.1em] px-4 py-2.5 rounded-full border border-luxury-blush shadow-sm transition-colors";
-        ordSec.classList.remove('hidden'); invSec.classList.add('hidden');
-        switchOrderTab('active'); fetchOrders();
-    }
-}
-
-function switchOrderTab(tab) {
-    const activeBtn = document.getElementById('subtab-active'); const completedBtn = document.getElementById('subtab-completed');
-    const activeSec = document.getElementById('admin-active-orders'); const completedSec = document.getElementById('admin-completed-orders'); const title = document.getElementById('order-section-title');
-    if(tab === 'active') {
-        activeBtn.className = "text-white bg-luxury-dark font-bold text-[9px] uppercase tracking-[0.1em] px-6 py-3 rounded-full border border-luxury-dark shadow-sm transition-colors";
-        completedBtn.className = "text-gray-500 bg-luxury-bg hover:text-luxury-dark font-bold text-[9px] uppercase tracking-[0.1em] px-6 py-3 rounded-full border border-luxury-blush shadow-sm transition-colors";
-        activeSec.classList.remove('hidden'); completedSec.classList.add('hidden'); title.textContent = "Concierge Desk: Active Workspace";
-    } else {
-        completedBtn.className = "text-white bg-luxury-rose font-bold text-[9px] uppercase tracking-[0.1em] px-6 py-3 rounded-full border border-luxury-rose shadow-sm transition-colors";
-        activeBtn.className = "text-gray-500 bg-luxury-bg hover:text-luxury-dark font-bold text-[9px] uppercase tracking-[0.1em] px-6 py-3 rounded-full border border-luxury-blush shadow-sm transition-colors";
-        completedSec.classList.remove('hidden'); activeSec.classList.add('hidden'); title.textContent = "The Archives: Elegantly Delivered";
-    }
-}
-
-// Toast helper
-function showToast(msg, icon = 'fa-check', color = 'text-luxury-rose') { 
-    const t = document.getElementById('toast'); 
-    document.getElementById('toast-msg').textContent = msg; 
-    document.getElementById('toast-icon').className = `fas ${icon} ${color} text-sm drop-shadow-sm`; 
-    requestAnimationFrame(() => { 
-        t.classList.remove('opacity-0', 'translate-y-10'); 
-        setTimeout(() => t.classList.add('opacity-0', 'translate-y-10'), 3000); 
-    });
-}
-
-// Note: Remaining Order manipulation functions (acceptOrder, markOrderReady, etc) would go here exactly as they were in the original file, just scoped securely inside this module.
+    <!-- Global Toast Notification -->
+    <div id="toast" role="alert" aria-live="assertive" class="fixed bottom-8 left-1/2 transform -translate-x-1/2 bg-luxury-dark text-luxury-bg px-6 py-3 rounded-full shadow-xl flex items-center gap-2.5 transition-all duration-300 opacity-0 pointer-events-none w-max border border-luxury-rose/30 translate-y-10 z-[2000]">
+        <i id="toast-icon" class="fas fa-check text-luxury-rose text-sm"></i> 
+        <span id="toast-msg" class="text-[10px] font-bold tracking-[0.1em] uppercase pt-0.5"></span>
+    </div>
+</body>
+</html>
