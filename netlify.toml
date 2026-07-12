@@ -24,9 +24,15 @@
     Cache-Control = "public, max-age=31536000, immutable"
 
 # Fallback routing for SPA (If you add actual routing later)
+# Netlify Configuration File
+
+[[redirects]]
+  from = "/khushiified"
+  to = "/admin.html"
+  status = 200
+
+# Ensures clean URLs work properly
 [[redirects]]
   from = "/*"
   to = "/index.html"
   status = 200
-  force = false
-  # Do not force this on /admin.html so it remains directly accessible
