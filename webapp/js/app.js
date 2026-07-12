@@ -105,21 +105,27 @@ function setupWhatsAppLink() {
 }
 
 // 🚨 Pinterest Style Skeleton Loaders
+// 🚨 Pinterest Style Skeleton Loaders with Random Heights
 function injectSkeletons() {
     const loadingGrid = document.getElementById('product-grid');
     if(!loadingGrid) return;
+    
     let skeletonHTML = '';
-    // Creating 12 aesthetic, image-heavy skeleton blocks
+    // Array of varied heights to simulate the uneven Pinterest waterfall
+    const heights = ['h-[220px]', 'h-[320px]', 'h-[280px]', 'h-[380px]', 'h-[250px]', 'h-[350px]'];
+    
     for(let i=0; i<12; i++) {
         const delay = (i % 6) * 0.05;
+        const randomHeight = heights[Math.floor(Math.random() * heights.length)];
+        
         skeletonHTML += `
-        <div class="w-full relative opacity-100 transform translate-y-0" style="animation: fadeInUp 0.4s ease-out forwards; animation-delay: ${delay}s;">
-            <!-- Aesthetic Image Block -->
-            <div class="w-full bg-luxury-blush/30 rounded-2xl aspect-[4/5] skeleton-layer mb-3"></div>
+        <div class="w-full relative opacity-100 transform translate-y-0 break-inside-avoid mb-4 sm:mb-5" style="animation: fadeInUp 0.4s ease-out forwards; animation-delay: ${delay}s;">
+            <!-- Soft, aesthetic girly skeleton block -->
+            <div class="w-full bg-luxury-blush/40 rounded-3xl ${randomHeight} skeleton-layer mb-3 border border-luxury-rose/20 shadow-[0_8px_30px_rgb(223,168,176,0.15)]"></div>
             <!-- Minimalist Text Lines -->
-            <div class="px-1">
-                <div class="h-3 rounded-full bg-luxury-blush/60 w-3/4 mb-2.5 skeleton-layer"></div>
-                <div class="h-4 rounded-full bg-luxury-blush/60 w-1/3 skeleton-layer"></div>
+            <div class="px-2">
+                <div class="h-3 rounded-full bg-luxury-blush/70 w-3/4 mb-2.5 skeleton-layer"></div>
+                <div class="h-4 rounded-full bg-luxury-blush/70 w-1/3 skeleton-layer"></div>
             </div>
         </div>`;
     }
@@ -157,21 +163,42 @@ function renderProducts(searchQuery = '') {
     requestAnimationFrame(() => { grid.appendChild(fragment); setupScrollReveal(); });
 }
 
+// 🚨 Pinterest Waterfall Product Cards (Girly Aesthetic)
 function generateProductCardHTML(p) {
-    const cleanPrice = Number(p.price.toString().replace(/[^0-9.,]/g, '')); const discountPercent = getDiscountPercent(p.id.toString()); const originalPrice = Math.round(cleanPrice * (1 + (discountPercent / 100)));
+    const cleanPrice = Number(p.price.toString().replace(/[^0-9.,]/g, '')); 
+    const discountPercent = getDiscountPercent(p.id.toString()); 
+    const originalPrice = Math.round(cleanPrice * (1 + (discountPercent / 100)));
     const mainImg = (p.image1 && typeof p.image1 === 'string' && p.image1.trim() !== '') ? p.image1 : 'https://placehold.co/400x500/F8E9EA/423133';
-    const card = document.createElement('div'); card.className = `w-full relative cursor-pointer opacity-0 transform translate-y-4 transition-all duration-400 ease-out group scroll-reveal`; 
+    
+    const card = document.createElement('div'); 
+    // break-inside-avoid prevents the card from splitting across columns
+    card.className = `w-full relative cursor-pointer opacity-0 transform translate-y-4 transition-all duration-500 ease-out group scroll-reveal break-inside-avoid mb-4 sm:mb-5`; 
     card.addEventListener('click', () => openProductPage(p.id));
+    
     card.innerHTML = `
-        <div class="w-full relative rounded-2xl overflow-hidden group shadow-sm bg-gradient-to-tr from-luxury-bg to-white border border-luxury-blush aspect-[4/5] mb-2">
-            <span class="absolute top-2.5 left-2.5 z-10 bg-white/95 text-luxury-dark text-[7px] sm:text-[8px] font-bold px-2.5 py-1 rounded-md uppercase tracking-[0.15em] border border-luxury-blush truncate max-w-[80%] shadow-sm">${p.category}</span>
-            <img loading="lazy" decoding="async" src="${mainImg}" alt="${p.name}" width="400" height="500" onerror="this.src='https://placehold.co/400x500/F8E9EA/423133';" class="absolute inset-0 w-full h-full object-cover opacity-0 transition-opacity duration-500 pointer-events-none" onload="this.classList.remove('opacity-0')">
+        <!-- Softer rounded-3xl borders, glowing pink shadow, and h-auto for Pinterest masonry -->
+        <div class="w-full relative rounded-3xl overflow-hidden group shadow-[0_8px_25px_rgb(223,168,176,0.2)] hover:shadow-[0_12px_35px_rgb(223,168,176,0.35)] bg-gradient-to-tr from-luxury-blush/10 to-white border border-luxury-rose/20 transition-all duration-500">
+            
+            <!-- Cute handwritten category badge -->
+            <span class="absolute top-3 left-3 z-10 bg-white/90 backdrop-blur-sm text-luxury-rose text-[13px] font-cursive px-3 py-1 rounded-full border border-luxury-rose/30 truncate max-w-[85%] shadow-sm transform group-hover:scale-105 transition-transform duration-300">${p.category}</span>
+            
+            <!-- Allow image to dictate height (h-auto) -->
+            <img loading="lazy" decoding="async" src="${mainImg}" alt="${p.name}" width="400" onerror="this.src='https://placehold.co/400x500/F8E9EA/423133';" class="w-full h-auto object-cover opacity-0 transition-all duration-700 pointer-events-none group-hover:scale-105" onload="this.classList.remove('opacity-0')">
+            
+            <!-- Elegant Cart overlay button on hover -->
+            <div class="absolute bottom-3 right-3 z-10 translate-y-10 opacity-0 group-hover:translate-y-0 group-hover:opacity-100 transition-all duration-300">
+                <button class="bg-white/95 text-luxury-rose hover:text-white hover:bg-luxury-rose w-10 h-10 rounded-full shadow-lg border border-luxury-rose/30 flex items-center justify-center transition-colors">
+                    <i class="fas fa-shopping-bag text-sm"></i>
+                </button>
+            </div>
         </div>
-        <div class="px-1 flex flex-col justify-start text-left w-full">
-            <h3 class="font-bitter font-semibold text-[11px] sm:text-[12px] text-luxury-dark leading-snug w-full transition-colors group-hover:text-luxury-rose mb-0.5 line-clamp-2">${p.name}</h3>
-            <div class="flex items-center md:items-baseline gap-1.5 flex-wrap w-full">
-                <span class="font-poppins font-extrabold text-luxury-dark text-[14px] sm:text-[15px] tracking-tight leading-none">₹${cleanPrice}</span>
-                <span class="font-poppins text-gray-400 text-[9px] font-medium line-through leading-none">₹${originalPrice}</span>
+        
+        <!-- Text Details -->
+        <div class="pt-3 pb-1 px-2 flex flex-col justify-start text-left w-full">
+            <h3 class="font-sans font-semibold text-[12px] sm:text-[13px] text-luxury-dark leading-snug w-full transition-colors group-hover:text-luxury-rose mb-1 line-clamp-2">${p.name}</h3>
+            <div class="flex items-center gap-2 flex-wrap w-full">
+                <span class="font-poppins font-bold text-luxury-dark text-[15px] sm:text-[17px] tracking-tight leading-none">₹${cleanPrice}</span>
+                <span class="font-poppins text-luxury-rose/60 text-[10px] font-medium line-through leading-none">₹${originalPrice}</span>
             </div>
         </div>`;
     return card;

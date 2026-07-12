@@ -12,11 +12,13 @@ module.exports = {
           rose: '#DFA8B0',
         }
       },
+      // Inside tailwind.config.js theme.extend
       fontFamily: {
         logo: ['"Marcellus"', 'serif'],
         bitter: ['"Bitter"', 'serif'],
         poppins: ['"Poppins"', 'sans-serif'],
-        sans: ['"Montserrat"', 'sans-serif'], // Default body font
+        sans: ['"Montserrat"', 'sans-serif'],
+        cursive: ['"Caveat"', 'cursive'], // 🎀 Added for the girly aesthetic
       },
       animation: {
         marquee: 'marquee 25s linear infinite',
