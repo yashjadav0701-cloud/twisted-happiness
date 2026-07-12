@@ -24,7 +24,8 @@
     <!-- Styles -->
     <link href="./output.css" rel="stylesheet">
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet" media="print" onload="this.media='all'">
-    <link href="https://fonts.googleapis.com/css2?family=Marcellus&family=Bitter:ital,wght@0,400;0,500;0,600;1,400&family=Poppins:wght@500;600;700;800&family=Montserrat:wght@300;400;500;600&display=swap" rel="stylesheet">
+    <!-- Note: Caveat font is loaded here for the new girly aesthetic -->
+    <link href="https://fonts.googleapis.com/css2?family=Caveat:wght@500;600;700&family=Marcellus&family=Bitter:ital,wght@0,400;0,500;0,600;1,400&family=Poppins:wght@500;600;700;800&family=Montserrat:wght@300;400;500;600&display=swap" rel="stylesheet">
 
     <!-- Deferred Scripts to prevent render blocking -->
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2" defer></script>
@@ -141,14 +142,11 @@
                 </div>
             </aside>
 
-            <!-- Product Grid -->
+            <!-- 🚨 PRODUCT GRID (Now a Flex container for JS Masonry) 🚨 -->
             <div class="flex-grow w-full min-w-0 pb-12 sm:pb-20">
-                <!-- Product Grid (Pinterest Waterfall Layout) -->
-            <div class="flex-grow w-full min-w-0 pb-12 sm:pb-20">
-                <div id="product-grid" class="columns-2 sm:columns-3 md:columns-4 lg:columns-5 xl:columns-6 gap-3 sm:gap-4 lg:gap-5 px-3 w-full">
-                    <!-- Products rendered via JS -->
+                <div id="product-grid" class="flex items-start justify-center gap-3 sm:gap-4 lg:gap-5 px-3 w-full">
+                    <!-- Masonry columns rendered via JS -->
                 </div>
-            </div>
             </div>
         </section>
         
@@ -174,7 +172,7 @@
             
             <!-- LEFT: IMAGE GALLERY -->
             <div class="w-full md:w-[310px] shrink-0 flex flex-col md:sticky md:top-[100px] z-10 mx-auto md:mx-0">
-                <div class="relative w-full h-[350px] bg-luxury-bg border border-luxury-blush rounded-2xl cursor-zoom-in shadow-sm overflow-hidden flex items-center justify-center group">
+                <div class="relative w-full h-[350px] bg-luxury-bg border border-luxury-blush rounded-3xl cursor-zoom-in shadow-sm overflow-hidden flex items-center justify-center group">
                     <button id="btn-slide-prev" class="absolute left-3 top-1/2 -translate-y-1/2 z-20 bg-white/95 shadow-sm text-luxury-dark hover:text-luxury-rose w-10 h-10 rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-300" aria-label="Previous Image"><i class="fas fa-chevron-left text-sm"></i></button>
                     <div id="modal-carousel-track" class="flex w-full h-full relative touch-pan-y"></div>
                     <button id="btn-slide-next" class="absolute right-3 top-1/2 -translate-y-1/2 z-20 bg-white/95 shadow-sm text-luxury-dark hover:text-luxury-rose w-10 h-10 rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-300" aria-label="Next Image"><i class="fas fa-chevron-right text-sm"></i></button>
@@ -229,7 +227,7 @@
                 </div>
                 
                 <!-- Accordions -->
-                <div class="divide-y border-t border-b border-luxury-blush w-full mt-8 bg-luxury-bg rounded-xl px-4">
+                <div class="divide-y border-t border-b border-luxury-blush w-full mt-8 bg-luxury-bg rounded-2xl px-4">
                     <details class="group" open>
                         <summary class="flex justify-between items-center font-bold text-[11px] sm:text-[12px] uppercase tracking-[0.15em] cursor-pointer list-none py-5 text-luxury-dark hover:text-luxury-rose transition focus:outline-none min-h-[44px]">
                             <span class="flex items-center gap-2"><i class="fas fa-info-circle text-luxury-rose"></i> The Details</span>
@@ -243,7 +241,7 @@
                             <span class="flex items-center gap-2"><i class="fas fa-leaf text-luxury-rose"></i> Care Guide</span>
                             <span class="transition-transform duration-300 group-open:rotate-180 text-gray-400"><i class="fas fa-chevron-down"></i></span>
                         </summary>
-                        <div class="text-[13px] text-luxury-dark/80 pb-6 animate-fade-in font-medium bg-white p-4 rounded-lg border border-luxury-blush mt-1">
+                        <div class="text-[13px] text-luxury-dark/80 pb-6 animate-fade-in font-medium bg-white p-4 rounded-xl border border-luxury-blush mt-1">
                             <ul id="modal-care-guide" class="space-y-2 list-disc ml-4 marker:text-luxury-rose"></ul>
                         </div>
                     </details>
@@ -255,7 +253,8 @@
         <section class="w-full border-t border-luxury-blush bg-luxury-bg pt-12 pb-20 mt-10">
             <div class="max-w-[1600px] mx-auto px-4 sm:px-8">
                 <h3 class="font-logo text-3xl text-luxury-dark mb-8 border-b border-luxury-rose/30 pb-3 inline-block">Curated For You</h3>
-                <div id="related-products-grid" class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-3 sm:gap-4 md:gap-[18px] lg:gap-5 px-3 w-full"></div>
+                <!-- 🚨 RELATED GRID (Flex Container for Masonry) 🚨 -->
+                <div id="related-products-grid" class="flex items-start justify-center gap-3 sm:gap-4 lg:gap-5 px-3 w-full"></div>
             </div>
         </section>
     </article>
@@ -295,7 +294,7 @@
                     <span id="cart-final-total" class="text-luxury-dark font-extrabold font-poppins text-2xl tracking-tight">₹0</span>
                 </div>
             </div>
-            <button id="btn-cart-checkout" class="bg-luxury-dark text-white hover:bg-luxury-gold w-full py-4 rounded-xl font-bold text-[10px] uppercase flex items-center justify-center gap-2 tracking-[0.1em] shadow-md transition-colors">Proceed to Checkout <i class="fas fa-lock text-[10px]"></i></button>
+            <button id="btn-cart-checkout" class="bg-luxury-dark text-white hover:bg-luxury-gold w-full py-4 rounded-2xl font-bold text-[10px] uppercase flex items-center justify-center gap-2 tracking-[0.1em] shadow-md transition-colors">Proceed to Checkout <i class="fas fa-lock text-[10px]"></i></button>
             <button id="btn-show-offers" class="w-full text-center text-luxury-rose text-[8px] font-bold uppercase tracking-widest mt-4 hover:text-luxury-gold transition-colors min-h-[44px]">🎀 View VIP Offers</button>
         </footer>
     </aside>
@@ -368,7 +367,7 @@
             <h2 class="font-logo font-normal text-2xl text-center text-luxury-dark mb-5">Order Details</h2>
             
             <form id="commission-form" class="space-y-4 font-sans" onsubmit="event.preventDefault();">
-                <div class="bg-white border border-luxury-blush p-3 rounded-xl shadow-sm text-[10px] text-gray-500 flex justify-between items-center">
+                <div class="bg-white border border-luxury-blush p-3 rounded-2xl shadow-sm text-[10px] text-gray-500 flex justify-between items-center">
                     <span>Delivering to: <strong class="text-luxury-dark" id="summary-name"></strong></span>
                     <button type="button" id="btn-edit-profile" class="text-luxury-rose font-bold uppercase tracking-wider p-2"><i class="fas fa-pen"></i> Edit</button>
                 </div>
@@ -389,7 +388,7 @@
                     <label for="comm-colors" class="block text-[8px] font-bold text-gray-500 uppercase tracking-[0.1em] mb-1 pl-1">Custom Notes / Inspiration</label>
                     <textarea id="comm-colors" placeholder="Any specific colors or customizations?" class="w-full px-3.5 py-2.5 bg-white border border-luxury-blush rounded-xl outline-none text-[11px] font-medium text-luxury-dark h-20 resize-none focus:ring-2 focus:ring-luxury-rose/30 focus:border-luxury-rose"></textarea>
                 </div>
-                <!-- WhatsApp button changed to generic Order Placement -->
+                
                 <button type="submit" id="final-checkout-btn" class="bg-luxury-dark text-white hover:bg-luxury-gold w-full mt-6 py-4 rounded-xl font-bold text-[10px] uppercase flex items-center justify-center gap-2 tracking-[0.15em] shadow-md transition-colors">Place Order & Pay <i class="fas fa-lock text-xs"></i></button>
             </form>
         </div>
@@ -399,7 +398,6 @@
     <div id="payment-modal" role="dialog" aria-modal="true" class="hidden transition-opacity duration-200 opacity-0 fixed inset-0 bg-luxury-dark/90 p-4 flex items-center justify-center z-[1100]">
         <div class="transform scale-95 translate-y-2 transition-all duration-300 bg-white rounded-3xl w-full max-w-sm p-8 shadow-2xl relative border border-luxury-rose flex flex-col items-center overflow-hidden" id="payment-box">
             
-            <!-- Close Button -->
             <button id="btn-close-payment" class="absolute top-4 right-4 text-gray-400 min-w-[44px] min-h-[44px] bg-luxury-bg rounded-full flex items-center justify-center border border-luxury-blush hover:text-luxury-dark" aria-label="Close"><i class="fas fa-times text-xs"></i></button>
             
             <!-- STEP 1: PAYMENT INSTRUCTIONS -->
@@ -415,9 +413,9 @@
 
                 <!-- Desktop QR Code -->
                 <div id="payment-qr-container" class="hidden flex-col items-center w-full">
-                    <div class="p-3 bg-white border-2 border-luxury-blush rounded-2xl shadow-sm mb-3 relative group">
-                        <img id="payment-qr-img" src="" alt="UPI QR Code" class="w-48 h-48 object-contain">
-                        <div class="absolute inset-0 bg-white/50 backdrop-blur-[2px] hidden items-center justify-center group-hover:flex transition-all">
+                    <div class="p-3 bg-white border-2 border-luxury-blush rounded-3xl shadow-sm mb-3 relative group">
+                        <img id="payment-qr-img" src="" alt="UPI QR Code" class="w-48 h-48 object-contain rounded-xl">
+                        <div class="absolute inset-0 bg-white/50 backdrop-blur-[2px] hidden items-center justify-center group-hover:flex transition-all rounded-3xl">
                             <span class="bg-luxury-dark text-white text-[9px] font-bold uppercase tracking-widest px-3 py-1.5 rounded-full shadow-md">Scan to Pay</span>
                         </div>
                     </div>
@@ -438,7 +436,7 @@
                 </div>
             </div>
 
-            <!-- STEP 2: SUCCESS CONFIRMATION (Hidden by default) -->
+            <!-- STEP 2: SUCCESS CONFIRMATION -->
             <div id="payment-step-2" class="w-full hidden flex-col items-center animate-fade-in py-4">
                 <div class="w-20 h-20 bg-green-100 rounded-full flex items-center justify-center mb-5 border-4 border-white shadow-md">
                     <i class="fas fa-check text-green-600 text-3xl"></i>
