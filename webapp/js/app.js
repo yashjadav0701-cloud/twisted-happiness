@@ -339,73 +339,173 @@ function saveProfileAndContinue() { shiprocketProfile.first_name = document.getE
 function showCommissionModal() { const modal = document.getElementById('commission-modal'); const box = document.getElementById('commission-box'); modal.classList.remove('hidden'); document.body.classList.add('overflow-hidden'); requestAnimationFrame(() => { modal.classList.remove('opacity-0'); box.classList.remove('modal-closed'); box.classList.add('modal-open-state'); }); document.getElementById('summary-name').textContent = `${shiprocketProfile.first_name} ${shiprocketProfile.last_name}`.trim(); document.getElementById('comm-type').value = 'Standard Order (No Framing)'; document.getElementById('comm-colors').value = ''; document.getElementById('comm-dimensions').value = ''; let hasCustomizable = false; if (currentCommissionContext === 'single' && singleProductToCommission) { hasCustomizable = singleProductToCommission.isCustomizable; } else { hasCustomizable = cart.some(item => item.isCustomizable); } const dimWrapper = document.getElementById('comm-dimensions-wrapper'); if (hasCustomizable) { dimWrapper.classList.remove('hidden'); } else { dimWrapper.classList.add('hidden'); } }
 
 // 🚨 Automated Payment Processing Logic
-async function submitCommission() {
-    const type = document.getElementById('comm-type').value; const colors = document.getElementById('comm-colors').value.trim() || 'No notes'; const dims = document.getElementById('comm-dimensions').value.trim();
-    const btn = document.getElementById('final-checkout-btn'); 
-    btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Preparing...'; btn.disabled = true;
+// --- Global variable to hold order data during payment ---
+let pendingOrderPayload = null; 
+let currentOrderReference = null;
 
-    let orderDetailsText = ""; let trueSubtotal = 0; let sellingSubtotal = 0; let totalPrepTime = ""; let itemsToSave = [];
+// 🚨 1. Initiate Checkout and Show Payment UI
+async function submitCommission() {
+    const type = document.getElementById('comm-type').value; 
+    const colors = document.getElementById('comm-colors').value.trim() || 'No notes'; 
+    const dims = document.getElementById('comm-dimensions').value.trim();
+    
+    const btn = document.getElementById('final-checkout-btn'); 
+    btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Preparing Secure Gateway...'; 
+    btn.disabled = true;
+
+    let trueSubtotal = 0; let sellingSubtotal = 0; let totalPrepTime = ""; let itemsToSave = [];
 
     if(currentCommissionContext === 'single' && singleProductToCommission) {
-        const cleanPrice = Number(singleProductToCommission.price.toString().replace(/[^0-9.,]/g, '')); const discountPercent = getDiscountPercent(singleProductToCommission.id.toString()); const originalPrice = Math.round(cleanPrice * (1 + (discountPercent / 100)));
-        trueSubtotal = originalPrice; sellingSubtotal = cleanPrice; orderDetailsText = `1x ${singleProductToCommission.name}\n`; totalPrepTime = calculateTotalPrepTime([{...singleProductToCommission, qty: 1}]); itemsToSave = [{ id: singleProductToCommission.id, name: singleProductToCommission.name, price: cleanPrice, qty: 1, image: singleProductToCommission.image1 }];
+        const cleanPrice = Number(singleProductToCommission.price.toString().replace(/[^0-9.,]/g, '')); 
+        const discountPercent = getDiscountPercent(singleProductToCommission.id.toString()); 
+        const originalPrice = Math.round(cleanPrice * (1 + (discountPercent / 100)));
+        trueSubtotal = originalPrice; sellingSubtotal = cleanPrice; 
+        totalPrepTime = calculateTotalPrepTime([{...singleProductToCommission, qty: 1}]); 
+        itemsToSave = [{ id: singleProductToCommission.id, name: singleProductToCommission.name, price: cleanPrice, qty: 1, image: singleProductToCommission.image1 }];
     } else {
         cart.forEach((item) => { 
-            const cleanPrice = Number(item.price.toString().replace(/[^0-9.,]/g, '')); const qty = parseInt(item.qty || 1); const discountPercent = getDiscountPercent(item.id.toString()); const originalPrice = Math.round(cleanPrice * (1 + (discountPercent / 100)));
-            trueSubtotal += (originalPrice * qty); sellingSubtotal += (cleanPrice * qty); orderDetailsText += `${qty}x ${item.name}\n`; itemsToSave.push({ id: item.id, name: item.name, price: cleanPrice, qty: qty, image: item.image });
+            const cleanPrice = Number(item.price.toString().replace(/[^0-9.,]/g, '')); 
+            const qty = parseInt(item.qty || 1); 
+            const discountPercent = getDiscountPercent(item.id.toString()); 
+            const originalPrice = Math.round(cleanPrice * (1 + (discountPercent / 100)));
+            trueSubtotal += (originalPrice * qty); sellingSubtotal += (cleanPrice * qty); 
+            itemsToSave.push({ id: item.id, name: item.name, price: cleanPrice, qty: qty, image: item.image });
         });
         totalPrepTime = calculateTotalPrepTime(cart);
     }
     
-    const { discount: vipDiscount } = calculateCartDiscount(sellingSubtotal); const finalTotal = sellingSubtotal - vipDiscount; 
-    const safeCountryCode = (settings.countryCode || '+91'); const fullContactPhone = safeCountryCode + " " + shiprocketProfile.phone;
+    const { discount: vipDiscount } = calculateCartDiscount(sellingSubtotal); 
+    const finalTotal = sellingSubtotal - vipDiscount; 
+    const safeCountryCode = (settings.countryCode || '+91'); 
+    const fullContactPhone = safeCountryCode + " " + shiprocketProfile.phone;
 
     let fullAddress = `${shiprocketProfile.address_1}, ${shiprocketProfile.address_2 ? shiprocketProfile.address_2 + ', ' : ''}${shiprocketProfile.city}, ${shiprocketProfile.state} - ${shiprocketProfile.pincode}`;
     let artDetails = `Phone: ${fullContactPhone} | Patron: ${shiprocketProfile.first_name} ${shiprocketProfile.last_name} | Email: ${shiprocketProfile.email} | Address: ${fullAddress} | Purpose: ${type} | Notes: ${colors}`;
-    if(dims && !document.getElementById('comm-dimensions-wrapper').classList.contains('hidden')) { artDetails += ` | Size: ${dims}`; } artDetails += ` | Est. Prep: ${totalPrepTime}`; 
+    if(dims && !document.getElementById('comm-dimensions-wrapper').classList.contains('hidden')) { artDetails += ` | Size: ${dims}`; } 
+    artDetails += ` | Est. Prep: ${totalPrepTime}`; 
 
-    // Insert order to database
-    const { error } = await _supabase.from('orders').insert([{ order_details: JSON.stringify(itemsToSave), subtotal: sellingSubtotal, discount: vipDiscount, total: finalTotal, customer_reqs: artDetails, status: 'pending' }]);
+    // Store payload in memory instead of sending immediately
+    pendingOrderPayload = { 
+        order_details: JSON.stringify(itemsToSave), 
+        subtotal: sellingSubtotal, 
+        discount: vipDiscount, 
+        total: finalTotal, 
+        customer_reqs: artDetails, 
+        status: 'pending' 
+    };
     
-    if (error) {
-        showToast("Error securing order.", "fa-times", "text-red-500");
-        btn.innerHTML = 'Place Order & Pay <i class="fas fa-lock text-xs"></i>'; btn.disabled = false;
-        return;
-    }
+    // Generate UPI Link and Details
+    const formattedTotal = Number(finalTotal).toFixed(2); 
+    const cleanUpiId = (settings.upiId || "khushisj315@oksbi").trim();
+    const cleanNameForNote = shiprocketProfile.first_name.replace(/[^a-zA-Z0-9]/g, '').substring(0, 10); 
+    currentOrderReference = `TH_${cleanNameForNote}_${String(Date.now()).slice(-4)}`; 
+    const upiLink = `upi://pay?pa=${cleanUpiId}&pn=Twisted_Happiness&am=${formattedTotal}&cu=INR&tn=${currentOrderReference}`;
     
-    // Payment Setup
-    const formattedTotal = Number(finalTotal).toFixed(2); const cleanUpiId = (settings.upiId || "khushisj315@oksbi").trim();
-    const cleanNameForNote = shiprocketProfile.first_name.replace(/[^a-zA-Z0-9]/g, '').substring(0, 10); const safeNote = `TH_${cleanNameForNote}_${String(Date.now()).slice(-4)}`; 
-    const upiLink = `upi://pay?pa=${cleanUpiId}&pn=Twisted_Happiness&am=${formattedTotal}&cu=INR&tn=${safeNote}`;
-    
-    btn.innerHTML = 'Place Order & Pay <i class="fas fa-lock text-xs"></i>'; btn.disabled = false; 
+    // Reset Commission Button
+    btn.innerHTML = 'Place Order & Pay <i class="fas fa-lock text-xs"></i>'; 
+    btn.disabled = false; 
     forceCloseCommissionForm();
     
-    // Launch Payment UI
+    // Setup and Show Payment Modal
     setTimeout(() => {
         document.getElementById('payment-amount').textContent = `₹${formattedTotal}`;
-        document.getElementById('payment-ref-note').textContent = safeNote;
         
+        // Ensure Step 1 is visible, Step 2 is hidden
+        document.getElementById('payment-step-1').classList.remove('hidden');
+        document.getElementById('payment-step-1').classList.add('flex');
+        document.getElementById('payment-step-2').classList.add('hidden');
+        document.getElementById('payment-step-2').classList.remove('flex');
+        
+        // Reset verify button state
+        const verifyBtn = document.getElementById('btn-confirm-payment');
+        verifyBtn.innerHTML = 'I Have Completed Payment <i class="fas fa-check-circle"></i>';
+        verifyBtn.disabled = false;
+
+        // Device logic for QR vs Deep Link
         if (isMobileDevice()) {
             document.getElementById('payment-mobile-btn').href = upiLink;
             document.getElementById('payment-mobile-container').classList.remove('hidden');
             document.getElementById('payment-mobile-container').classList.add('flex');
             document.getElementById('payment-qr-container').classList.add('hidden');
+            document.getElementById('payment-qr-container').classList.remove('flex');
         } else {
-            const qrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=250x250&data=${encodeURIComponent(upiLink)}`;
+            const qrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=250x250&data=${encodeURIComponent(upiLink)}&margin=10`;
             document.getElementById('payment-qr-img').src = qrUrl;
             document.getElementById('payment-qr-container').classList.remove('hidden');
             document.getElementById('payment-qr-container').classList.add('flex');
             document.getElementById('payment-mobile-container').classList.add('hidden');
+            document.getElementById('payment-mobile-container').classList.remove('flex');
         }
 
-        const pModal = document.getElementById('payment-modal'); const pBox = document.getElementById('payment-box');
-        pModal.classList.remove('hidden'); document.body.classList.add('overflow-hidden'); 
-        requestAnimationFrame(() => { pModal.classList.remove('opacity-0'); pBox.classList.remove('modal-closed'); pBox.classList.add('modal-open-state'); });
+        // Open Payment Modal
+        const pModal = document.getElementById('payment-modal'); 
+        const pBox = document.getElementById('payment-box');
+        pModal.classList.remove('hidden'); 
+        document.body.classList.add('overflow-hidden'); 
         
-        // Empty the cart
-        if(currentCommissionContext === 'cart') { cart = []; localStorage.setItem('th_cart', JSON.stringify(cart)); updateCartCount(); }
+        requestAnimationFrame(() => { 
+            pModal.classList.remove('opacity-0'); 
+            pBox.classList.remove('modal-closed'); 
+            pBox.classList.add('modal-open-state'); 
+        });
     }, 300);
+}
+
+// 🚨 2. Execute Order After User Clicks "I Have Completed Payment"
+async function confirmPaymentAndOrder() {
+    if(!pendingOrderPayload) return;
+    
+    const btn = document.getElementById('btn-confirm-payment');
+    btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Securing Order...';
+    btn.disabled = true;
+
+    // Push the order to the database
+    const { error } = await _supabase.from('orders').insert([pendingOrderPayload]);
+    
+    if (error) {
+        console.error("Order insertion error:", error);
+        showToast("Network error. Please try again.", "fa-times", "text-red-500");
+        btn.innerHTML = 'I Have Completed Payment <i class="fas fa-check-circle"></i>';
+        btn.disabled = false;
+        return;
+    }
+
+    // Success! Transition to Step 2 UI
+    document.getElementById('payment-step-1').classList.add('hidden');
+    document.getElementById('payment-step-1').classList.remove('flex');
+    
+    document.getElementById('success-ref-note').textContent = currentOrderReference;
+    document.getElementById('payment-step-2').classList.remove('hidden');
+    document.getElementById('payment-step-2').classList.add('flex');
+
+    // Empty the bag
+    if(currentCommissionContext === 'cart') { 
+        cart = []; 
+        localStorage.setItem('th_cart', JSON.stringify(cart)); 
+        updateCartCount(); 
+    }
+}
+
+// Bind the new buttons inside bindDOMEvents() context (or attach globally)
+document.addEventListener('DOMContentLoaded', () => {
+    // Add these event listeners after your existing ones
+    document.getElementById('btn-confirm-payment')?.addEventListener('click', confirmPaymentAndOrder);
+    document.getElementById('btn-return-gallery')?.addEventListener('click', () => { forceClosePaymentModal(); safeBack(); });
+});
+
+function forceClosePaymentModal() { 
+    const modal = document.getElementById('payment-modal'); 
+    const box = document.getElementById('payment-box'); 
+    requestAnimationFrame(() => { 
+        modal.classList.add('opacity-0'); 
+        box.classList.remove('modal-open-state'); 
+        box.classList.add('modal-closed'); 
+        setTimeout(() => { 
+            modal.classList.add('hidden'); 
+            document.body.classList.remove('overflow-hidden'); 
+            pendingOrderPayload = null; // Clear memory
+        }, 300); 
+    }); 
 }
 
 function showToast(msg, icon = 'fa-check', color = 'text-luxury-rose') { const t = document.getElementById('toast'); document.getElementById('toast-msg').textContent = msg; document.getElementById('toast-icon').className = `fas ${icon} ${color} text-sm drop-shadow-sm`; requestAnimationFrame(() => { t.classList.remove('opacity-0', 'translate-y-10'); setTimeout(() => t.classList.add('opacity-0', 'translate-y-10'), 3000); }); }

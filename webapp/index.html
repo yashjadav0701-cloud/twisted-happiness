@@ -392,41 +392,67 @@
         </div>
     </div>
 
-    <!-- 🚨 NEW: UPI PAYMENT MODAL 🚨 -->
-    <div id="payment-modal" role="dialog" aria-modal="true" class="hidden transition-opacity duration-200 opacity-0 fixed inset-0 bg-luxury-dark/80 p-4 flex items-center justify-center z-[1100]">
-        <div class="transform scale-95 translate-y-2 transition-all duration-300 bg-white rounded-3xl w-full max-w-sm p-8 shadow-2xl relative border border-luxury-rose flex flex-col items-center" id="payment-box">
+    <!-- 🚨 SECURE ON-SITE PAYMENT MODAL 🚨 -->
+    <div id="payment-modal" role="dialog" aria-modal="true" class="hidden transition-opacity duration-200 opacity-0 fixed inset-0 bg-luxury-dark/90 p-4 flex items-center justify-center z-[1100]">
+        <div class="transform scale-95 translate-y-2 transition-all duration-300 bg-white rounded-3xl w-full max-w-sm p-8 shadow-2xl relative border border-luxury-rose flex flex-col items-center overflow-hidden" id="payment-box">
+            
+            <!-- Close Button -->
             <button id="btn-close-payment" class="absolute top-4 right-4 text-gray-400 min-w-[44px] min-h-[44px] bg-luxury-bg rounded-full flex items-center justify-center border border-luxury-blush hover:text-luxury-dark" aria-label="Close"><i class="fas fa-times text-xs"></i></button>
             
-            <div class="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mb-4 border-4 border-white shadow-sm">
-                <i class="fas fa-check text-green-500 text-2xl"></i>
-            </div>
-            
-            <h2 class="font-logo font-normal text-2xl text-center text-luxury-dark mb-2">Order Reserved!</h2>
-            <p class="text-[11px] text-gray-500 text-center font-sans font-medium mb-6 leading-relaxed">
-                Your creation is temporarily reserved. Complete the secure payment of <span class="font-poppins font-bold text-luxury-dark" id="payment-amount">₹0</span> to permanently secure your order and begin curation.
-            </p>
-
-            <!-- Desktop QR Code -->
-            <div id="payment-qr-container" class="hidden flex-col items-center w-full">
-                <div class="p-3 bg-white border-2 border-luxury-blush rounded-2xl shadow-sm mb-3">
-                    <img id="payment-qr-img" src="" alt="UPI QR Code" class="w-48 h-48 object-contain">
+            <!-- STEP 1: PAYMENT INSTRUCTIONS -->
+            <div id="payment-step-1" class="w-full flex flex-col items-center animate-fade-in">
+                <div class="w-16 h-16 bg-luxury-blush rounded-full flex items-center justify-center mb-4 border-4 border-white shadow-sm">
+                    <i class="fas fa-qrcode text-luxury-rose text-2xl"></i>
                 </div>
-                <p class="text-[9px] font-bold text-luxury-rose uppercase tracking-widest text-center">Scan with any UPI App</p>
-            </div>
-
-            <!-- Mobile UPI Button -->
-            <div id="payment-mobile-container" class="hidden w-full">
-                <a id="payment-mobile-btn" href="#" class="w-full bg-luxury-dark text-white hover:bg-luxury-gold py-4 rounded-xl font-bold text-[11px] uppercase flex items-center justify-center gap-2 tracking-[0.1em] shadow-md transition-colors">
-                    Pay with UPI App <i class="fas fa-mobile-alt"></i>
-                </a>
-            </div>
-
-            <div class="mt-6 text-center border-t border-luxury-blush pt-4 w-full">
-                <p class="text-[10px] text-gray-400 font-sans">
-                    Ref: <span id="payment-ref-note" class="font-poppins font-bold text-luxury-dark"></span>
+                
+                <h2 class="font-logo font-normal text-2xl text-center text-luxury-dark mb-2">Secure Your Order</h2>
+                <p class="text-[11px] text-gray-500 text-center font-sans font-medium mb-6 leading-relaxed">
+                    Complete the secure payment of <span class="font-poppins font-bold text-luxury-dark text-[13px]" id="payment-amount">₹0</span> to permanently secure your order and begin curation.
                 </p>
-                <p class="text-[8px] text-gray-400 uppercase tracking-widest mt-2">Our artisan will verify payment shortly.</p>
+
+                <!-- Desktop QR Code -->
+                <div id="payment-qr-container" class="hidden flex-col items-center w-full">
+                    <div class="p-3 bg-white border-2 border-luxury-blush rounded-2xl shadow-sm mb-3 relative group">
+                        <img id="payment-qr-img" src="" alt="UPI QR Code" class="w-48 h-48 object-contain">
+                        <div class="absolute inset-0 bg-white/50 backdrop-blur-[2px] hidden items-center justify-center group-hover:flex transition-all">
+                            <span class="bg-luxury-dark text-white text-[9px] font-bold uppercase tracking-widest px-3 py-1.5 rounded-full shadow-md">Scan to Pay</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Mobile UPI Button -->
+                <div id="payment-mobile-container" class="hidden w-full mb-2">
+                    <a id="payment-mobile-btn" href="#" target="_blank" class="w-full bg-luxury-dark text-white hover:bg-luxury-gold py-4 rounded-xl font-bold text-[11px] uppercase flex items-center justify-center gap-2 tracking-[0.1em] shadow-md transition-colors">
+                        Pay with UPI App <i class="fas fa-mobile-alt"></i>
+                    </a>
+                </div>
+
+                <div class="w-full border-t border-luxury-blush pt-5 mt-4">
+                    <button id="btn-confirm-payment" class="w-full bg-green-600 text-white hover:bg-green-700 py-4 rounded-xl font-bold text-[10px] uppercase flex items-center justify-center gap-2 tracking-[0.15em] shadow-md transition-colors">
+                        I Have Completed Payment <i class="fas fa-check-circle"></i>
+                    </button>
+                    <p class="text-[8px] text-center text-gray-400 uppercase tracking-widest mt-3">Do not click until payment is successful from your bank.</p>
+                </div>
             </div>
+
+            <!-- STEP 2: SUCCESS CONFIRMATION (Hidden by default) -->
+            <div id="payment-step-2" class="w-full hidden flex-col items-center animate-fade-in py-4">
+                <div class="w-20 h-20 bg-green-100 rounded-full flex items-center justify-center mb-5 border-4 border-white shadow-md">
+                    <i class="fas fa-check text-green-600 text-3xl"></i>
+                </div>
+                <h2 class="font-logo font-normal text-3xl text-center text-luxury-dark mb-3">Order Confirmed!</h2>
+                <p class="text-[12px] text-gray-500 text-center font-sans font-medium mb-6 leading-relaxed">
+                    Your request has been securely routed to our studio. Our artisan will verify your payment shortly and begin crafting your masterpiece.
+                </p>
+                <div class="w-full bg-luxury-bg border border-luxury-blush rounded-xl p-4 mb-6 text-center">
+                    <span class="block text-[8px] font-bold text-gray-400 uppercase tracking-widest mb-1">Order Reference</span>
+                    <span id="success-ref-note" class="font-poppins font-extrabold text-luxury-dark text-lg tracking-wider"></span>
+                </div>
+                <button id="btn-return-gallery" class="w-full border border-luxury-rose text-luxury-dark hover:bg-luxury-rose hover:text-white py-3.5 rounded-full font-bold text-[9px] uppercase tracking-[0.15em] transition-colors">
+                    Return to Gallery
+                </button>
+            </div>
+
         </div>
     </div>
 

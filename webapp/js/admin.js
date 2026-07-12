@@ -315,22 +315,33 @@ async function markOrderReady(id) { showToast("Updating status...", "fa-spinner 
 async function markOrderDelivered(id) { showToast("Archiving commission...", "fa-spinner fa-spin"); try { await _supabase.from('orders').update({ status: 'completed' }).eq('id', id); showToast("Commission Archived", "fa-check"); fetchOrders(); } catch(e) { showToast("Error", "fa-times", "text-red-500"); } }
 
 async function rejectOrder(id) { 
-    const order = allOrders.find(o => o.id === id); if(!order) return;
-    if(!confirm("Deny this order? The customer will receive a WhatsApp message stating their payment was not received.")) return; 
+    const order = allOrders.find(o => o.id === id); 
+    if(!order) return;
+    
+    if(!confirm("Deny this order? The customer will receive a WhatsApp message stating their transaction failed.")) return; 
+    
     showToast("Declining...", "fa-spinner fa-spin"); 
     
     try { 
+        // 1. Delete the order from the database
         await _supabase.from('orders').delete().eq('id', id); 
         showToast("Commission Denied & Deleted", "fa-trash"); 
-        fetchOrders(); 
+        fetchOrders(); // Refresh the admin UI
         
+        // 2. Extract the customer's phone number
         const customerData = extractCustomerData(order.customer_reqs);
         if (customerData.phone) {
             let cleanPhone = customerData.phone.replace(/\D/g, ''); 
-            const denyMsg = `✨ Dear ${customerData.name},\n\nWe noticed an order was placed at *Twisted Happiness*, but we haven't received the corresponding UPI payment.\n\nAs a result, your order has been currently cancelled. If this is a mistake or you faced payment issues, please reply to this message and we will assist you immediately! 🕊️`;
+            
+            // 3. Draft the Premium "Transaction Failed" Message
+            const denyMsg = `✨ Dear ${customerData.name},\n\nWe are reaching out regarding your recent order attempt at *Twisted Happiness*.\n\nUnfortunately, it looks like your UPI transaction failed or the payment was not successfully received by our studio. As a result, your order reservation has been cancelled.\n\nIf the amount was deducted from your account, it will automatically be refunded by your bank within 2-3 business days.\n\nIf you would still like to secure your handcrafted piece, please reply to this message and we will gladly assist you! 🕊️`;
+            
+            // 4. Redirect Admin to WhatsApp Web/App to send the message
             window.open(`https://wa.me/${cleanPhone}?text=${encodeURIComponent(denyMsg)}`, '_blank');
         }
-    } catch(e) { showToast("Error", "fa-times", "text-red-500"); } 
+    } catch(e) { 
+        showToast("Error", "fa-times", "text-red-500"); 
+    } 
 }
 
 async function pushToShiprocket(orderId, event) {
