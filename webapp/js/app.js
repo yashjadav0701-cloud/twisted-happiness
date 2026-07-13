@@ -165,7 +165,7 @@ function safeBack() { if (statePushed) { try { history.back(); } catch(e) {} sta
 function isMobileDevice() { return /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent); }
 
 function setupSocialLinks() {
-    // Strip non-digits from whatsapp and country code to guarantee a clean API link
+    // Force numbers only for safety
     const phone = (settings.whatsapp || "9909310501").replace(/\D/g, '');
     const code = (settings.countryCode || "91").replace(/\D/g, '');
     
@@ -177,9 +177,16 @@ function setupSocialLinks() {
     const igLink = document.getElementById('footer-instagram');
     if(igLink) {
         if (settings.instagram && settings.instagram.trim() !== "") {
-            igLink.href = settings.instagram.trim();
+            // Ensure http/https exists so browser treats it as absolute url
+            let cleanIg = settings.instagram.trim();
+            if (!cleanIg.startsWith('http://') && !cleanIg.startsWith('https://')) {
+                cleanIg = 'https://' + cleanIg;
+            }
+            igLink.href = cleanIg;
+            igLink.style.display = 'flex'; // make sure it's visible
         } else {
-            igLink.href = "https://instagram.com"; // Fallback URL
+            // If they haven't set an Instagram, hide the button so they don't jump to nowhere
+            igLink.style.display = 'none';
         }
     }
 }
@@ -496,7 +503,6 @@ async function submitCommission() {
             document.getElementById('payment-qr-container').classList.add('hidden');
             document.getElementById('payment-qr-container').classList.remove('flex');
         } else {
-            // FIX: Using QuickChart IO to prevent Adblocker issues on PC
             const qrUrl = `https://quickchart.io/qr?size=250&margin=2&text=${encodeURIComponent(upiLink)}`;
             document.getElementById('payment-qr-img').src = qrUrl;
             document.getElementById('payment-qr-container').classList.remove('hidden');
