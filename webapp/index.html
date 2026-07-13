@@ -149,38 +149,39 @@
             </div>
         </section>
         
-        <!-- NEW LUXURY FOOTER -->
-        <footer class="w-full py-12 sm:py-16 bg-luxury-dark text-luxury-bg border-t-4 border-luxury-rose mt-auto">
-            <div class="max-w-[1200px] mx-auto px-6 grid grid-cols-1 md:grid-cols-3 gap-10 text-center md:text-left">
+        <!-- LUXURY FEMININE FOOTER -->
+        <footer class="w-full py-16 bg-gradient-to-b from-luxury-bg to-white border-t border-luxury-blush mt-auto">
+            <div class="max-w-[1200px] mx-auto px-6 grid grid-cols-1 md:grid-cols-3 gap-12 text-center md:text-left">
                 
                 <!-- Brand Info -->
                 <div class="flex flex-col items-center md:items-start">
-                    <h3 class="font-logo font-normal text-3xl sm:text-4xl text-luxury-blush mb-3 tracking-wide" id="footer-dynamic-name">Twisted Happiness</h3>
-                    <p class="text-gray-400 text-[11px] font-medium leading-relaxed max-w-xs">Curating bespoke canvas paintings, textured clay art, and premium handcrafted gifts tailored to your aesthetic.</p>
+                    <h3 class="font-logo font-normal text-3xl sm:text-4xl text-luxury-rose mb-3 tracking-wide" id="footer-dynamic-name">Twisted Happiness</h3>
+                    <p class="text-luxury-dark/70 text-[12px] font-medium leading-relaxed max-w-xs">Curating bespoke canvas paintings, textured clay art, and premium handcrafted gifts tailored to your aesthetic.</p>
                 </div>
 
                 <!-- Policies -->
-                <div class="flex flex-col items-center md:items-start">
-                    <h4 class="text-luxury-rose font-bold text-[10px] uppercase tracking-widest mb-4">Our Policies</h4>
-                    <div class="flex flex-col gap-3">
-                        <button type="button" id="btn-open-return-policy" class="text-white/70 hover:text-white transition-colors text-[11px] font-medium text-left">Strict Return Policy</button>
-                        <button type="button" id="btn-open-privacy-policy" class="text-white/70 hover:text-white transition-colors text-[11px] font-medium text-left">Privacy Policy</button>
-                        <span class="text-white/40 text-[10px] italic mt-2">100% Handcrafted. All sales final.</span>
+                <div class="flex flex-col items-center md:items-start md:pl-10">
+                    <h4 class="text-luxury-dark font-bold text-[10px] uppercase tracking-[0.2em] mb-4">Our Policies</h4>
+                    <div class="flex flex-col gap-3 items-center md:items-start">
+                        <button type="button" id="btn-open-return-policy" class="text-luxury-dark/70 hover:text-luxury-rose transition-colors text-[12px] font-medium text-left">Strict Return Policy</button>
+                        <button type="button" id="btn-open-privacy-policy" class="text-luxury-dark/70 hover:text-luxury-rose transition-colors text-[12px] font-medium text-left">Privacy Policy</button>
+                        <span class="text-luxury-rose/70 text-[10px] italic mt-2">100% Handcrafted. All sales final.</span>
                     </div>
                 </div>
 
                 <!-- Contact & Socials -->
-                <div class="flex flex-col items-center md:items-start">
-                    <h4 class="text-luxury-rose font-bold text-[10px] uppercase tracking-widest mb-4">Contact Us</h4>
-                    <div class="flex gap-4 mb-5">
-                        <a href="#" id="footer-whatsapp" target="_blank" class="w-10 h-10 rounded-full bg-white/10 flex items-center justify-center text-white hover:bg-luxury-rose hover:scale-110 transition-all">
+                <div class="flex flex-col items-center md:items-end">
+                    <h4 class="text-luxury-dark font-bold text-[10px] uppercase tracking-[0.2em] mb-4">Connect With Us</h4>
+                    <div class="flex gap-4 mb-6">
+                        <a href="#" id="footer-whatsapp" class="w-10 h-10 rounded-full bg-luxury-blush flex items-center justify-center text-luxury-rose border border-luxury-rose/20 hover:bg-luxury-rose hover:text-white hover:scale-110 transition-all shadow-sm">
                             <i class="fab fa-whatsapp text-lg"></i>
                         </a>
-                        <a href="#" id="footer-instagram" target="_blank" class="w-10 h-10 rounded-full bg-white/10 flex items-center justify-center text-white hover:bg-luxury-rose hover:scale-110 transition-all">
+                        <a href="#" id="footer-instagram" class="w-10 h-10 rounded-full bg-luxury-blush flex items-center justify-center text-luxury-rose border border-luxury-rose/20 hover:bg-luxury-rose hover:text-white hover:scale-110 transition-all shadow-sm">
                             <i class="fab fa-instagram text-lg"></i>
                         </a>
                     </div>
-                    <p class="font-medium tracking-[0.2em] text-white/30 text-[8px] uppercase">© <span id="current-year">2026</span>. Handcrafted in India.</p>
+                    <a href="/admin.html" class="text-luxury-dark/40 hover:text-luxury-rose transition-colors uppercase tracking-[0.2em] font-sans font-bold text-[9px] cursor-pointer mb-4">Artisan Login</a>
+                    <p class="font-medium tracking-[0.2em] text-luxury-dark/40 text-[9px] uppercase">© <span id="current-year">2026</span>. Handcrafted in India.</p>
                 </div>
             </div>
         </footer>
@@ -198,7 +199,7 @@
         </header>
 
         <div class="w-full max-w-[1100px] mx-auto flex flex-col md:flex-row items-start pt-6 md:pt-10 px-4 sm:px-6 lg:px-8 gap-8 md:gap-12 relative">
-            <!-- [Image Gallery and Details UI remains exactly the same as provided] -->
+            
             <!-- LEFT: IMAGE GALLERY -->
             <div class="w-full md:w-[310px] shrink-0 flex flex-col md:sticky md:top-[100px] z-10 mx-auto md:mx-0">
                 <div class="relative w-full h-[350px] bg-luxury-bg border border-luxury-blush rounded-2xl cursor-zoom-in shadow-sm overflow-hidden flex items-center justify-center group">
@@ -317,7 +318,6 @@
         </div>
     </div>
 
-    <!-- [Lightboxes, Cart, Profile, Commission, Payment, Offers Modals - Exact same code preserved as previous] -->
     <!-- Lightbox -->
     <div id="lightbox-modal" role="dialog" aria-modal="true" class="hidden transition-opacity duration-200 ease-out opacity-0 fixed inset-0 flex flex-col items-center justify-center bg-luxury-dark/90 z-[2000]">
         <div class="absolute top-0 left-0 w-full p-4 sm:p-6 flex justify-between items-center bg-gradient-to-b from-white/95 to-transparent z-[2010]">

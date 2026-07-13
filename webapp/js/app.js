@@ -55,7 +55,7 @@ function applyDynamicSettings() {
 }
 
 function bindDOMEvents() {
-    // 🚨 Hidden Admin Shortcut
+    // 🚨 Hidden Admin Shortcut (Ctrl + Shift + K)
     document.addEventListener('keydown', (e) => {
         if (e.ctrlKey && e.shiftKey && e.key.toLowerCase() === 'k') {
             e.preventDefault();
@@ -69,7 +69,7 @@ function bindDOMEvents() {
     document.getElementById('btn-open-privacy-policy')?.addEventListener('click', () => openPolicyModal('privacy-policy-modal', 'privacy-policy-box'));
     document.getElementById('btn-close-privacy-policy')?.addEventListener('click', () => closePolicyModal('privacy-policy-modal', 'privacy-policy-box'));
 
-    // Standard DOM Event Listeners
+    // Standard Storefront binds
     document.getElementById('btn-profile-header')?.addEventListener('click', openProfileFromHeader);
     document.getElementById('btn-toggle-cart')?.addEventListener('click', toggleCart);
     document.getElementById('btn-toggle-cart-product')?.addEventListener('click', toggleCart);
@@ -97,6 +97,9 @@ function bindDOMEvents() {
     document.getElementById('btn-slide-next')?.addEventListener('click', (e) => { e.stopPropagation(); moveSlide(1); });
     document.getElementById('btn-lightbox-prev')?.addEventListener('click', () => moveLightboxSlide(-1));
     document.getElementById('btn-lightbox-next')?.addEventListener('click', () => moveLightboxSlide(1));
+    
+    document.getElementById('btn-confirm-payment')?.addEventListener('click', confirmPaymentAndOrder);
+    document.getElementById('btn-return-gallery')?.addEventListener('click', () => { forceClosePaymentModal(); safeBack(); });
 
     window.addEventListener('popstate', function(e) {
         const level = e.state ? e.state.level : 0;
@@ -162,15 +165,22 @@ function safeBack() { if (statePushed) { try { history.back(); } catch(e) {} sta
 function isMobileDevice() { return /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent); }
 
 function setupSocialLinks() {
-    const adminPhone = (settings.countryCode || '+91').replace(/\+/g, '') + settings.whatsapp;
+    // Strip non-digits from whatsapp and country code to guarantee a clean API link
+    const phone = (settings.whatsapp || "9909310501").replace(/\D/g, '');
+    const code = (settings.countryCode || "91").replace(/\D/g, '');
+    
     const waLink = document.getElementById('footer-whatsapp');
-    if(waLink) waLink.href = `https://wa.me/${adminPhone}?text=Hello!%20I%20am%20exploring%20your%20beautiful%20collection.`;
+    if(waLink) {
+        waLink.href = `https://wa.me/${code}${phone}?text=Hello!%20I%20am%20exploring%20your%20beautiful%20collection.`;
+    }
     
     const igLink = document.getElementById('footer-instagram');
-    if(igLink && settings.instagram) {
-        igLink.href = settings.instagram;
-    } else if (igLink) {
-        igLink.classList.add('hidden');
+    if(igLink) {
+        if (settings.instagram && settings.instagram.trim() !== "") {
+            igLink.href = settings.instagram.trim();
+        } else {
+            igLink.href = "https://instagram.com"; // Fallback URL
+        }
     }
 }
 
