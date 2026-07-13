@@ -31,7 +31,6 @@
   to = "/admin.html"
   status = 200
 
-# Ensures clean URLs work properly
 [[redirects]]
   from = "/*"
   to = "/index.html"

@@ -326,11 +326,9 @@ async function markOrderDelivered(id) { showToast("Archiving commission...", "fa
 async function rejectOrder(id) { 
     const order = allOrders.find(o => o.id === id); 
     if(!order) return;
-    
     if(!confirm("Deny this order? The customer will receive a WhatsApp message stating their transaction failed.")) return; 
     
     showToast("Declining...", "fa-spinner fa-spin"); 
-    
     try { 
         await _supabase.from('orders').delete().eq('id', id); 
         showToast("Commission Denied & Deleted", "fa-trash"); 

@@ -1,6 +1,6 @@
 /**
  * Twisted Happiness - Enterprise Storefront Engine
- * Phase 6 & 7 Complete: Modularized, SEO-optimized, Touch-enabled, Automated UPI Payments.
+ * Phase 8 Complete: Multi-Step Unified Checkout, Adblock-Proof QR, Dynamic Delivery, Luxury Footer.
  */
 
 const SUPABASE_URL = "https://gvrfucjtnyqfkdynrmqs.supabase.co"; 
@@ -32,7 +32,14 @@ let searchTimeout = null;
 let modalImages = []; let currentSlideIndex = 0; let isAnimating = false; 
 let currentLightboxIndex = 0; let isLightboxAnimating = false;
 let currentModalLevel = 0; let statePushed = false;
-let currentCommissionContext = 'cart'; let singleProductToCommission = null;
+
+// 🚨 Unified Checkout State
+let currentCommissionContext = 'cart'; 
+let singleProductToCommission = null;
+let checkoutStep = 1;
+let pendingOrderPayload = null; 
+let currentOrderReference = null;
+let currentDeliveryFee = 0;
 
 document.addEventListener('DOMContentLoaded', () => {
     _supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
@@ -44,18 +51,47 @@ document.addEventListener('DOMContentLoaded', () => {
     setupSocialLinks();
 });
 
+// 🎀 LOADING ENGINE 🎀
+window.addEventListener('load', () => {
+    const preloader = document.getElementById('luxury-page-preloader');
+    if (preloader) {
+        setTimeout(() => {
+            preloader.classList.add('opacity-0');
+            setTimeout(() => preloader.classList.add('hidden'), 700);
+        }, 800);
+    }
+});
+
+function showInteractionLoader(text = "Please wait...") {
+    const loader = document.getElementById('interaction-loader');
+    document.getElementById('interaction-loader-text').textContent = text;
+    loader.classList.remove('hidden');
+    loader.classList.add('flex');
+    requestAnimationFrame(() => loader.classList.remove('opacity-0'));
+}
+
+function hideInteractionLoader() {
+    const loader = document.getElementById('interaction-loader');
+    loader.classList.add('opacity-0');
+    setTimeout(() => {
+        loader.classList.add('hidden');
+        loader.classList.remove('flex');
+    }, 300);
+}
+
 function applyDynamicSettings() {
     const name = settings.storeName || "Twisted Happiness";
     document.title = `${name} | Fine Art & Handcrafted Gifts`;
     const headerName = document.getElementById('dynamic-store-name');
     const footerName = document.getElementById('footer-dynamic-name');
+    const preloaderName = document.getElementById('preloader-brand');
     if(headerName) headerName.textContent = name;
     if(footerName) footerName.textContent = name;
+    if(preloaderName) preloaderName.textContent = name;
     document.getElementById('current-year').textContent = new Date().getFullYear();
 }
 
 function bindDOMEvents() {
-    // 🚨 Hidden Admin Shortcut (Ctrl + Shift + K)
     document.addEventListener('keydown', (e) => {
         if (e.ctrlKey && e.shiftKey && e.key.toLowerCase() === 'k') {
             e.preventDefault();
@@ -63,14 +99,12 @@ function bindDOMEvents() {
         }
     });
 
-    // Policy Modals
     document.getElementById('btn-open-return-policy')?.addEventListener('click', () => openPolicyModal('return-policy-modal', 'return-policy-box'));
     document.getElementById('btn-close-return-policy')?.addEventListener('click', () => closePolicyModal('return-policy-modal', 'return-policy-box'));
     document.getElementById('btn-open-privacy-policy')?.addEventListener('click', () => openPolicyModal('privacy-policy-modal', 'privacy-policy-box'));
     document.getElementById('btn-close-privacy-policy')?.addEventListener('click', () => closePolicyModal('privacy-policy-modal', 'privacy-policy-box'));
 
-    // Standard Storefront binds
-    document.getElementById('btn-profile-header')?.addEventListener('click', openProfileFromHeader);
+    document.getElementById('btn-profile-header')?.addEventListener('click', () => { currentCommissionContext = 'header'; openCheckoutBase(); });
     document.getElementById('btn-toggle-cart')?.addEventListener('click', toggleCart);
     document.getElementById('btn-toggle-cart-product')?.addEventListener('click', toggleCart);
     document.getElementById('searchInputDesk')?.addEventListener('input', (e) => syncSearch(e.target.value));
@@ -83,36 +117,32 @@ function bindDOMEvents() {
     document.getElementById('btn-close-lightbox')?.addEventListener('click', () => { forceCloseLightbox(); safeBack(); });
     document.getElementById('btn-close-cart')?.addEventListener('click', () => { forceCloseCart(); safeBack(); });
     document.getElementById('cart-overlay')?.addEventListener('click', () => { forceCloseCart(); safeBack(); });
-    document.getElementById('btn-close-profile')?.addEventListener('click', () => { forceCloseProfileModal(); safeBack(); });
-    document.getElementById('btn-close-commission')?.addEventListener('click', () => { forceCloseCommissionForm(); safeBack(); });
-    document.getElementById('btn-close-offers')?.addEventListener('click', () => { forceCloseOffersModal(); safeBack(); });
-    document.getElementById('btn-close-payment')?.addEventListener('click', () => { forceClosePaymentModal(); safeBack(); });
     
-    document.getElementById('profile-form')?.addEventListener('submit', saveProfileAndContinue);
-    document.getElementById('commission-form')?.addEventListener('submit', submitCommission);
     document.getElementById('btn-cart-checkout')?.addEventListener('click', routeCheckoutFromCart);
-    document.getElementById('btn-show-offers')?.addEventListener('click', showOffersModal);
-    document.getElementById('btn-edit-profile')?.addEventListener('click', editProfile);
+    
+    document.getElementById('btn-edit-address')?.addEventListener('click', () => {
+        document.getElementById('address-display').classList.add('hidden');
+        document.getElementById('checkout-profile-form').classList.remove('hidden');
+        document.getElementById('btn-edit-address').classList.add('hidden');
+    });
+
     document.getElementById('btn-slide-prev')?.addEventListener('click', (e) => { e.stopPropagation(); moveSlide(-1); });
     document.getElementById('btn-slide-next')?.addEventListener('click', (e) => { e.stopPropagation(); moveSlide(1); });
     document.getElementById('btn-lightbox-prev')?.addEventListener('click', () => moveLightboxSlide(-1));
     document.getElementById('btn-lightbox-next')?.addEventListener('click', () => moveLightboxSlide(1));
-    
+
     document.getElementById('btn-confirm-payment')?.addEventListener('click', confirmPaymentAndOrder);
-    document.getElementById('btn-return-gallery')?.addEventListener('click', () => { forceClosePaymentModal(); safeBack(); });
 
     window.addEventListener('popstate', function(e) {
         const level = e.state ? e.state.level : 0;
         requestAnimationFrame(() => {
             if (level === 0) { 
-                closeProductPage(); forceCloseCart(); forceCloseCommissionForm(); forceCloseProfileModal(); 
-                forceCloseLightbox(); forceCloseOffersModal(); forceClosePaymentModal(); 
+                closeProductPage(); forceCloseCart(); closeCheckout();
                 closePolicyModal('return-policy-modal', 'return-policy-box');
                 closePolicyModal('privacy-policy-modal', 'privacy-policy-box');
             } 
             else if (level === 1) { 
-                forceCloseLightbox(); forceCloseCommissionForm(); forceCloseOffersModal(); 
-                forceCloseProfileModal(); forceClosePaymentModal(); 
+                forceCloseLightbox(); closeCheckout();
             }
             currentModalLevel = level;
         });
@@ -152,7 +182,7 @@ function closePolicyModal(modalId, boxId) {
         box.classList.add('scale-95', 'translate-y-2');
         setTimeout(() => {
             modal.classList.add('hidden');
-            if(document.getElementById('cart-overlay').classList.contains('hidden') && document.getElementById('profile-modal').classList.contains('hidden') && document.getElementById('commission-modal').classList.contains('hidden')){
+            if(document.getElementById('cart-overlay').classList.contains('hidden') && document.getElementById('checkout-overlay').classList.contains('hidden')){
                 document.body.classList.remove('overflow-hidden');
             }
         }, 200);
@@ -165,7 +195,6 @@ function safeBack() { if (statePushed) { try { history.back(); } catch(e) {} sta
 function isMobileDevice() { return /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent); }
 
 function setupSocialLinks() {
-    // Force numbers only for safety
     const phone = (settings.whatsapp || "9909310501").replace(/\D/g, '');
     const code = (settings.countryCode || "91").replace(/\D/g, '');
     
@@ -177,15 +206,13 @@ function setupSocialLinks() {
     const igLink = document.getElementById('footer-instagram');
     if(igLink) {
         if (settings.instagram && settings.instagram.trim() !== "") {
-            // Ensure http/https exists so browser treats it as absolute url
             let cleanIg = settings.instagram.trim();
             if (!cleanIg.startsWith('http://') && !cleanIg.startsWith('https://')) {
                 cleanIg = 'https://' + cleanIg;
             }
             igLink.href = cleanIg;
-            igLink.style.display = 'flex'; // make sure it's visible
+            igLink.style.display = 'flex'; 
         } else {
-            // If they haven't set an Instagram, hide the button so they don't jump to nowhere
             igLink.style.display = 'none';
         }
     }
@@ -388,7 +415,7 @@ function renderCart() {
 
 function toggleCart() { const sidebar = document.getElementById('cart-sidebar'); if (sidebar.classList.contains('translate-x-full')) { currentModalLevel = 1; safePushState(1); forceOpenCart(); } else { safeBack(); forceCloseCart(); } }
 function forceOpenCart() { const overlay = document.getElementById('cart-overlay'); const sidebar = document.getElementById('cart-sidebar'); renderCart(); requestAnimationFrame(() => { overlay.classList.remove('hidden'); document.body.classList.add('overflow-hidden'); requestAnimationFrame(() => { overlay.classList.remove('opacity-0'); sidebar.classList.remove('translate-x-full'); }); }); }
-function forceCloseCart() { const overlay = document.getElementById('cart-overlay'); const sidebar = document.getElementById('cart-sidebar'); requestAnimationFrame(() => { overlay.classList.add('opacity-0'); sidebar.classList.add('translate-x-full'); setTimeout(() => { overlay.classList.add('hidden'); if(document.getElementById('commission-modal').classList.contains('hidden') && document.getElementById('profile-modal').classList.contains('hidden') && document.getElementById('payment-modal').classList.contains('hidden') && document.getElementById('return-policy-modal').classList.contains('hidden') && document.getElementById('privacy-policy-modal').classList.contains('hidden')){ document.body.classList.remove('overflow-hidden'); } }, 300); }); }
+function forceCloseCart() { const overlay = document.getElementById('cart-overlay'); const sidebar = document.getElementById('cart-sidebar'); requestAnimationFrame(() => { overlay.classList.add('opacity-0'); sidebar.classList.add('translate-x-full'); setTimeout(() => { overlay.classList.add('hidden'); if(document.getElementById('checkout-overlay').classList.contains('hidden')){ document.body.classList.remove('overflow-hidden'); } }, 300); }); }
 
 function openLightboxFromCarousel() { currentLightboxIndex = currentSlideIndex; const lb = document.getElementById('lightbox-modal'); const track = document.getElementById('lightbox-track'); track.innerHTML = ''; modalImages.forEach((src) => { track.innerHTML += `<div class="w-full h-full flex-shrink-0 flex items-center justify-center p-2 md:p-8"><img loading="lazy" decoding="async" src="${src}" class="max-w-full max-h-full object-contain"></div>`; }); track.style.transition = 'none'; track.style.transform = `translateX(-${currentLightboxIndex * 100}%)`; updateLightboxCounter(); currentModalLevel = 2; safePushState(2); lb.classList.remove('hidden'); requestAnimationFrame(() => { lb.classList.remove('opacity-0'); }); setupLightboxTouch(); }
 function forceCloseLightbox() { const lb = document.getElementById('lightbox-modal'); requestAnimationFrame(() => { lb.classList.add('opacity-0'); setTimeout(() => { lb.classList.add('hidden'); }, 200); }); }
@@ -401,67 +428,201 @@ function setupTouchCarousel() { let startX = 0; let endX = 0; const track = docu
 function setupLightboxTouch() { let lbStartX = 0; let lbEndX = 0; const track = document.getElementById('lightbox-track'); if(track) { track.replaceWith(track.cloneNode(true)); const newTrack = document.getElementById('lightbox-track'); newTrack.addEventListener('touchstart', (e) => { lbStartX = e.changedTouches[0].screenX; }, {passive: true}); newTrack.addEventListener('touchend', (e) => { lbEndX = e.changedTouches[0].screenX; requestAnimationFrame(() => { if (lbEndX < lbStartX - 30) moveLightboxSlide(1); else if (lbEndX > lbStartX + 30) moveLightboxSlide(-1); }); }, {passive: true}); } }
 function updateActiveThumb(activeIndex, totalImages) { requestAnimationFrame(() => { for(let i = 0; i < totalImages; i++) { const thumb = document.getElementById(`thumb-${i}`); if(thumb) { if(i === activeIndex) { thumb.classList.add('border-luxury-rose', 'scale-105', 'opacity-100'); thumb.classList.remove('border-transparent', 'opacity-60'); } else { thumb.classList.remove('border-luxury-rose', 'scale-105', 'opacity-100'); thumb.classList.add('border-transparent', 'opacity-60'); } } } }); }
 
-function forceCloseProfileModal() { const modal = document.getElementById('profile-modal'); const box = document.getElementById('profile-box'); requestAnimationFrame(() => { modal.classList.add('opacity-0'); box.classList.remove('modal-open-state'); box.classList.add('modal-closed'); setTimeout(() => { modal.classList.add('hidden'); if(document.getElementById('cart-overlay').classList.contains('hidden') && document.getElementById('commission-modal').classList.contains('hidden') && document.getElementById('payment-modal').classList.contains('hidden') && document.getElementById('return-policy-modal').classList.contains('hidden') && document.getElementById('privacy-policy-modal').classList.contains('hidden')){ document.body.classList.remove('overflow-hidden'); } }, 300); }); }
-function forceCloseCommissionForm() { const modal = document.getElementById('commission-modal'); const box = document.getElementById('commission-box'); requestAnimationFrame(() => { modal.classList.add('opacity-0'); box.classList.remove('modal-open-state'); box.classList.add('modal-closed'); setTimeout(() => { modal.classList.add('hidden'); if(document.getElementById('cart-overlay').classList.contains('hidden') && document.getElementById('profile-modal').classList.contains('hidden') && document.getElementById('payment-modal').classList.contains('hidden') && document.getElementById('return-policy-modal').classList.contains('hidden') && document.getElementById('privacy-policy-modal').classList.contains('hidden')){ document.body.classList.remove('overflow-hidden'); } }, 300); }); }
-function showOffersModal() { currentModalLevel = 2; safePushState(2); const modal = document.getElementById('offers-modal'); const box = document.getElementById('offers-box'); modal.classList.remove('hidden'); requestAnimationFrame(() => { modal.classList.remove('opacity-0'); box.classList.remove('modal-closed'); box.classList.add('modal-open-state'); }); }
-function forceCloseOffersModal() { const modal = document.getElementById('offers-modal'); const box = document.getElementById('offers-box'); requestAnimationFrame(() => { modal.classList.add('opacity-0'); box.classList.remove('modal-open-state'); box.classList.add('modal-closed'); setTimeout(() => { modal.classList.add('hidden'); }, 300); }); }
-
-function forceClosePaymentModal() { const modal = document.getElementById('payment-modal'); const box = document.getElementById('payment-box'); requestAnimationFrame(() => { modal.classList.add('opacity-0'); box.classList.remove('modal-open-state'); box.classList.add('modal-closed'); setTimeout(() => { modal.classList.add('hidden'); document.body.classList.remove('overflow-hidden'); }, 300); }); }
+// 🚨 3-STEP UNIFIED CHECKOUT ENGINE 🚨
+window.th_routeCheckoutFromModal = function(id, event) { if(event) { event.preventDefault(); event.stopPropagation(); } const p = products.find(x => x.id == id); currentCommissionContext = 'single'; singleProductToCommission = p; openCheckoutBase(); };
+function routeCheckoutFromCart(event) { if(event) { event.preventDefault(); event.stopPropagation(); } forceCloseCart(); setTimeout(() => { currentCommissionContext = 'cart'; singleProductToCommission = null; if(cart.length === 0) return showToast("Your bag is empty!", "fa-times", "text-red-500"); openCheckoutBase(); }, 300); }
+function openProfileFromHeader() { currentCommissionContext = 'header'; openCheckoutBase(); }
 
 function isProfileComplete() { return shiprocketProfile.first_name && shiprocketProfile.email && shiprocketProfile.phone && shiprocketProfile.address_1 && shiprocketProfile.city && shiprocketProfile.pincode; }
-function routeCheckoutFromModal(id, event) { if(event) { event.preventDefault(); event.stopPropagation(); } const p = products.find(x => x.id == id); routeCheckout(p); }
-window.th_routeCheckoutFromModal = routeCheckoutFromModal;
-function routeCheckoutFromCart(event) { if(event) { event.preventDefault(); event.stopPropagation(); } forceCloseCart(); setTimeout(() => { routeCheckout(null); }, 300); }
-function routeCheckout(product = null) { if(product) { currentCommissionContext = 'single'; singleProductToCommission = product; } else { currentCommissionContext = 'cart'; singleProductToCommission = null; if(cart.length === 0) return showToast("Your bag is empty!", "fa-times", "text-red-500"); } currentModalLevel = 2; safePushState(2); if(isProfileComplete()) { showCommissionModal(); } else { showProfileModal(); } }
-function openProfileFromHeader() { currentCommissionContext = 'header'; currentModalLevel = 1; safePushState(1); showProfileModal(); }
-function editProfile() { forceCloseCommissionForm(); setTimeout(() => { showProfileModal(); }, 300); }
 
-function showProfileModal() { const modal = document.getElementById('profile-modal'); const box = document.getElementById('profile-box'); modal.classList.remove('hidden'); document.body.classList.add('overflow-hidden'); requestAnimationFrame(() => { modal.classList.remove('opacity-0'); box.classList.remove('modal-closed'); box.classList.add('modal-open-state'); }); document.getElementById('prof-fname').value = shiprocketProfile.first_name || ''; document.getElementById('prof-lname').value = shiprocketProfile.last_name || ''; document.getElementById('prof-email').value = shiprocketProfile.email || ''; document.getElementById('prof-phone').value = shiprocketProfile.phone || ''; const activeCode = settings.countryCode || "+91"; document.getElementById('prof-country-code-display').textContent = countryCodeMapping[activeCode] || activeCode; document.getElementById('prof-add1').value = shiprocketProfile.address_1 || ''; document.getElementById('prof-add2').value = shiprocketProfile.address_2 || ''; document.getElementById('prof-city').value = shiprocketProfile.city || ''; document.getElementById('prof-state').value = shiprocketProfile.state || ''; document.getElementById('prof-pin').value = shiprocketProfile.pincode || ''; }
-function saveProfileAndContinue() { shiprocketProfile.first_name = document.getElementById('prof-fname').value.trim(); shiprocketProfile.last_name = document.getElementById('prof-lname').value.trim(); shiprocketProfile.email = document.getElementById('prof-email').value.trim(); shiprocketProfile.phone = document.getElementById('prof-phone').value.trim(); shiprocketProfile.address_1 = document.getElementById('prof-add1').value.trim(); shiprocketProfile.address_2 = document.getElementById('prof-add2').value.trim(); shiprocketProfile.city = document.getElementById('prof-city').value.trim(); shiprocketProfile.state = document.getElementById('prof-state').value.trim(); shiprocketProfile.pincode = document.getElementById('prof-pin').value.trim(); if(!shiprocketProfile.first_name || !shiprocketProfile.phone || !shiprocketProfile.address_1 || !shiprocketProfile.city || !shiprocketProfile.pincode) { alert("Please complete all required fields (*)."); return; } localStorage.setItem('th_shiprocket_profile', JSON.stringify(shiprocketProfile)); forceCloseProfileModal(); if (currentCommissionContext === 'header') { showToast("Profile Saved", "fa-check"); } else { setTimeout(() => { showCommissionModal(); }, 300); } }
+function openCheckoutBase() {
+    currentModalLevel = 1; safePushState(1);
+    checkoutStep = 1;
+    const overlay = document.getElementById('checkout-overlay');
+    overlay.classList.remove('hidden');
+    document.body.classList.add('overflow-hidden');
+    
+    document.getElementById('checkout-step-1').classList.remove('hidden');
+    document.getElementById('checkout-step-2').classList.remove('flex'); document.getElementById('checkout-step-2').classList.add('hidden');
+    document.getElementById('checkout-step-3').classList.remove('flex'); document.getElementById('checkout-step-3').classList.add('hidden');
+    document.getElementById('payment-success-view').classList.add('hidden'); document.getElementById('payment-success-view').classList.remove('flex');
+    document.getElementById('payment-gateway-view').classList.remove('hidden'); document.getElementById('payment-gateway-view').classList.add('flex');
+    
+    if (isProfileComplete()) {
+        document.getElementById('address-display').classList.remove('hidden');
+        document.getElementById('checkout-profile-form').classList.add('hidden');
+        document.getElementById('btn-edit-address').classList.remove('hidden');
+        document.getElementById('display-name').textContent = `${shiprocketProfile.first_name} ${shiprocketProfile.last_name}`.trim();
+        document.getElementById('display-full-address').textContent = `${shiprocketProfile.address_1}, ${shiprocketProfile.address_2 ? shiprocketProfile.address_2 + ', ' : ''}${shiprocketProfile.city}, ${shiprocketProfile.state} - ${shiprocketProfile.pincode}`;
+        document.getElementById('display-phone').textContent = shiprocketProfile.phone;
+    } else {
+        document.getElementById('address-display').classList.add('hidden');
+        document.getElementById('checkout-profile-form').classList.remove('hidden');
+        document.getElementById('btn-edit-address').classList.add('hidden');
+    }
 
-function showCommissionModal() { const modal = document.getElementById('commission-modal'); const box = document.getElementById('commission-box'); modal.classList.remove('hidden'); document.body.classList.add('overflow-hidden'); requestAnimationFrame(() => { modal.classList.remove('opacity-0'); box.classList.remove('modal-closed'); box.classList.add('modal-open-state'); }); document.getElementById('summary-name').textContent = `${shiprocketProfile.first_name} ${shiprocketProfile.last_name}`.trim(); document.getElementById('comm-type').value = 'Standard Order (No Framing)'; document.getElementById('comm-colors').value = ''; document.getElementById('comm-dimensions').value = ''; let hasCustomizable = false; if (currentCommissionContext === 'single' && singleProductToCommission) { hasCustomizable = singleProductToCommission.isCustomizable; } else { hasCustomizable = cart.some(item => item.isCustomizable); } const dimWrapper = document.getElementById('comm-dimensions-wrapper'); if (hasCustomizable) { dimWrapper.classList.remove('hidden'); } else { dimWrapper.classList.add('hidden'); } }
+    document.getElementById('prof-fname').value = shiprocketProfile.first_name || ''; document.getElementById('prof-lname').value = shiprocketProfile.last_name || ''; document.getElementById('prof-email').value = shiprocketProfile.email || ''; document.getElementById('prof-phone').value = shiprocketProfile.phone || ''; const activeCode = settings.countryCode || "+91"; document.getElementById('prof-country-code-display').textContent = countryCodeMapping[activeCode] || activeCode; document.getElementById('prof-add1').value = shiprocketProfile.address_1 || ''; document.getElementById('prof-add2').value = shiprocketProfile.address_2 || ''; document.getElementById('prof-city').value = shiprocketProfile.city || ''; document.getElementById('prof-state').value = shiprocketProfile.state || ''; document.getElementById('prof-pin').value = shiprocketProfile.pincode || '';
 
-// 🚨 Automated Payment Processing Logic
-let pendingOrderPayload = null; 
-let currentOrderReference = null;
+    updateCheckoutUI();
+    
+    requestAnimationFrame(() => {
+        overlay.classList.remove('opacity-0');
+        overlay.scrollTo(0, 0);
+    });
+}
 
-async function submitCommission() {
+function closeCheckout() {
+    const overlay = document.getElementById('checkout-overlay');
+    requestAnimationFrame(() => {
+        overlay.classList.add('opacity-0');
+        setTimeout(() => {
+            overlay.classList.add('hidden');
+            if(document.getElementById('return-policy-modal').classList.contains('hidden') && document.getElementById('privacy-policy-modal').classList.contains('hidden')){
+                document.body.classList.remove('overflow-hidden');
+            }
+            pendingOrderPayload = null;
+        }, 300);
+    });
+}
+
+function handleCheckoutAction() {
+    if (checkoutStep === 1) {
+        if (!document.getElementById('checkout-profile-form').classList.contains('hidden')) {
+            shiprocketProfile.first_name = document.getElementById('prof-fname').value.trim(); shiprocketProfile.last_name = document.getElementById('prof-lname').value.trim(); shiprocketProfile.email = document.getElementById('prof-email').value.trim(); shiprocketProfile.phone = document.getElementById('prof-phone').value.trim(); shiprocketProfile.address_1 = document.getElementById('prof-add1').value.trim(); shiprocketProfile.address_2 = document.getElementById('prof-add2').value.trim(); shiprocketProfile.city = document.getElementById('prof-city').value.trim(); shiprocketProfile.state = document.getElementById('prof-state').value.trim(); shiprocketProfile.pincode = document.getElementById('prof-pin').value.trim(); 
+            if(!shiprocketProfile.first_name || !shiprocketProfile.phone || !shiprocketProfile.address_1 || !shiprocketProfile.city || !shiprocketProfile.pincode) { 
+                showToast("Please fill all required fields", "fa-exclamation-circle", "text-red-500");
+                return; 
+            }
+            localStorage.setItem('th_shiprocket_profile', JSON.stringify(shiprocketProfile));
+        }
+        
+        if (currentCommissionContext === 'header') {
+            showToast("Profile Saved", "fa-check");
+            closeCheckout();
+            return;
+        }
+
+        checkoutStep = 2;
+        document.getElementById('checkout-step-1').classList.add('hidden');
+        document.getElementById('checkout-step-2').classList.remove('hidden'); document.getElementById('checkout-step-2').classList.add('flex');
+        
+        let hasCustomizable = false; let itemsHTML = '';
+        if (currentCommissionContext === 'single' && singleProductToCommission) {
+            hasCustomizable = singleProductToCommission.isCustomizable;
+            const itemImg = (singleProductToCommission.image1 && typeof singleProductToCommission.image1 === 'string') ? singleProductToCommission.image1 : 'https://placehold.co/150/F8E9EA/423133';
+            itemsHTML = `<div class="flex gap-4 border border-luxury-blush bg-luxury-bg/50 p-3 rounded-2xl"><img src="${itemImg}" class="w-16 h-20 object-cover rounded-xl border border-luxury-blush"><div class="flex flex-col justify-center"><h4 class="font-bitter text-[12px] font-semibold text-luxury-dark">${singleProductToCommission.name}</h4><span class="text-[10px] text-gray-500 mt-1">Qty: 1</span></div></div>`;
+        } else {
+            hasCustomizable = cart.some(item => item.isCustomizable);
+            cart.forEach(item => {
+                const itemImg = (item.image && typeof item.image === 'string') ? item.image : 'https://placehold.co/150/F8E9EA/423133';
+                itemsHTML += `<div class="flex gap-4 border border-luxury-blush bg-luxury-bg/50 p-3 rounded-2xl"><img src="${itemImg}" class="w-16 h-20 object-cover rounded-xl border border-luxury-blush"><div class="flex flex-col justify-center"><h4 class="font-bitter text-[12px] font-semibold text-luxury-dark">${item.name}</h4><span class="text-[10px] text-gray-500 mt-1">Qty: ${item.qty}</span></div></div>`;
+            });
+        }
+        document.getElementById('checkout-items-list').innerHTML = itemsHTML;
+        
+        const dimWrapper = document.getElementById('comm-dimensions-wrapper');
+        if (hasCustomizable) dimWrapper.classList.remove('hidden'); else dimWrapper.classList.add('hidden');
+        
+        updateCheckoutUI();
+        document.getElementById('checkout-overlay').scrollTo({top: 0, behavior: 'smooth'});
+
+    } else if (checkoutStep === 2) {
+        preparePaymentGateway();
+    }
+}
+
+function updateCheckoutUI() {
+    const btn = document.getElementById('checkout-action-btn');
+    const fill = document.getElementById('progress-bar-fill');
+    const ind2 = document.getElementById('step-indicator-2');
+    const ind3 = document.getElementById('step-indicator-3');
+    const lbl2 = document.getElementById('step-label-2');
+    const lbl3 = document.getElementById('step-label-3');
+
+    let trueSubtotal = 0; let sellingSubtotal = 0;
+    if(currentCommissionContext === 'single' && singleProductToCommission) {
+        const cleanPrice = Number(singleProductToCommission.price.toString().replace(/[^0-9.,]/g, '')); 
+        const discountPercent = getDiscountPercent(singleProductToCommission.id.toString()); 
+        trueSubtotal = Math.round(cleanPrice * (1 + (discountPercent / 100))); sellingSubtotal = cleanPrice; 
+    } else if (cart.length > 0) {
+        cart.forEach((item) => { 
+            const cleanPrice = Number(item.price.toString().replace(/[^0-9.,]/g, '')); const qty = parseInt(item.qty || 1); const discountPercent = getDiscountPercent(item.id.toString()); 
+            trueSubtotal += (Math.round(cleanPrice * (1 + (discountPercent / 100))) * qty); sellingSubtotal += (cleanPrice * qty); 
+        });
+    }
+
+    // Dynamic Delivery Logic: Free if over 2499, else 99.
+    currentDeliveryFee = (sellingSubtotal >= 2499 || sellingSubtotal === 0) ? 0 : 99;
+    
+    const { discount: vipDiscount, currentTier } = calculateCartDiscount(sellingSubtotal); 
+    const finalTotal = sellingSubtotal - vipDiscount + currentDeliveryFee; 
+    const productDiscountTotal = trueSubtotal - sellingSubtotal;
+    const totalSavings = productDiscountTotal + vipDiscount;
+
+    document.getElementById('qo-original-value').textContent = `₹${trueSubtotal}`;
+    document.getElementById('qo-product-discount').textContent = `- ₹${productDiscountTotal}`;
+    document.getElementById('qo-delivery-fee').innerHTML = currentDeliveryFee === 0 ? '<span class="text-green-500 font-bold uppercase tracking-widest text-[9px]">Free</span>' : `₹${currentDeliveryFee}`;
+    
+    const vipRow = document.getElementById('qo-vip-row');
+    if(vipDiscount > 0) {
+        document.getElementById('qo-vip-label').textContent = currentTier.label;
+        document.getElementById('qo-vip-discount').textContent = `- ₹${vipDiscount}`;
+        vipRow.classList.remove('hidden');
+    } else { vipRow.classList.add('hidden'); }
+
+    document.getElementById('qo-total-savings').textContent = totalSavings;
+    document.getElementById('qo-final-total').textContent = `₹${finalTotal}`;
+
+    if (checkoutStep === 1) {
+        fill.style.width = '0%';
+        ind2.className = "w-8 h-8 rounded-full flex items-center justify-center text-[12px] font-bold transition-colors bg-white text-gray-400 border-2 border-luxury-blush";
+        lbl2.className = "text-[9px] font-bold uppercase tracking-widest text-gray-400";
+        btn.innerHTML = currentCommissionContext === 'header' ? 'Save Profile <i class="fas fa-check"></i>' : 'Deliver Here <i class="fas fa-arrow-right"></i>';
+    } else if (checkoutStep === 2) {
+        fill.style.width = '50%';
+        ind2.className = "w-8 h-8 rounded-full flex items-center justify-center text-[12px] font-bold transition-colors bg-luxury-rose text-white shadow-md border-2 border-white";
+        lbl2.className = "text-[9px] font-bold uppercase tracking-widest text-luxury-dark";
+        btn.innerHTML = 'Continue to Payment <i class="fas fa-lock text-[10px]"></i>';
+        btn.classList.remove('hidden');
+    } else if (checkoutStep === 3) {
+        fill.style.width = '100%';
+        ind3.className = "w-8 h-8 rounded-full flex items-center justify-center text-[12px] font-bold transition-colors bg-luxury-rose text-white shadow-md border-2 border-white";
+        lbl3.className = "text-[9px] font-bold uppercase tracking-widest text-luxury-dark";
+        btn.classList.add('hidden');
+    }
+}
+
+function preparePaymentGateway() {
     const type = document.getElementById('comm-type').value; 
     const colors = document.getElementById('comm-colors').value.trim() || 'No notes'; 
     const dims = document.getElementById('comm-dimensions').value.trim();
     
-    const btn = document.getElementById('final-checkout-btn'); 
-    btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Preparing Secure Gateway...'; 
-    btn.disabled = true;
+    // 🎀 Interaction Loader 🎀
+    showInteractionLoader("Securing Payment Gateway...");
 
-    let trueSubtotal = 0; let sellingSubtotal = 0; let totalPrepTime = ""; let itemsToSave = [];
+    let sellingSubtotal = 0; let totalPrepTime = ""; let itemsToSave = [];
 
     if(currentCommissionContext === 'single' && singleProductToCommission) {
         const cleanPrice = Number(singleProductToCommission.price.toString().replace(/[^0-9.,]/g, '')); 
-        const discountPercent = getDiscountPercent(singleProductToCommission.id.toString()); 
-        const originalPrice = Math.round(cleanPrice * (1 + (discountPercent / 100)));
-        trueSubtotal = originalPrice; sellingSubtotal = cleanPrice; 
+        sellingSubtotal = cleanPrice; 
         totalPrepTime = calculateTotalPrepTime([{...singleProductToCommission, qty: 1}]); 
         itemsToSave = [{ id: singleProductToCommission.id, name: singleProductToCommission.name, price: cleanPrice, qty: 1, image: singleProductToCommission.image1 }];
     } else {
         cart.forEach((item) => { 
-            const cleanPrice = Number(item.price.toString().replace(/[^0-9.,]/g, '')); 
-            const qty = parseInt(item.qty || 1); 
-            const discountPercent = getDiscountPercent(item.id.toString()); 
-            const originalPrice = Math.round(cleanPrice * (1 + (discountPercent / 100)));
-            trueSubtotal += (originalPrice * qty); sellingSubtotal += (cleanPrice * qty); 
+            const cleanPrice = Number(item.price.toString().replace(/[^0-9.,]/g, '')); const qty = parseInt(item.qty || 1); 
+            sellingSubtotal += (cleanPrice * qty); 
             itemsToSave.push({ id: item.id, name: item.name, price: cleanPrice, qty: qty, image: item.image });
         });
         totalPrepTime = calculateTotalPrepTime(cart);
     }
     
     const { discount: vipDiscount } = calculateCartDiscount(sellingSubtotal); 
-    const finalTotal = sellingSubtotal - vipDiscount; 
+    const finalTotal = sellingSubtotal - vipDiscount + currentDeliveryFee; 
     const safeCountryCode = (settings.countryCode || '+91'); 
     const fullContactPhone = safeCountryCode + " " + shiprocketProfile.phone;
 
     let fullAddress = `${shiprocketProfile.address_1}, ${shiprocketProfile.address_2 ? shiprocketProfile.address_2 + ', ' : ''}${shiprocketProfile.city}, ${shiprocketProfile.state} - ${shiprocketProfile.pincode}`;
-    let artDetails = `Phone: ${fullContactPhone} | Patron: ${shiprocketProfile.first_name} ${shiprocketProfile.last_name} | Email: ${shiprocketProfile.email} | Address: ${fullAddress} | Purpose: ${type} | Notes: ${colors}`;
+    let artDetails = `Phone: ${fullContactPhone} | Patron: ${shiprocketProfile.first_name} ${shiprocketProfile.last_name} | Email: ${shiprocketProfile.email} | Address: ${fullAddress} | Purpose: ${type} | Notes: ${colors} | Delivery Fee: ₹${currentDeliveryFee}`;
     if(dims && !document.getElementById('comm-dimensions-wrapper').classList.contains('hidden')) { artDetails += ` | Size: ${dims}`; } 
     artDetails += ` | Est. Prep: ${totalPrepTime}`; 
 
@@ -480,17 +641,12 @@ async function submitCommission() {
     currentOrderReference = `TH_${cleanNameForNote}_${String(Date.now()).slice(-4)}`; 
     const upiLink = `upi://pay?pa=${cleanUpiId}&pn=${settings.storeName ? settings.storeName.replace(/\s+/g, '_') : 'Twisted_Happiness'}&am=${formattedTotal}&cu=INR&tn=${currentOrderReference}`;
     
-    btn.innerHTML = 'Place Order & Pay <i class="fas fa-lock text-xs"></i>'; 
-    btn.disabled = false; 
-    forceCloseCommissionForm();
-    
     setTimeout(() => {
-        document.getElementById('payment-amount').textContent = `₹${formattedTotal}`;
+        checkoutStep = 3;
+        document.getElementById('checkout-step-2').classList.add('hidden'); document.getElementById('checkout-step-2').classList.remove('flex');
+        document.getElementById('checkout-step-3').classList.remove('hidden'); document.getElementById('checkout-step-3').classList.add('flex');
         
-        document.getElementById('payment-step-1').classList.remove('hidden');
-        document.getElementById('payment-step-1').classList.add('flex');
-        document.getElementById('payment-step-2').classList.add('hidden');
-        document.getElementById('payment-step-2').classList.remove('flex');
+        document.getElementById('checkout-payment-amount').textContent = `₹${formattedTotal}`;
         
         const verifyBtn = document.getElementById('btn-confirm-payment');
         verifyBtn.innerHTML = 'I Have Completed Payment <i class="fas fa-check-circle"></i>';
@@ -499,29 +655,20 @@ async function submitCommission() {
         if (isMobileDevice()) {
             document.getElementById('payment-mobile-btn').href = upiLink;
             document.getElementById('payment-mobile-container').classList.remove('hidden');
-            document.getElementById('payment-mobile-container').classList.add('flex');
             document.getElementById('payment-qr-container').classList.add('hidden');
-            document.getElementById('payment-qr-container').classList.remove('flex');
         } else {
             const qrUrl = `https://quickchart.io/qr?size=250&margin=2&text=${encodeURIComponent(upiLink)}`;
             document.getElementById('payment-qr-img').src = qrUrl;
             document.getElementById('payment-qr-container').classList.remove('hidden');
-            document.getElementById('payment-qr-container').classList.add('flex');
             document.getElementById('payment-mobile-container').classList.add('hidden');
-            document.getElementById('payment-mobile-container').classList.remove('flex');
         }
-
-        const pModal = document.getElementById('payment-modal'); 
-        const pBox = document.getElementById('payment-box');
-        pModal.classList.remove('hidden'); 
-        document.body.classList.add('overflow-hidden'); 
         
-        requestAnimationFrame(() => { 
-            pModal.classList.remove('opacity-0'); 
-            pBox.classList.remove('modal-closed'); 
-            pBox.classList.add('modal-open-state'); 
-        });
-    }, 300);
+        updateCheckoutUI();
+        document.getElementById('checkout-overlay').scrollTo({top: 0, behavior: 'smooth'});
+        
+        hideInteractionLoader();
+        
+    }, 1500); 
 }
 
 async function confirmPaymentAndOrder() {
@@ -541,12 +688,12 @@ async function confirmPaymentAndOrder() {
         return;
     }
 
-    document.getElementById('payment-step-1').classList.add('hidden');
-    document.getElementById('payment-step-1').classList.remove('flex');
+    document.getElementById('payment-gateway-view').classList.add('hidden');
+    document.getElementById('payment-gateway-view').classList.remove('flex');
     
     document.getElementById('success-ref-note').textContent = currentOrderReference;
-    document.getElementById('payment-step-2').classList.remove('hidden');
-    document.getElementById('payment-step-2').classList.add('flex');
+    document.getElementById('payment-success-view').classList.remove('hidden');
+    document.getElementById('payment-success-view').classList.add('flex');
 
     if(currentCommissionContext === 'cart') { 
         cart = []; 

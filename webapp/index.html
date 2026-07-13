@@ -41,6 +41,23 @@
 </head>
 <body class="bg-luxury-bg text-luxury-dark font-sans selection:bg-luxury-blush selection:text-luxury-dark overflow-x-hidden w-full min-h-screen">
 
+    <!-- 🎀 1. GRAND ENTRANCE PRELOADER 🎀 -->
+    <div id="luxury-page-preloader" class="fixed inset-0 z-[9999] bg-[#FFF0F2] flex flex-col items-center justify-center transition-opacity duration-700 ease-out">
+        <div class="relative w-24 h-24 mb-6 flex items-center justify-center">
+            <div class="absolute inset-0 border-t-2 border-r-2 border-[#D9778A] rounded-full animate-spin"></div>
+            <div class="absolute inset-2 bg-white/50 rounded-full animate-pulse backdrop-blur-sm"></div>
+            <img src="https://i.ibb.co/0RRrFK9N/TH-logo-1.png" class="w-12 h-12 rounded-full object-cover z-10 animate-pulse border border-[#f4c6ce]" alt="Loading">
+        </div>
+        <h1 class="font-logo text-3xl sm:text-4xl text-[#D9778A] tracking-wide animate-pulse" id="preloader-brand">Twisted Happiness</h1>
+        <p class="text-[9px] font-bold text-[#8c7a7a] uppercase tracking-[0.3em] mt-4">Curating Beauty...</p>
+    </div>
+
+    <!-- 🎀 2. INTERACTION LOADER (For Checkout/Processing) 🎀 -->
+    <div id="interaction-loader" class="fixed inset-0 z-[9999] bg-white/60 backdrop-blur-md hidden flex-col items-center justify-center transition-opacity duration-300 opacity-0">
+        <i class="fas fa-circle-notch fa-spin text-[#D9778A] text-4xl mb-4 shadow-sm rounded-full"></i>
+        <span class="text-[10px] font-bold text-luxury-dark uppercase tracking-[0.2em] bg-white px-4 py-2 rounded-full border border-luxury-blush shadow-sm" id="interaction-loader-text">Processing...</span>
+    </div>
+
     <!-- MAIN STOREFRONT VIEW -->
     <main id="customer-view" class="w-full relative block flex flex-col min-h-screen">
         
@@ -149,17 +166,17 @@
             </div>
         </section>
         
-        <!-- 🎀 ULTRA-SOFT LUXURY FEMININE FOOTER 🎀 -->
+        <!-- LUXURY FEMININE FOOTER -->
         <footer class="w-full py-14 sm:py-16 bg-[#FFF0F2] border-t border-[#f4c6ce] mt-auto">
             <div class="max-w-[1200px] mx-auto px-6 grid grid-cols-1 md:grid-cols-3 gap-10">
                 
-                <!-- Column 1: Brand Info (Left on PC, Center on Mobile) -->
+                <!-- Column 1: Brand Info -->
                 <div class="flex flex-col items-center md:items-start text-center md:text-left">
                     <h3 class="font-logo font-normal text-3xl sm:text-4xl text-[#D9778A] mb-3 tracking-wide" id="footer-dynamic-name">Twisted Happiness</h3>
                     <p class="text-[#8c7a7a] text-[12px] font-medium leading-relaxed max-w-[280px]">Curating bespoke canvas paintings, textured clay art, and premium handcrafted gifts tailored to your aesthetic.</p>
                 </div>
 
-                <!-- Column 2: Policies (Center on PC & Mobile) -->
+                <!-- Column 2: Policies -->
                 <div class="flex flex-col items-center text-center">
                     <h4 class="text-[#D9778A] font-bold text-[10px] uppercase tracking-[0.2em] mb-5">Our Policies</h4>
                     <div class="flex flex-col gap-3 items-center">
@@ -169,7 +186,7 @@
                     </div>
                 </div>
 
-                <!-- Column 3: Contact & Socials (Right on PC, Center on Mobile) -->
+                <!-- Column 3: Contact & Socials -->
                 <div class="flex flex-col items-center md:items-end text-center md:text-right">
                     <h4 class="text-[#D9778A] font-bold text-[10px] uppercase tracking-[0.2em] mb-5">Connect With Us</h4>
                     <div class="flex gap-4 mb-6 justify-center md:justify-end">
@@ -180,7 +197,7 @@
                             <i class="fab fa-instagram text-lg"></i>
                         </a>
                     </div>
-                    <a href="/admin.html" class="text-[#a49696] hover:text-[#D9778A] transition-colors uppercase tracking-[0.2em] font-sans font-bold text-[9px] cursor-pointer mb-3">Artisan Login</a>
+                    <a href="/khushiified" class="text-[#a49696] hover:text-[#D9778A] transition-colors uppercase tracking-[0.2em] font-sans font-bold text-[9px] cursor-pointer mb-3">Artisan Login</a>
                     <p class="font-medium tracking-[0.2em] text-[#a49696] text-[9px] uppercase">© <span id="current-year">2026</span>. Handcrafted in India.</p>
                 </div>
             </div>
@@ -288,9 +305,247 @@
         </section>
     </article>
 
+    <!-- 🚨 NEW UNIFIED MULTI-STEP CHECKOUT ENGINE 🚨 -->
+    <div id="checkout-overlay" class="fixed inset-0 bg-white z-[3000] hidden overflow-y-auto custom-scroll transition-opacity duration-300 opacity-0">
+        <!-- Checkout Header -->
+        <header class="w-full bg-white border-b border-luxury-blush px-4 py-4 flex items-center justify-between sticky top-0 z-50 shadow-sm">
+            <div class="flex items-center gap-3">
+                <img src="https://i.ibb.co/0RRrFK9N/TH-logo-1.png" class="w-8 h-8 rounded-full border border-luxury-rose object-cover" alt="Logo">
+                <span class="font-logo text-xl text-luxury-dark">Secure Checkout</span>
+            </div>
+            <button type="button" onclick="closeCheckout()" class="text-luxury-dark text-[10px] font-bold uppercase tracking-widest hover:text-luxury-rose transition-colors flex items-center gap-2">
+                Cancel <i class="fas fa-times text-sm"></i>
+            </button>
+        </header>
+
+        <div class="max-w-[1200px] mx-auto w-full px-4 sm:px-6 py-6 md:py-10 grid grid-cols-1 lg:grid-cols-12 gap-8 md:gap-12 relative">
+            
+            <!-- LEFT COLUMN: The Stepper & Content -->
+            <div class="lg:col-span-8 flex flex-col gap-8">
+                
+                <!-- Progress Stepper -->
+                <div class="flex items-center justify-between w-full relative mb-4">
+                    <div class="absolute left-0 top-1/2 -translate-y-1/2 w-full h-[2px] bg-luxury-bg z-0"></div>
+                    <div id="progress-bar-fill" class="absolute left-0 top-1/2 -translate-y-1/2 h-[2px] bg-luxury-rose z-0 transition-all duration-500 w-0"></div>
+                    
+                    <!-- Step 1 Indicator -->
+                    <div class="relative z-10 flex flex-col items-center gap-2">
+                        <div id="step-indicator-1" class="w-8 h-8 rounded-full flex items-center justify-center text-[12px] font-bold transition-colors bg-luxury-rose text-white shadow-md border-2 border-white">1</div>
+                        <span class="text-[9px] font-bold uppercase tracking-widest text-luxury-dark">Address</span>
+                    </div>
+                    <!-- Step 2 Indicator -->
+                    <div class="relative z-10 flex flex-col items-center gap-2">
+                        <div id="step-indicator-2" class="w-8 h-8 rounded-full flex items-center justify-center text-[12px] font-bold transition-colors bg-white text-gray-400 border-2 border-luxury-blush">2</div>
+                        <span class="text-[9px] font-bold uppercase tracking-widest text-gray-400" id="step-label-2">Summary</span>
+                    </div>
+                    <!-- Step 3 Indicator -->
+                    <div class="relative z-10 flex flex-col items-center gap-2">
+                        <div id="step-indicator-3" class="w-8 h-8 rounded-full flex items-center justify-center text-[12px] font-bold transition-colors bg-white text-gray-400 border-2 border-luxury-blush">3</div>
+                        <span class="text-[9px] font-bold uppercase tracking-widest text-gray-400" id="step-label-3">Payment</span>
+                    </div>
+                </div>
+
+                <!-- STEP 1: PATRON PROFILE / ADDRESS -->
+                <div id="checkout-step-1" class="w-full bg-white border border-luxury-blush rounded-3xl p-6 md:p-8 shadow-sm animate-fade-in">
+                    <div class="flex justify-between items-center mb-6">
+                        <h2 class="font-logo text-2xl text-luxury-dark">Delivery Details</h2>
+                        <button type="button" id="btn-edit-address" class="hidden text-luxury-rose text-[9px] font-bold uppercase tracking-widest border border-luxury-rose/30 px-3 py-1.5 rounded-full hover:bg-luxury-rose hover:text-white transition-colors">Edit</button>
+                    </div>
+
+                    <!-- Read-Only Display (Shown if profile is already complete) -->
+                    <div id="address-display" class="hidden bg-[#FFF0F2] border border-[#f4c6ce] rounded-xl p-5">
+                        <p class="font-bold text-luxury-dark text-[13px] mb-2" id="display-name"></p>
+                        <p class="text-luxury-dark/80 text-[12px] leading-relaxed mb-3" id="display-full-address"></p>
+                        <p class="text-luxury-dark font-medium text-[12px]"><i class="fas fa-phone-alt text-luxury-rose/70 mr-1.5 text-[10px]"></i> <span id="display-phone"></span></p>
+                    </div>
+
+                    <!-- Form (Shown if profile is empty or Edit is clicked) -->
+                    <form id="checkout-profile-form" class="space-y-4 font-sans">
+                        <div class="grid grid-cols-2 gap-4">
+                            <div>
+                                <label class="block text-[9px] font-bold text-gray-400 uppercase tracking-widest mb-1.5 pl-1">First Name *</label>
+                                <input type="text" id="prof-fname" required class="w-full px-4 py-3 bg-luxury-bg border border-luxury-blush rounded-xl outline-none text-[12px] font-medium text-luxury-dark focus:ring-2 focus:ring-luxury-rose/30 focus:border-luxury-rose transition-all">
+                            </div>
+                            <div>
+                                <label class="block text-[9px] font-bold text-gray-400 uppercase tracking-widest mb-1.5 pl-1">Last Name *</label>
+                                <input type="text" id="prof-lname" required class="w-full px-4 py-3 bg-luxury-bg border border-luxury-blush rounded-xl outline-none text-[12px] font-medium text-luxury-dark focus:ring-2 focus:ring-luxury-rose/30 focus:border-luxury-rose transition-all">
+                            </div>
+                        </div>
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <div>
+                                <label class="block text-[9px] font-bold text-gray-400 uppercase tracking-widest mb-1.5 pl-1">Email Address *</label>
+                                <input type="email" id="prof-email" required class="w-full px-4 py-3 bg-luxury-bg border border-luxury-blush rounded-xl outline-none text-[12px] font-medium text-luxury-dark focus:ring-2 focus:ring-luxury-rose/30 focus:border-luxury-rose transition-all">
+                            </div>
+                            <div>
+                                <label class="block text-[9px] font-bold text-gray-400 uppercase tracking-widest mb-1.5 pl-1">WhatsApp / Phone *</label>
+                                <div class="w-full bg-luxury-bg border border-luxury-blush rounded-xl overflow-hidden focus-within:ring-2 focus-within:ring-luxury-rose/30 focus-within:border-luxury-rose flex items-stretch transition-all">
+                                    <div class="flex items-center justify-center bg-white px-3 py-2.5 border-r border-luxury-blush">
+                                        <span class="text-[11px] font-bold text-gray-500 whitespace-nowrap mt-0.5" id="prof-country-code-display">🇮🇳 IN (+91)</span>
+                                    </div>
+                                    <input type="tel" id="prof-phone" required class="w-full min-w-0 px-4 py-3 bg-transparent outline-none text-[13px] font-semibold tracking-wide text-luxury-dark">
+                                </div>
+                            </div>
+                        </div>
+                        <div>
+                            <label class="block text-[9px] font-bold text-gray-400 uppercase tracking-widest mb-1.5 pl-1">Flat / House / Building *</label>
+                            <input type="text" id="prof-add1" required class="w-full px-4 py-3 bg-luxury-bg border border-luxury-blush rounded-xl outline-none text-[12px] font-medium text-luxury-dark focus:ring-2 focus:ring-luxury-rose/30 focus:border-luxury-rose transition-all">
+                        </div>
+                        <div>
+                            <label class="block text-[9px] font-bold text-gray-400 uppercase tracking-widest mb-1.5 pl-1">Area / Street / Sector</label>
+                            <input type="text" id="prof-add2" class="w-full px-4 py-3 bg-luxury-bg border border-luxury-blush rounded-xl outline-none text-[12px] font-medium text-luxury-dark focus:ring-2 focus:ring-luxury-rose/30 focus:border-luxury-rose transition-all">
+                        </div>
+                        <div class="grid grid-cols-2 md:grid-cols-3 gap-4">
+                            <div>
+                                <label class="block text-[9px] font-bold text-gray-400 uppercase tracking-widest mb-1.5 pl-1">City *</label>
+                                <input type="text" id="prof-city" required class="w-full px-4 py-3 bg-luxury-bg border border-luxury-blush rounded-xl outline-none text-[12px] font-medium text-luxury-dark focus:ring-2 focus:ring-luxury-rose/30 focus:border-luxury-rose transition-all">
+                            </div>
+                            <div>
+                                <label class="block text-[9px] font-bold text-gray-400 uppercase tracking-widest mb-1.5 pl-1">State *</label>
+                                <input type="text" id="prof-state" required class="w-full px-4 py-3 bg-luxury-bg border border-luxury-blush rounded-xl outline-none text-[12px] font-medium text-luxury-dark focus:ring-2 focus:ring-luxury-rose/30 focus:border-luxury-rose transition-all">
+                            </div>
+                            <div class="col-span-2 md:col-span-1">
+                                <label class="block text-[9px] font-bold text-gray-400 uppercase tracking-widest mb-1.5 pl-1">Pincode *</label>
+                                <input type="text" id="prof-pin" required class="w-full px-4 py-3 bg-luxury-bg border border-luxury-blush rounded-xl outline-none text-[12px] font-medium text-luxury-dark focus:ring-2 focus:ring-luxury-rose/30 focus:border-luxury-rose transition-all">
+                            </div>
+                        </div>
+                    </form>
+                </div>
+
+                <!-- STEP 2: ORDER SUMMARY & NOTES -->
+                <div id="checkout-step-2" class="w-full bg-white border border-luxury-blush rounded-3xl p-6 md:p-8 shadow-sm hidden flex-col animate-fade-in">
+                    <h2 class="font-logo text-2xl text-luxury-dark border-b border-luxury-blush pb-4 mb-6">Review & Personalize</h2>
+                    
+                    <div id="checkout-items-list" class="flex flex-col gap-4 mb-8">
+                        <!-- Items injected via JS -->
+                    </div>
+
+                    <div class="bg-luxury-bg border border-luxury-blush rounded-2xl p-5 md:p-6 space-y-4">
+                        <h4 class="font-bold text-[10px] text-luxury-dark uppercase tracking-widest mb-2"><i class="fas fa-paint-brush text-luxury-rose mr-1.5"></i> Customization Notes</h4>
+                        <div>
+                            <label class="block text-[9px] font-bold text-gray-500 uppercase tracking-widest mb-1.5 pl-1">Intended Purpose</label>
+                            <select id="comm-type" class="w-full px-4 py-3 bg-white border border-luxury-blush rounded-xl outline-none text-[11px] font-medium text-luxury-dark focus:ring-2 focus:ring-luxury-rose/30">
+                                <option value="Standard Order (No Framing)">Standard Order / As Displayed</option>
+                                <option value="A gift for someone special">A gift for someone special</option>
+                                <option value="Include framing options if available">Include framing options (if available)</option>
+                            </select>
+                        </div>
+                        <div id="comm-dimensions-wrapper" class="hidden">
+                            <label class="block text-[9px] font-bold text-luxury-gold uppercase tracking-widest mb-1.5 pl-1">Requested Size</label>
+                            <input type="text" id="comm-dimensions" placeholder="e.g. 24x36 inches" class="w-full px-4 py-3 bg-white border border-luxury-gold/30 rounded-xl outline-none text-[11px] font-medium text-luxury-dark focus:ring-2 focus:ring-luxury-rose/30">
+                        </div>
+                        <div>
+                            <label class="block text-[9px] font-bold text-gray-500 uppercase tracking-widest mb-1.5 pl-1">Notes / Inspiration</label>
+                            <textarea id="comm-colors" placeholder="Any specific colors or requests?" class="w-full px-4 py-3 bg-white border border-luxury-blush rounded-xl outline-none text-[11px] font-medium text-luxury-dark h-24 resize-none focus:ring-2 focus:ring-luxury-rose/30"></textarea>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- STEP 3: SECURE PAYMENT -->
+                <div id="checkout-step-3" class="w-full bg-white border border-luxury-blush rounded-3xl p-6 md:p-8 shadow-sm hidden flex-col items-center animate-fade-in text-center">
+                    <!-- Standard QR/UPI View -->
+                    <div id="payment-gateway-view" class="w-full flex flex-col items-center">
+                        <div class="w-16 h-16 bg-[#FFF0F2] rounded-full flex items-center justify-center mb-5 border border-[#f4c6ce] shadow-sm">
+                            <i class="fas fa-shield-alt text-luxury-rose text-2xl"></i>
+                        </div>
+                        <h2 class="font-logo text-3xl text-luxury-dark mb-2">Secure Your Order</h2>
+                        <p class="text-[12px] text-gray-500 font-medium mb-8 max-w-sm leading-relaxed">
+                            Complete the secure payment of <span class="font-poppins font-bold text-luxury-dark text-[14px]" id="checkout-payment-amount">₹0</span> to officially commission your artwork.
+                        </p>
+
+                        <!-- Desktop QR Code -->
+                        <div id="payment-qr-container" class="hidden flex-col items-center w-full mb-6">
+                            <div class="p-4 bg-white border-2 border-luxury-blush rounded-3xl shadow-sm relative group">
+                                <img id="payment-qr-img" src="" alt="UPI QR Code" class="w-56 h-56 object-contain">
+                                <div class="absolute inset-0 bg-white/60 backdrop-blur-[2px] hidden items-center justify-center group-hover:flex transition-all rounded-3xl">
+                                    <span class="bg-luxury-dark text-white text-[9px] font-bold uppercase tracking-widest px-4 py-2 rounded-full shadow-md">Scan to Pay</span>
+                                </div>
+                            </div>
+                            <p class="text-[9px] text-gray-400 uppercase tracking-widest font-bold mt-4"><i class="fas fa-camera text-luxury-rose mr-1"></i> Scan using any UPI app</p>
+                        </div>
+
+                        <!-- Mobile UPI Button -->
+                        <div id="payment-mobile-container" class="hidden w-full max-w-sm mb-6">
+                            <a id="payment-mobile-btn" href="#" target="_blank" rel="noopener noreferrer" class="w-full bg-luxury-dark text-white hover:bg-luxury-rose py-4 rounded-xl font-bold text-[11px] uppercase flex items-center justify-center gap-2 tracking-[0.15em] shadow-float transition-all">
+                                Pay via UPI App <i class="fas fa-external-link-alt"></i>
+                            </a>
+                        </div>
+                        
+                        <p class="text-[8px] text-gray-400 uppercase tracking-widest max-w-xs mx-auto mt-2">Only click "Verify" after your bank confirms the transaction is successful.</p>
+                    </div>
+
+                    <!-- Success View -->
+                    <div id="payment-success-view" class="w-full hidden flex-col items-center py-6">
+                        <div class="w-24 h-24 bg-green-50 rounded-full flex items-center justify-center mb-6 border-4 border-white shadow-soft">
+                            <i class="fas fa-check text-green-500 text-4xl"></i>
+                        </div>
+                        <h2 class="font-logo text-4xl text-luxury-dark mb-4">Order Confirmed</h2>
+                        <p class="text-[13px] text-gray-500 font-medium mb-8 max-w-md leading-relaxed">
+                            Your request has been securely routed to our studio. Our artisan will verify your payment shortly and begin crafting your masterpiece.
+                        </p>
+                        <div class="w-full max-w-sm bg-[#FFF0F2] border border-[#f4c6ce] rounded-2xl p-5 mb-8 text-center shadow-inner">
+                            <span class="block text-[9px] font-bold text-luxury-rose uppercase tracking-widest mb-1.5">Order Reference</span>
+                            <span id="success-ref-note" class="font-poppins font-black text-luxury-dark text-xl tracking-wider"></span>
+                        </div>
+                        <button type="button" onclick="closeCheckout()" class="w-full max-w-sm border-2 border-luxury-rose text-luxury-dark hover:bg-luxury-rose hover:text-white py-4 rounded-full font-bold text-[10px] uppercase tracking-[0.15em] transition-colors shadow-sm">
+                            Return to Gallery
+                        </button>
+                    </div>
+                </div>
+
+            </div>
+
+            <!-- RIGHT COLUMN: Price Details / Quotation Sidebar -->
+            <div class="lg:col-span-4 w-full">
+                <div class="bg-white border border-luxury-blush rounded-3xl p-6 md:p-8 shadow-float sticky top-[100px] flex flex-col">
+                    <h3 class="font-bold text-[11px] text-luxury-dark uppercase tracking-widest border-b border-luxury-blush pb-4 mb-5">Quotation Summary</h3>
+                    
+                    <div class="space-y-4 mb-6 text-[12px] font-medium text-gray-500">
+                        <div class="flex justify-between items-center">
+                            <span>Original Value</span>
+                            <span id="qo-original-value" class="font-poppins text-luxury-dark line-through decoration-red-400/50">₹0</span>
+                        </div>
+                        
+                        <div class="flex justify-between items-center text-luxury-rose">
+                            <span>Artisan Discount</span>
+                            <span id="qo-product-discount" class="font-poppins font-bold">- ₹0</span>
+                        </div>
+                        
+                        <div id="qo-vip-row" class="flex justify-between items-center text-luxury-rose hidden">
+                            <span>VIP Privilege <span id="qo-vip-label" class="bg-luxury-blush px-1.5 py-0.5 rounded-sm ml-1 text-[7px] text-luxury-rose font-extrabold border border-luxury-rose/30 shadow-sm uppercase tracking-widest"></span></span>
+                            <span id="qo-vip-discount" class="font-poppins font-bold">- ₹0</span>
+                        </div>
+
+                        <div class="flex justify-between items-center border-t border-dashed border-luxury-blush pt-4">
+                            <span class="flex items-center gap-1.5">Delivery Fee <i class="fas fa-info-circle text-[9px] text-gray-300" title="Calculated based on standard premium shipping rates."></i></span>
+                            <span id="qo-delivery-fee" class="font-poppins text-luxury-dark">₹99</span>
+                        </div>
+                    </div>
+
+                    <div class="border-t border-luxury-blush pt-5 mb-6 flex justify-between items-end">
+                        <div class="flex flex-col">
+                            <span class="text-luxury-dark font-bold text-[14px] uppercase tracking-widest">Final Total</span>
+                            <span class="text-[9px] text-green-500 font-bold tracking-widest uppercase mt-1">You Saved ₹<span id="qo-total-savings">0</span>!</span>
+                        </div>
+                        <span id="qo-final-total" class="font-poppins font-black text-3xl text-luxury-dark tracking-tight">₹0</span>
+                    </div>
+
+                    <!-- Dynamic Action Button -->
+                    <button type="button" id="checkout-action-btn" onclick="handleCheckoutAction()" class="w-full bg-luxury-dark text-white hover:bg-luxury-rose py-4 rounded-xl font-bold text-[11px] uppercase tracking-[0.15em] transition-all shadow-float flex items-center justify-center gap-2">
+                        Deliver Here <i class="fas fa-arrow-right"></i>
+                    </button>
+                    
+                    <div class="flex items-center justify-center gap-3 mt-6 text-[9px] text-gray-400 font-bold uppercase tracking-widest">
+                        <i class="fas fa-shield-alt"></i> 100% Secure Checkout
+                    </div>
+                </div>
+            </div>
+
+        </div>
+    </div>
+
     <!-- UI MODALS -->
     <!-- Return Policy Modal -->
-    <div id="return-policy-modal" role="dialog" aria-modal="true" class="hidden transition-opacity duration-200 opacity-0 fixed inset-0 bg-luxury-dark/60 p-4 flex items-center justify-center z-[1100]">
+    <div id="return-policy-modal" role="dialog" aria-modal="true" class="hidden transition-opacity duration-200 opacity-0 fixed inset-0 bg-luxury-dark/60 p-4 flex items-center justify-center z-[4000]">
         <div class="transform scale-95 translate-y-2 transition-all duration-300 bg-white rounded-3xl w-full max-w-md p-6 sm:p-8 shadow-xl relative border border-luxury-rose" id="return-policy-box">
             <button id="btn-close-return-policy" class="absolute top-4 right-4 text-gray-400 w-8 h-8 bg-luxury-bg rounded-full flex items-center justify-center border border-luxury-blush hover:text-luxury-dark"><i class="fas fa-times text-xs"></i></button>
             <div class="w-12 h-12 bg-red-50 rounded-full flex items-center justify-center mx-auto mb-4 border border-red-100"><i class="fas fa-ban text-red-400 text-xl"></i></div>
@@ -304,7 +559,7 @@
     </div>
 
     <!-- Privacy Policy Modal -->
-    <div id="privacy-policy-modal" role="dialog" aria-modal="true" class="hidden transition-opacity duration-200 opacity-0 fixed inset-0 bg-luxury-dark/60 p-4 flex items-center justify-center z-[1100]">
+    <div id="privacy-policy-modal" role="dialog" aria-modal="true" class="hidden transition-opacity duration-200 opacity-0 fixed inset-0 bg-luxury-dark/60 p-4 flex items-center justify-center z-[4000]">
         <div class="transform scale-95 translate-y-2 transition-all duration-300 bg-white rounded-3xl w-full max-w-lg p-6 sm:p-8 shadow-xl relative border border-luxury-blush max-h-[85vh] overflow-y-auto custom-scroll" id="privacy-policy-box">
             <button id="btn-close-privacy-policy" class="absolute top-4 right-4 text-gray-400 w-8 h-8 bg-luxury-bg rounded-full flex items-center justify-center border border-luxury-blush hover:text-luxury-dark"><i class="fas fa-times text-xs"></i></button>
             <h2 class="font-logo font-normal text-2xl text-center text-luxury-dark mb-6">Privacy Policy</h2>
@@ -352,165 +607,10 @@
                     <span id="cart-final-total" class="text-luxury-dark font-extrabold font-poppins text-2xl tracking-tight">₹0</span>
                 </div>
             </div>
-            <button id="btn-cart-checkout" class="bg-luxury-dark text-white hover:bg-luxury-gold w-full py-4 rounded-xl font-bold text-[10px] uppercase flex items-center justify-center gap-2 tracking-[0.1em] shadow-md transition-colors">Proceed to Checkout <i class="fas fa-lock text-[10px]"></i></button>
+            <button id="btn-cart-checkout" class="bg-luxury-dark text-white hover:bg-luxury-rose w-full py-4 rounded-xl font-bold text-[10px] uppercase flex items-center justify-center gap-2 tracking-[0.1em] shadow-md transition-colors">Proceed to Checkout <i class="fas fa-lock text-[10px]"></i></button>
             <button id="btn-show-offers" class="w-full text-center text-luxury-rose text-[8px] font-bold uppercase tracking-widest mt-4 hover:text-luxury-gold transition-colors min-h-[44px]">🎀 View VIP Offers</button>
         </footer>
     </aside>
-
-    <!-- Profile/Checkout Modal -->
-    <div id="profile-modal" role="dialog" aria-modal="true" class="hidden transition-opacity duration-200 opacity-0 fixed inset-0 bg-luxury-dark/60 p-4 flex items-center justify-center z-[1050]">
-        <div class="transform scale-95 translate-y-2 transition-all duration-300 bg-luxury-bg rounded-3xl w-full max-w-lg p-6 sm:p-8 shadow-xl relative border border-luxury-rose max-h-[95vh] overflow-y-auto custom-scroll" id="profile-box">
-            <button id="btn-close-profile" class="absolute top-4 right-4 text-gray-400 min-w-[44px] min-h-[44px] bg-white rounded-full flex items-center justify-center border border-luxury-blush hover:text-luxury-dark" aria-label="Close"><i class="fas fa-times text-xs"></i></button>
-            <span class="block text-center text-[8px] font-bold text-luxury-rose uppercase tracking-[0.2em] mb-1">Step 1 of 2</span>
-            <h2 class="font-logo font-normal text-2xl text-center text-luxury-dark mb-5">Patron Profile</h2>
-            
-            <form id="profile-form" class="space-y-3 font-sans" onsubmit="event.preventDefault();">
-                <div class="grid grid-cols-2 gap-3">
-                    <div>
-                        <label for="prof-fname" class="block text-[8px] font-bold text-gray-500 uppercase tracking-[0.1em] mb-1 pl-1">First Name <span class="text-red-400">*</span></label>
-                        <input type="text" id="prof-fname" required class="w-full px-3 py-2.5 bg-white border border-luxury-blush rounded-xl outline-none text-[11px] font-medium text-luxury-dark focus:ring-2 focus:ring-luxury-rose/30 focus:border-luxury-rose">
-                    </div>
-                    <div>
-                        <label for="prof-lname" class="block text-[8px] font-bold text-gray-500 uppercase tracking-[0.1em] mb-1 pl-1">Last Name <span class="text-red-400">*</span></label>
-                        <input type="text" id="prof-lname" required class="w-full px-3 py-2.5 bg-white border border-luxury-blush rounded-xl outline-none text-[11px] font-medium text-luxury-dark focus:ring-2 focus:ring-luxury-rose/30 focus:border-luxury-rose">
-                    </div>
-                </div>
-                <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                    <div>
-                        <label for="prof-email" class="block text-[8px] font-bold text-gray-500 uppercase tracking-[0.1em] mb-1 pl-1">Email <span class="text-red-400">*</span></label>
-                        <input type="email" id="prof-email" required class="w-full px-3 py-2.5 bg-white border border-luxury-blush rounded-xl outline-none text-[11px] font-medium text-luxury-dark focus:ring-2 focus:ring-luxury-rose/30 focus:border-luxury-rose">
-                    </div>
-                    <div>
-                        <label for="prof-phone" class="block text-[8px] font-bold text-gray-500 uppercase tracking-[0.1em] mb-1 pl-1">WhatsApp / Phone <span class="text-red-400">*</span></label>
-                        <!-- PERFECT VERTICAL CENTERING APPLIED HERE -->
-                        <div class="w-full bg-white border border-luxury-blush rounded-xl overflow-hidden focus-within:ring-2 focus-within:ring-luxury-rose/30 focus-within:border-luxury-rose flex items-stretch">
-                            <div class="flex items-center justify-center bg-luxury-bg px-3 py-2.5 border-r border-luxury-blush">
-                                <span class="text-[11px] font-bold text-gray-500 whitespace-nowrap mt-0.5" id="prof-country-code-display">🇮🇳 IN (+91)</span>
-                            </div>
-                            <input type="tel" id="prof-phone" required class="w-full min-w-0 px-3 py-2.5 bg-transparent outline-none text-[12px] font-semibold tracking-wide text-luxury-dark">
-                        </div>
-                    </div>
-                </div>
-                <div>
-                    <label for="prof-add1" class="block text-[8px] font-bold text-gray-500 uppercase tracking-[0.1em] mb-1 pl-1">Flat / House / Building <span class="text-red-400">*</span></label>
-                    <input type="text" id="prof-add1" required class="w-full px-3 py-2.5 bg-white border border-luxury-blush rounded-xl outline-none text-[11px] font-medium text-luxury-dark focus:ring-2 focus:ring-luxury-rose/30 focus:border-luxury-rose">
-                </div>
-                <div>
-                    <label for="prof-add2" class="block text-[8px] font-bold text-gray-500 uppercase tracking-[0.1em] mb-1 pl-1">Area / Street / Sector</label>
-                    <input type="text" id="prof-add2" class="w-full px-3 py-2.5 bg-white border border-luxury-blush rounded-xl outline-none text-[11px] font-medium text-luxury-dark focus:ring-2 focus:ring-luxury-rose/30 focus:border-luxury-rose">
-                </div>
-                <div class="grid grid-cols-2 sm:grid-cols-3 gap-3">
-                    <div>
-                        <label for="prof-city" class="block text-[8px] font-bold text-gray-500 uppercase tracking-[0.1em] mb-1 pl-1">City <span class="text-red-400">*</span></label>
-                        <input type="text" id="prof-city" required class="w-full px-3 py-2.5 bg-white border border-luxury-blush rounded-xl outline-none text-[11px] font-medium text-luxury-dark focus:ring-2 focus:ring-luxury-rose/30 focus:border-luxury-rose">
-                    </div>
-                    <div>
-                        <label for="prof-state" class="block text-[8px] font-bold text-gray-500 uppercase tracking-[0.1em] mb-1 pl-1">State <span class="text-red-400">*</span></label>
-                        <input type="text" id="prof-state" required class="w-full px-3 py-2.5 bg-white border border-luxury-blush rounded-xl outline-none text-[11px] font-medium text-luxury-dark focus:ring-2 focus:ring-luxury-rose/30 focus:border-luxury-rose">
-                    </div>
-                    <div class="col-span-2 sm:col-span-1">
-                        <label for="prof-pin" class="block text-[8px] font-bold text-gray-500 uppercase tracking-[0.1em] mb-1 pl-1">Pincode <span class="text-red-400">*</span></label>
-                        <input type="text" id="prof-pin" required class="w-full px-3 py-2.5 bg-white border border-luxury-blush rounded-xl outline-none text-[11px] font-medium text-luxury-dark focus:ring-2 focus:ring-luxury-rose/30 focus:border-luxury-rose">
-                    </div>
-                </div>
-                <button type="submit" id="btn-save-profile" class="bg-luxury-dark text-white hover:bg-luxury-gold w-full mt-6 py-4 rounded-xl font-bold text-[10px] uppercase flex items-center justify-center gap-2 tracking-[0.15em] shadow-md transition-colors">Save & Continue <i class="fas fa-arrow-right"></i></button>
-            </form>
-        </div>
-    </div>
-
-    <!-- Order Finalization Modal -->
-    <div id="commission-modal" role="dialog" aria-modal="true" class="hidden transition-opacity duration-200 opacity-0 fixed inset-0 bg-luxury-dark/60 p-4 flex items-center justify-center z-[1050]">
-        <div class="transform scale-95 translate-y-2 transition-all duration-300 bg-luxury-bg rounded-3xl w-full max-w-md p-6 sm:p-8 shadow-xl relative border border-luxury-rose" id="commission-box">
-            <button id="btn-close-commission" class="absolute top-4 right-4 text-gray-400 min-w-[44px] min-h-[44px] bg-white rounded-full flex items-center justify-center border border-luxury-blush hover:text-luxury-dark" aria-label="Close"><i class="fas fa-times text-xs"></i></button>
-            <span class="block text-center text-[8px] font-bold text-luxury-rose uppercase tracking-[0.2em] mb-1">Final Step</span>
-            <h2 class="font-logo font-normal text-2xl text-center text-luxury-dark mb-5">Order Details</h2>
-            
-            <form id="commission-form" class="space-y-4 font-sans" onsubmit="event.preventDefault();">
-                <div class="bg-white border border-luxury-blush p-3 rounded-xl shadow-sm text-[10px] text-gray-500 flex justify-between items-center">
-                    <span>Delivering to: <strong class="text-luxury-dark" id="summary-name"></strong></span>
-                    <button type="button" id="btn-edit-profile" class="text-luxury-rose font-bold uppercase tracking-wider p-2"><i class="fas fa-pen"></i> Edit</button>
-                </div>
-
-                <div>
-                    <label for="comm-type" class="block text-[8px] font-bold text-gray-500 uppercase tracking-[0.1em] mb-1 pl-1">Intended Purpose / Framing</label>
-                    <select id="comm-type" class="w-full px-3.5 py-2.5 bg-white border border-luxury-blush rounded-xl outline-none text-[11px] font-medium text-luxury-dark focus:ring-2 focus:ring-luxury-rose/30 focus:border-luxury-rose">
-                        <option value="Standard Order (No Framing)">Standard Order / As Displayed</option>
-                        <option value="A gift for someone special">A gift for someone special</option>
-                        <option value="Include framing options if available">Include framing options (if available)</option>
-                    </select>
-                </div>
-                <div id="comm-dimensions-wrapper" class="hidden">
-                    <label for="comm-dimensions" class="block text-[8px] font-bold text-luxury-gold uppercase tracking-[0.1em] mb-1 pl-1">Requested Size (Customization)</label>
-                    <input type="text" id="comm-dimensions" placeholder="e.g. 24x36 inches (Leave blank for default)" class="w-full px-3.5 py-2.5 bg-white border border-luxury-gold/30 rounded-xl outline-none text-[11px] font-medium text-luxury-dark focus:ring-2 focus:ring-luxury-rose/30 focus:border-luxury-rose">
-                </div>
-                <div>
-                    <label for="comm-colors" class="block text-[8px] font-bold text-gray-500 uppercase tracking-[0.1em] mb-1 pl-1">Custom Notes / Inspiration</label>
-                    <textarea id="comm-colors" placeholder="Any specific colors or customizations?" class="w-full px-3.5 py-2.5 bg-white border border-luxury-blush rounded-xl outline-none text-[11px] font-medium text-luxury-dark h-20 resize-none focus:ring-2 focus:ring-luxury-rose/30 focus:border-luxury-rose"></textarea>
-                </div>
-                <button type="submit" id="final-checkout-btn" class="bg-luxury-dark text-white hover:bg-luxury-gold w-full mt-6 py-4 rounded-xl font-bold text-[10px] uppercase flex items-center justify-center gap-2 tracking-[0.15em] shadow-md transition-colors">Place Order & Pay <i class="fas fa-lock text-xs"></i></button>
-            </form>
-        </div>
-    </div>
-
-    <!-- 🚨 SECURE ON-SITE PAYMENT MODAL 🚨 -->
-    <div id="payment-modal" role="dialog" aria-modal="true" class="hidden transition-opacity duration-200 opacity-0 fixed inset-0 bg-luxury-dark/90 p-4 flex items-center justify-center z-[1100]">
-        <div class="transform scale-95 translate-y-2 transition-all duration-300 bg-white rounded-3xl w-full max-w-sm p-8 shadow-2xl relative border border-luxury-rose flex flex-col items-center overflow-hidden" id="payment-box">
-            
-            <button id="btn-close-payment" class="absolute top-4 right-4 text-gray-400 min-w-[44px] min-h-[44px] bg-luxury-bg rounded-full flex items-center justify-center border border-luxury-blush hover:text-luxury-dark" aria-label="Close"><i class="fas fa-times text-xs"></i></button>
-            
-            <div id="payment-step-1" class="w-full flex flex-col items-center animate-fade-in">
-                <div class="w-16 h-16 bg-luxury-blush rounded-full flex items-center justify-center mb-4 border-4 border-white shadow-sm">
-                    <i class="fas fa-qrcode text-luxury-rose text-2xl"></i>
-                </div>
-                
-                <h2 class="font-logo font-normal text-2xl text-center text-luxury-dark mb-2">Secure Your Order</h2>
-                <p class="text-[11px] text-gray-500 text-center font-sans font-medium mb-6 leading-relaxed">
-                    Complete the secure payment of <span class="font-poppins font-bold text-luxury-dark text-[13px]" id="payment-amount">₹0</span> to permanently secure your order and begin curation.
-                </p>
-
-                <!-- Desktop QR Code -->
-                <div id="payment-qr-container" class="hidden flex-col items-center w-full">
-                    <div class="p-3 bg-white border-2 border-luxury-blush rounded-2xl shadow-sm mb-3 relative group">
-                        <img id="payment-qr-img" src="" alt="UPI QR Code" class="w-48 h-48 object-contain">
-                        <div class="absolute inset-0 bg-white/50 backdrop-blur-[2px] hidden items-center justify-center group-hover:flex transition-all">
-                            <span class="bg-luxury-dark text-white text-[9px] font-bold uppercase tracking-widest px-3 py-1.5 rounded-full shadow-md">Scan to Pay</span>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- Mobile UPI Button -->
-                <div id="payment-mobile-container" class="hidden w-full mb-2">
-                    <a id="payment-mobile-btn" href="#" target="_blank" class="w-full bg-luxury-dark text-white hover:bg-luxury-gold py-4 rounded-xl font-bold text-[11px] uppercase flex items-center justify-center gap-2 tracking-[0.1em] shadow-md transition-colors">
-                        Pay with UPI App <i class="fas fa-mobile-alt"></i>
-                    </a>
-                </div>
-
-                <div class="w-full border-t border-luxury-blush pt-5 mt-4">
-                    <button id="btn-confirm-payment" class="w-full bg-green-600 text-white hover:bg-green-700 py-4 rounded-xl font-bold text-[10px] uppercase flex items-center justify-center gap-2 tracking-[0.15em] shadow-md transition-colors">
-                        I Have Completed Payment <i class="fas fa-check-circle"></i>
-                    </button>
-                    <p class="text-[8px] text-center text-gray-400 uppercase tracking-widest mt-3">Do not click until payment is successful from your bank.</p>
-                </div>
-            </div>
-
-            <div id="payment-step-2" class="w-full hidden flex-col items-center animate-fade-in py-4">
-                <div class="w-20 h-20 bg-green-100 rounded-full flex items-center justify-center mb-5 border-4 border-white shadow-md">
-                    <i class="fas fa-check text-green-600 text-3xl"></i>
-                </div>
-                <h2 class="font-logo font-normal text-3xl text-center text-luxury-dark mb-3">Order Confirmed!</h2>
-                <p class="text-[12px] text-gray-500 text-center font-sans font-medium mb-6 leading-relaxed">
-                    Your request has been securely routed to our studio. Our artisan will verify your payment shortly and begin crafting your masterpiece.
-                </p>
-                <div class="w-full bg-luxury-bg border border-luxury-blush rounded-xl p-4 mb-6 text-center">
-                    <span class="block text-[8px] font-bold text-gray-400 uppercase tracking-widest mb-1">Order Reference</span>
-                    <span id="success-ref-note" class="font-poppins font-extrabold text-luxury-dark text-lg tracking-wider"></span>
-                </div>
-                <button id="btn-return-gallery" class="w-full border border-luxury-rose text-luxury-dark hover:bg-luxury-rose hover:text-white py-3.5 rounded-full font-bold text-[9px] uppercase tracking-[0.15em] transition-colors">
-                    Return to Gallery
-                </button>
-            </div>
-        </div>
-    </div>
 
     <!-- Offers Modal -->
     <div id="offers-modal" role="dialog" aria-modal="true" class="hidden transition-opacity duration-200 opacity-0 fixed inset-0 bg-luxury-dark/60 p-4 flex items-center justify-center z-[1050]">
@@ -528,7 +628,7 @@
     </div>
 
     <!-- Global Toast Notification -->
-    <div id="toast" role="alert" aria-live="assertive" class="fixed bottom-8 left-1/2 transform -translate-x-1/2 bg-luxury-dark text-luxury-bg px-6 py-3 rounded-full shadow-xl flex items-center gap-2.5 transition-all duration-300 opacity-0 pointer-events-none w-max border border-luxury-rose/30 translate-y-10 z-[2000]">
+    <div id="toast" role="alert" aria-live="assertive" class="fixed bottom-8 left-1/2 transform -translate-x-1/2 bg-luxury-dark text-luxury-bg px-6 py-3 rounded-full shadow-xl flex items-center gap-2.5 transition-all duration-300 opacity-0 pointer-events-none w-max border border-luxury-rose/30 translate-y-10 z-[5000]">
         <i id="toast-icon" class="fas fa-check text-luxury-rose text-sm"></i> 
         <span id="toast-msg" class="text-[10px] font-bold tracking-[0.1em] uppercase pt-0.5"></span>
     </div>
