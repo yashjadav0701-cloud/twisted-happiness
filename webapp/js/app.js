@@ -1,6 +1,6 @@
 /**
  * Twisted Happiness - Enterprise Storefront Engine
- * Phase 8 Complete: Multi-Step Unified Checkout, Adblock-Proof QR, Dynamic Delivery, Luxury Footer.
+ * Phase 8 Complete: Multi-Step Unified Checkout, Adblock-Proof QR, Next-Level Dynamic Delivery, Luxury Footer.
  */
 
 const SUPABASE_URL = "https://gvrfucjtnyqfkdynrmqs.supabase.co"; 
@@ -33,7 +33,7 @@ let modalImages = []; let currentSlideIndex = 0; let isAnimating = false;
 let currentLightboxIndex = 0; let isLightboxAnimating = false;
 let currentModalLevel = 0; let statePushed = false;
 
-// 🚨 Unified Checkout State
+// Unified Checkout State
 let currentCommissionContext = 'cart'; 
 let singleProductToCommission = null;
 let checkoutStep = 1;
@@ -92,6 +92,7 @@ function applyDynamicSettings() {
 }
 
 function bindDOMEvents() {
+    // Hidden Admin Shortcut (Ctrl + Shift + K)
     document.addEventListener('keydown', (e) => {
         if (e.ctrlKey && e.shiftKey && e.key.toLowerCase() === 'k') {
             e.preventDefault();
@@ -99,6 +100,15 @@ function bindDOMEvents() {
         }
     });
 
+    // Reactive Pincode Listener for Flipkart-Style Live Shipping Calculation
+    document.getElementById('prof-pin')?.addEventListener('input', () => {
+        const overlay = document.getElementById('checkout-overlay');
+        if (overlay && !overlay.classList.contains('hidden')) {
+            updateCheckoutUI();
+        }
+    });
+
+    // Policy Modals
     document.getElementById('btn-open-return-policy')?.addEventListener('click', () => openPolicyModal('return-policy-modal', 'return-policy-box'));
     document.getElementById('btn-close-return-policy')?.addEventListener('click', () => closePolicyModal('return-policy-modal', 'return-policy-box'));
     document.getElementById('btn-open-privacy-policy')?.addEventListener('click', () => openPolicyModal('privacy-policy-modal', 'privacy-policy-box'));
@@ -130,8 +140,9 @@ function bindDOMEvents() {
     document.getElementById('btn-slide-next')?.addEventListener('click', (e) => { e.stopPropagation(); moveSlide(1); });
     document.getElementById('btn-lightbox-prev')?.addEventListener('click', () => moveLightboxSlide(-1));
     document.getElementById('btn-lightbox-next')?.addEventListener('click', () => moveLightboxSlide(1));
-
+    
     document.getElementById('btn-confirm-payment')?.addEventListener('click', confirmPaymentAndOrder);
+    document.getElementById('btn-return-gallery')?.addEventListener('click', () => { forceClosePaymentModal(); safeBack(); });
 
     window.addEventListener('popstate', function(e) {
         const level = e.state ? e.state.level : 0;
@@ -429,7 +440,13 @@ function setupLightboxTouch() { let lbStartX = 0; let lbEndX = 0; const track = 
 function updateActiveThumb(activeIndex, totalImages) { requestAnimationFrame(() => { for(let i = 0; i < totalImages; i++) { const thumb = document.getElementById(`thumb-${i}`); if(thumb) { if(i === activeIndex) { thumb.classList.add('border-luxury-rose', 'scale-105', 'opacity-100'); thumb.classList.remove('border-transparent', 'opacity-60'); } else { thumb.classList.remove('border-luxury-rose', 'scale-105', 'opacity-100'); thumb.classList.add('border-transparent', 'opacity-60'); } } } }); }
 
 // 🚨 3-STEP UNIFIED CHECKOUT ENGINE 🚨
-window.th_routeCheckoutFromModal = function(id, event) { if(event) { event.preventDefault(); event.stopPropagation(); } const p = products.find(x => x.id == id); currentCommissionContext = 'single'; singleProductToCommission = p; openCheckoutBase(); };
+window.th_routeCheckoutFromModal = function(id, event) { 
+    if(event) { event.preventDefault(); event.stopPropagation(); } 
+    const p = products.find(x => x.id == id); 
+    currentCommissionContext = 'single'; 
+    singleProductToCommission = {...p, qty: 1}; 
+    openCheckoutBase(); 
+};
 function routeCheckoutFromCart(event) { if(event) { event.preventDefault(); event.stopPropagation(); } forceCloseCart(); setTimeout(() => { currentCommissionContext = 'cart'; singleProductToCommission = null; if(cart.length === 0) return showToast("Your bag is empty!", "fa-times", "text-red-500"); openCheckoutBase(); }, 300); }
 function openProfileFromHeader() { currentCommissionContext = 'header'; openCheckoutBase(); }
 
@@ -485,6 +502,211 @@ function closeCheckout() {
     });
 }
 
+window.updateCheckoutQty = function(id, delta) {
+    if (currentCommissionContext === 'single') {
+        if (!singleProductToCommission.qty) singleProductToCommission.qty = 1;
+        singleProductToCommission.qty += delta;
+        if (singleProductToCommission.qty < 1) singleProductToCommission.qty = 1; 
+    } else {
+        let existing = cart.find(x => x.id === id);
+        if(existing) { 
+            existing.qty = parseInt(existing.qty || 1) + delta; 
+            if(existing.qty <= 0) { 
+                cart = cart.filter(x => x.id !== id); 
+                if (cart.length === 0) {
+                    closeCheckout();
+                    return showToast("Bag is empty!", "fa-times");
+                }
+            } 
+        }
+        localStorage.setItem('th_cart', JSON.stringify(cart));
+        updateCartCount();
+        renderCart(); 
+    }
+    renderCheckoutItems();
+    updateCheckoutUI();
+};
+
+function renderCheckoutItems() {
+    const container = document.getElementById('checkout-items-list');
+    let itemsHTML = '';
+    
+    let itemsToRender = [];
+    if (currentCommissionContext === 'single' && singleProductToCommission) {
+        if(!singleProductToCommission.qty) singleProductToCommission.qty = 1;
+        itemsToRender = [singleProductToCommission];
+    } else {
+        itemsToRender = cart;
+    }
+
+    itemsToRender.forEach(item => {
+        const cleanPrice = Number(item.price.toString().replace(/[^0-9.,]/g, ''));
+        const discountPercent = getDiscountPercent(item.id.toString());
+        const originalPrice = Math.round(cleanPrice * (1 + (discountPercent / 100)));
+        const itemImg = (item.image1 || item.image) ? (item.image1 || item.image) : 'https://placehold.co/150/F8E9EA/423133';
+        const qty = parseInt(item.qty || 1);
+
+        itemsHTML += `
+        <div class="flex flex-col sm:flex-row gap-4 border border-luxury-blush bg-white p-4 rounded-2xl shadow-sm">
+            <img src="${itemImg}" class="w-20 h-24 sm:w-24 sm:h-28 object-cover rounded-xl border border-luxury-blush shrink-0 bg-luxury-bg">
+            <div class="flex flex-col justify-between w-full">
+                <div>
+                    <h4 class="font-bitter text-[14px] sm:text-[15px] font-semibold text-luxury-dark mb-1 leading-snug">${item.name}</h4>
+                    <p class="text-[10px] uppercase tracking-widest font-bold text-gray-400 mb-3">${item.mainCategory || item.category || 'Handcrafted Art'}</p>
+                    <div class="flex items-baseline gap-2 mb-4">
+                        <span class="font-poppins text-luxury-dark font-bold text-[16px] sm:text-[18px]">₹${cleanPrice}</span>
+                        <span class="font-poppins text-gray-400 text-[11px] line-through">₹${originalPrice}</span>
+                        <span class="text-green-600 font-bold text-[10px] ml-1">${discountPercent}% Off</span>
+                    </div>
+                </div>
+                <div class="flex items-center gap-3">
+                    <div class="flex items-center bg-white border border-luxury-blush rounded-full h-[36px] overflow-hidden shadow-sm">
+                        <button type="button" onclick="window.updateCheckoutQty('${item.id}', -1)" class="w-10 h-full flex items-center justify-center text-luxury-dark hover:bg-luxury-blush transition-colors"><i class="fas fa-minus text-[10px]"></i></button>
+                        <div class="w-10 h-full flex items-center justify-center border-l border-r border-luxury-blush text-[12px] font-bold text-luxury-rose bg-luxury-bg">${qty}</div>
+                        <button type="button" onclick="window.updateCheckoutQty('${item.id}', 1)" class="w-10 h-full flex items-center justify-center text-luxury-dark hover:bg-luxury-blush transition-colors"><i class="fas fa-plus text-[10px]"></i></button>
+                    </div>
+                </div>
+            </div>
+        </div>`;
+    });
+    container.innerHTML = itemsHTML;
+}
+
+// 🚨 ENTERPRISE DYNAMIC SHIPPING ENGINE 🚨
+function calculateDynamicDelivery(subtotal, pincode, items) {
+    if (subtotal >= 2499 || subtotal === 0) return 0; 
+    
+    let totalChargeableWeightKg = 0;
+    
+    items.forEach(item => {
+        let itemDeadWeight = 0.2; 
+        let itemVolumetricWeight = 0.2;
+        const cat = item.mainCategory || item.category || '';
+        const qty = parseInt(item.qty || 1);
+
+        if (cat.includes('Canvas')) {
+            itemDeadWeight = 1.5; 
+            itemVolumetricWeight = (45 * 35 * 5) / 5000; 
+        } else if (cat.includes('Clay')) {
+            itemDeadWeight = 0.8;
+            itemVolumetricWeight = (25 * 25 * 10) / 5000;
+        } else {
+            itemDeadWeight = 0.15;
+            itemVolumetricWeight = (15 * 10 * 5) / 5000;
+        }
+
+        const chargeablePerItem = Math.max(itemDeadWeight, itemVolumetricWeight);
+        totalChargeableWeightKg += (chargeablePerItem * qty);
+    });
+
+    const weightSlabs = Math.ceil(totalChargeableWeightKg / 0.5);
+
+    let zone = 'D'; 
+    if (pincode && pincode.toString().length >= 2) {
+        const pinPrefix = parseInt(pincode.toString().substring(0, 2));
+        const pinPrefixThree = parseInt(pincode.toString().substring(0, 3));
+        
+        if (pinPrefixThree === 387 || pinPrefixThree === 388) {
+            zone = 'A';
+        } else if ((pinPrefix >= 36 && pinPrefix <= 42) || pinPrefix === 39) {
+            zone = 'B';
+        } else if (pinPrefix === 19 || (pinPrefix >= 78 && pinPrefix <= 79)) {
+            zone = 'E';
+        }
+    }
+
+    let baseRate = 0;
+    let additionalSlabRate = 0;
+
+    switch(zone) {
+        case 'A': baseRate = 35; additionalSlabRate = 35; break;
+        case 'B': baseRate = 45; additionalSlabRate = 40; break;
+        case 'E': baseRate = 85; additionalSlabRate = 80; break;
+        default:  baseRate = 55; additionalSlabRate = 50; break;
+    }
+
+    let finalShippingFee = baseRate;
+    if (weightSlabs > 1) {
+        finalShippingFee += ((weightSlabs - 1) * additionalSlabRate);
+    }
+    
+    return finalShippingFee;
+}
+
+function updateCheckoutUI() {
+    const btn = document.getElementById('checkout-action-btn');
+    const fill = document.getElementById('progress-bar-fill');
+    const ind2 = document.getElementById('step-indicator-2');
+    const ind3 = document.getElementById('step-indicator-3');
+    const lbl2 = document.getElementById('step-label-2');
+    const lbl3 = document.getElementById('step-label-3');
+
+    let trueSubtotal = 0; let sellingSubtotal = 0; let totalItems = 0; let itemsToCalculate = [];
+    
+    if(currentCommissionContext === 'single' && singleProductToCommission) {
+        const cleanPrice = Number(singleProductToCommission.price.toString().replace(/[^0-9.,]/g, '')); 
+        const discountPercent = getDiscountPercent(singleProductToCommission.id.toString()); 
+        const qty = singleProductToCommission.qty || 1;
+        trueSubtotal = Math.round(cleanPrice * (1 + (discountPercent / 100))) * qty; 
+        sellingSubtotal = cleanPrice * qty; 
+        totalItems = qty;
+        itemsToCalculate = [singleProductToCommission];
+    } else if (cart.length > 0) {
+        cart.forEach((item) => { 
+            const cleanPrice = Number(item.price.toString().replace(/[^0-9.,]/g, '')); const qty = parseInt(item.qty || 1); const discountPercent = getDiscountPercent(item.id.toString()); 
+            trueSubtotal += (Math.round(cleanPrice * (1 + (discountPercent / 100))) * qty); sellingSubtotal += (cleanPrice * qty); 
+            totalItems += qty;
+        });
+        itemsToCalculate = cart;
+    }
+
+    const currentPin = document.getElementById('prof-pin') ? document.getElementById('prof-pin').value : '';
+    currentDeliveryFee = calculateDynamicDelivery(sellingSubtotal, currentPin, itemsToCalculate);
+    
+    const { discount: vipDiscount, currentTier } = calculateCartDiscount(sellingSubtotal); 
+    const finalTotal = sellingSubtotal - vipDiscount + currentDeliveryFee; 
+    const productDiscountTotal = trueSubtotal - sellingSubtotal;
+    const totalSavings = productDiscountTotal + vipDiscount;
+
+    document.getElementById('qo-item-count').textContent = totalItems;
+    document.getElementById('qo-original-value').textContent = `₹${trueSubtotal}`;
+    document.getElementById('qo-product-discount').textContent = `- ₹${productDiscountTotal}`;
+    document.getElementById('qo-delivery-fee').innerHTML = currentDeliveryFee === 0 ? '<span class="text-green-600 font-bold uppercase tracking-widest text-[10px]">Free</span>' : `₹${currentDeliveryFee}`;
+    
+    const vipRow = document.getElementById('qo-vip-row');
+    if(vipDiscount > 0) {
+        document.getElementById('qo-vip-label').textContent = currentTier.label;
+        document.getElementById('qo-vip-discount').textContent = `- ₹${vipDiscount}`;
+        vipRow.classList.remove('hidden');
+    } else { vipRow.classList.add('hidden'); }
+
+    document.getElementById('qo-total-savings').textContent = totalSavings;
+    document.getElementById('qo-final-total').textContent = `₹${finalTotal}`;
+
+    if (checkoutStep === 1) {
+        fill.style.width = '0%';
+        ind2.className = "w-8 h-8 rounded-full flex items-center justify-center text-[12px] font-bold transition-colors bg-white text-gray-400 border-2 border-luxury-blush";
+        lbl2.className = "text-[9px] font-bold uppercase tracking-widest text-gray-400";
+        ind3.className = "w-8 h-8 rounded-full flex items-center justify-center text-[12px] font-bold transition-colors bg-white text-gray-400 border-2 border-luxury-blush";
+        lbl3.className = "text-[9px] font-bold uppercase tracking-widest text-gray-400";
+        btn.innerHTML = currentCommissionContext === 'header' ? 'Save Profile <i class="fas fa-check"></i>' : 'Continue to Order Summary <i class="fas fa-arrow-right"></i>';
+        btn.classList.remove('hidden');
+    } else if (checkoutStep === 2) {
+        fill.style.width = '50%';
+        ind2.className = "w-8 h-8 rounded-full flex items-center justify-center text-[12px] font-bold transition-colors bg-luxury-rose text-white shadow-md border-2 border-white";
+        lbl2.className = "text-[9px] font-bold uppercase tracking-widest text-luxury-dark";
+        ind3.className = "w-8 h-8 rounded-full flex items-center justify-center text-[12px] font-bold transition-colors bg-white text-gray-400 border-2 border-luxury-blush";
+        lbl3.className = "text-[9px] font-bold uppercase tracking-widest text-gray-400";
+        btn.innerHTML = 'Proceed to Secure Payment <i class="fas fa-lock text-[10px]"></i>';
+        btn.classList.remove('hidden');
+    } else if (checkoutStep === 3) {
+        fill.style.width = '100%';
+        ind3.className = "w-8 h-8 rounded-full flex items-center justify-center text-[12px] font-bold transition-colors bg-luxury-rose text-white shadow-md border-2 border-white";
+        lbl3.className = "text-[9px] font-bold uppercase tracking-widest text-luxury-dark";
+        btn.classList.add('hidden'); 
+    }
+}
+
 function handleCheckoutAction() {
     if (checkoutStep === 1) {
         if (!document.getElementById('checkout-profile-form').classList.contains('hidden')) {
@@ -506,19 +728,14 @@ function handleCheckoutAction() {
         document.getElementById('checkout-step-1').classList.add('hidden');
         document.getElementById('checkout-step-2').classList.remove('hidden'); document.getElementById('checkout-step-2').classList.add('flex');
         
-        let hasCustomizable = false; let itemsHTML = '';
+        let hasCustomizable = false;
         if (currentCommissionContext === 'single' && singleProductToCommission) {
             hasCustomizable = singleProductToCommission.isCustomizable;
-            const itemImg = (singleProductToCommission.image1 && typeof singleProductToCommission.image1 === 'string') ? singleProductToCommission.image1 : 'https://placehold.co/150/F8E9EA/423133';
-            itemsHTML = `<div class="flex gap-4 border border-luxury-blush bg-luxury-bg/50 p-3 rounded-2xl"><img src="${itemImg}" class="w-16 h-20 object-cover rounded-xl border border-luxury-blush"><div class="flex flex-col justify-center"><h4 class="font-bitter text-[12px] font-semibold text-luxury-dark">${singleProductToCommission.name}</h4><span class="text-[10px] text-gray-500 mt-1">Qty: 1</span></div></div>`;
         } else {
             hasCustomizable = cart.some(item => item.isCustomizable);
-            cart.forEach(item => {
-                const itemImg = (item.image && typeof item.image === 'string') ? item.image : 'https://placehold.co/150/F8E9EA/423133';
-                itemsHTML += `<div class="flex gap-4 border border-luxury-blush bg-luxury-bg/50 p-3 rounded-2xl"><img src="${itemImg}" class="w-16 h-20 object-cover rounded-xl border border-luxury-blush"><div class="flex flex-col justify-center"><h4 class="font-bitter text-[12px] font-semibold text-luxury-dark">${item.name}</h4><span class="text-[10px] text-gray-500 mt-1">Qty: ${item.qty}</span></div></div>`;
-            });
         }
-        document.getElementById('checkout-items-list').innerHTML = itemsHTML;
+        
+        renderCheckoutItems();
         
         const dimWrapper = document.getElementById('comm-dimensions-wrapper');
         if (hasCustomizable) dimWrapper.classList.remove('hidden'); else dimWrapper.classList.add('hidden');
@@ -531,82 +748,21 @@ function handleCheckoutAction() {
     }
 }
 
-function updateCheckoutUI() {
-    const btn = document.getElementById('checkout-action-btn');
-    const fill = document.getElementById('progress-bar-fill');
-    const ind2 = document.getElementById('step-indicator-2');
-    const ind3 = document.getElementById('step-indicator-3');
-    const lbl2 = document.getElementById('step-label-2');
-    const lbl3 = document.getElementById('step-label-3');
-
-    let trueSubtotal = 0; let sellingSubtotal = 0;
-    if(currentCommissionContext === 'single' && singleProductToCommission) {
-        const cleanPrice = Number(singleProductToCommission.price.toString().replace(/[^0-9.,]/g, '')); 
-        const discountPercent = getDiscountPercent(singleProductToCommission.id.toString()); 
-        trueSubtotal = Math.round(cleanPrice * (1 + (discountPercent / 100))); sellingSubtotal = cleanPrice; 
-    } else if (cart.length > 0) {
-        cart.forEach((item) => { 
-            const cleanPrice = Number(item.price.toString().replace(/[^0-9.,]/g, '')); const qty = parseInt(item.qty || 1); const discountPercent = getDiscountPercent(item.id.toString()); 
-            trueSubtotal += (Math.round(cleanPrice * (1 + (discountPercent / 100))) * qty); sellingSubtotal += (cleanPrice * qty); 
-        });
-    }
-
-    // Dynamic Delivery Logic: Free if over 2499, else 99.
-    currentDeliveryFee = (sellingSubtotal >= 2499 || sellingSubtotal === 0) ? 0 : 99;
-    
-    const { discount: vipDiscount, currentTier } = calculateCartDiscount(sellingSubtotal); 
-    const finalTotal = sellingSubtotal - vipDiscount + currentDeliveryFee; 
-    const productDiscountTotal = trueSubtotal - sellingSubtotal;
-    const totalSavings = productDiscountTotal + vipDiscount;
-
-    document.getElementById('qo-original-value').textContent = `₹${trueSubtotal}`;
-    document.getElementById('qo-product-discount').textContent = `- ₹${productDiscountTotal}`;
-    document.getElementById('qo-delivery-fee').innerHTML = currentDeliveryFee === 0 ? '<span class="text-green-500 font-bold uppercase tracking-widest text-[9px]">Free</span>' : `₹${currentDeliveryFee}`;
-    
-    const vipRow = document.getElementById('qo-vip-row');
-    if(vipDiscount > 0) {
-        document.getElementById('qo-vip-label').textContent = currentTier.label;
-        document.getElementById('qo-vip-discount').textContent = `- ₹${vipDiscount}`;
-        vipRow.classList.remove('hidden');
-    } else { vipRow.classList.add('hidden'); }
-
-    document.getElementById('qo-total-savings').textContent = totalSavings;
-    document.getElementById('qo-final-total').textContent = `₹${finalTotal}`;
-
-    if (checkoutStep === 1) {
-        fill.style.width = '0%';
-        ind2.className = "w-8 h-8 rounded-full flex items-center justify-center text-[12px] font-bold transition-colors bg-white text-gray-400 border-2 border-luxury-blush";
-        lbl2.className = "text-[9px] font-bold uppercase tracking-widest text-gray-400";
-        btn.innerHTML = currentCommissionContext === 'header' ? 'Save Profile <i class="fas fa-check"></i>' : 'Deliver Here <i class="fas fa-arrow-right"></i>';
-    } else if (checkoutStep === 2) {
-        fill.style.width = '50%';
-        ind2.className = "w-8 h-8 rounded-full flex items-center justify-center text-[12px] font-bold transition-colors bg-luxury-rose text-white shadow-md border-2 border-white";
-        lbl2.className = "text-[9px] font-bold uppercase tracking-widest text-luxury-dark";
-        btn.innerHTML = 'Continue to Payment <i class="fas fa-lock text-[10px]"></i>';
-        btn.classList.remove('hidden');
-    } else if (checkoutStep === 3) {
-        fill.style.width = '100%';
-        ind3.className = "w-8 h-8 rounded-full flex items-center justify-center text-[12px] font-bold transition-colors bg-luxury-rose text-white shadow-md border-2 border-white";
-        lbl3.className = "text-[9px] font-bold uppercase tracking-widest text-luxury-dark";
-        btn.classList.add('hidden');
-    }
-}
-
 function preparePaymentGateway() {
     const type = document.getElementById('comm-type').value; 
     const colors = document.getElementById('comm-colors').value.trim() || 'No notes'; 
     const dims = document.getElementById('comm-dimensions').value.trim();
     
-    // 🎀 Interaction Loader 🎀
     showInteractionLoader("Securing Payment Gateway...");
 
     let sellingSubtotal = 0; let totalPrepTime = ""; let itemsToSave = [];
 
     if(currentCommissionContext === 'single' && singleProductToCommission) {
         const cleanPrice = Number(singleProductToCommission.price.toString().replace(/[^0-9.,]/g, '')); 
-        sellingSubtotal = cleanPrice; 
-        totalPrepTime = calculateTotalPrepTime([{...singleProductToCommission, qty: 1}]); 
-        itemsToSave = [{ id: singleProductToCommission.id, name: singleProductToCommission.name, price: cleanPrice, qty: 1, image: singleProductToCommission.image1 }];
+        const qty = singleProductToCommission.qty || 1;
+        sellingSubtotal = cleanPrice * qty; 
+        totalPrepTime = calculateTotalPrepTime([{...singleProductToCommission, qty: qty}]); 
+        itemsToSave = [{ id: singleProductToCommission.id, name: singleProductToCommission.name, price: cleanPrice, qty: qty, image: singleProductToCommission.image1 }];
     } else {
         cart.forEach((item) => { 
             const cleanPrice = Number(item.price.toString().replace(/[^0-9.,]/g, '')); const qty = parseInt(item.qty || 1); 
