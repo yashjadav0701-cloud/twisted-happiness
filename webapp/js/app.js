@@ -20,7 +20,7 @@ const countryCodeMapping = {
     "+61": "🇦🇺 AU (+61)", "+971": "🇦🇪 AE (+971)", "+966": "🇸🇦 SA (+966)",
     "+65": "🇸🇬 SG (+65)", "+60": "🇲🇾 MY (+60)", "+49": "🇩🇪 DE (+49)",
     "+33": "🇫🇷 FR (+33)", "+39": "🇮🇹 IT (+39)", "+81": "🇯🇵 JP (+81)",
-    "+82": "🇰🇷 KR (+8韩国)", "+64": "🇳🇿 NZ (+64)", "+27": "🇿🇦 ZA (+27)"
+    "+82": "🇰🇷 KR (+82)", "+64": "🇳🇿 NZ (+64)", "+27": "🇿🇦 ZA (+27)"
 };
 
 let settings = safeJSONParse('th_settings', { storeName: "Twisted Happiness", instagram: "", whatsapp: "9909310501", upiId: "khushisj315@oksbi", countryCode: "+91" });
@@ -41,15 +41,59 @@ let pendingOrderPayload = null;
 let currentOrderReference = null;
 let currentDeliveryFee = 0;
 
+// 🎀 BULLETPROOF LOADING ENGINE 🎀
+const dismissPreloader = () => {
+    const preloader = document.getElementById('luxury-page-preloader');
+    if (preloader && !preloader.classList.contains('hidden')) {
+        preloader.classList.add('opacity-0');
+        setTimeout(() => preloader.classList.add('hidden'), 700);
+    }
+};
+
+// Attempt to dismiss on window load (if network is fast)
+window.addEventListener('load', () => {
+    setTimeout(dismissPreloader, 300);
+});
+
+// Absolute Failsafe: if external resources hang, force dismiss after 2.5 seconds
+setTimeout(dismissPreloader, 2500);
+
 document.addEventListener('DOMContentLoaded', () => {
-    _supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+    // Force preloader dismiss if DOM is ready and 1.5s pass
+    setTimeout(dismissPreloader, 1500); 
+
+    try {
+        _supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+        fetchDatabase();
+    } catch (e) {
+        console.error("Supabase Init Error:", e);
+    }
+    
     applyDynamicSettings();
     bindDOMEvents();
     injectSkeletons();
-    fetchDatabase();
     updateCartCount();
     setupSocialLinks();
 });
+
+function showInteractionLoader(text = "Please wait...") {
+    const loader = document.getElementById('interaction-loader');
+    if(!loader) return;
+    document.getElementById('interaction-loader-text').textContent = text;
+    loader.classList.remove('hidden');
+    loader.classList.add('flex');
+    requestAnimationFrame(() => loader.classList.remove('opacity-0'));
+}
+
+function hideInteractionLoader() {
+    const loader = document.getElementById('interaction-loader');
+    if(!loader) return;
+    loader.classList.add('opacity-0');
+    setTimeout(() => {
+        loader.classList.add('hidden');
+        loader.classList.remove('flex');
+    }, 300);
+}
 
 function applyDynamicSettings() {
     const name = settings.storeName || "Twisted Happiness";
@@ -222,21 +266,22 @@ function renderProducts(searchQuery = '') {
     const fragment = document.createDocumentFragment();
     filtered.forEach((p) => { fragment.appendChild(generateProductCardHTML(p)); }); 
     grid.appendChild(fragment);
+    requestAnimationFrame(() => { setupScrollReveal(); });
 }
 
 function generateProductCardHTML(p) {
     const cleanPrice = Number(p.price.toString().replace(/[^0-9.,]/g, '')); const discountPercent = getDiscountPercent(p.id.toString()); const originalPrice = Math.round(cleanPrice * (1 + (discountPercent / 100)));
     const mainImg = (p.image1 && typeof p.image1 === 'string' && p.image1.trim() !== '') ? p.image1 : 'https://placehold.co/400x500/F8E9EA/423133';
-    const card = document.createElement('div'); card.className = `w-full relative cursor-pointer group scroll-reveal`; 
+    const card = document.createElement('div'); card.className = `w-full relative cursor-pointer opacity-0 transform translate-y-4 transition-all duration-400 ease-out group scroll-reveal`; 
     card.addEventListener('click', () => openProductPage(p.id));
     card.innerHTML = `
         <div class="w-full relative rounded-2xl overflow-hidden group shadow-sm bg-gradient-to-tr from-luxury-bg to-white border border-luxury-blush aspect-[4/5] mb-2">
             <span class="absolute top-2.5 left-2.5 z-10 bg-white/95 text-luxury-dark text-[7px] sm:text-[8px] font-bold px-2.5 py-1 rounded-md uppercase tracking-[0.15em] border border-luxury-blush truncate max-w-[80%] shadow-sm">${p.category}</span>
-            <img loading="lazy" decoding="async" src="${mainImg}" alt="${p.name}" width="400" height="500" onerror="this.src='https://placehold.co/400x500/F8E9EA/423133';" class="absolute inset-0 w-full h-full object-cover transition-opacity duration-500 pointer-events-none">
+            <img loading="lazy" decoding="async" src="${mainImg}" alt="${p.name}" width="400" height="500" onerror="this.src='https://placehold.co/400x500/F8E9EA/423133';" class="absolute inset-0 w-full h-full object-cover opacity-0 transition-opacity duration-500 pointer-events-none" onload="this.classList.remove('opacity-0')">
         </div>
         <div class="px-1 flex flex-col justify-start text-left w-full">
             <h3 class="font-bitter font-semibold text-[11px] sm:text-[12px] text-luxury-dark leading-snug w-full transition-colors group-hover:text-luxury-rose mb-0.5 line-clamp-2">${p.name}</h3>
-            <div class="flex items-center gap-1.5 flex-wrap w-full">
+            <div class="flex items-center md:items-baseline gap-1.5 flex-wrap w-full">
                 <span class="font-poppins font-extrabold text-luxury-dark text-[14px] sm:text-[15px] tracking-tight leading-none">₹${cleanPrice}</span>
                 <span class="font-poppins text-gray-400 text-[9px] font-medium line-through leading-none">₹${originalPrice}</span>
             </div>
@@ -387,24 +432,42 @@ function setupLightboxTouch() { let lbStartX = 0; let lbEndX = 0; const track = 
 function updateActiveThumb(activeIndex, totalImages) { requestAnimationFrame(() => { for(let i = 0; i < totalImages; i++) { const thumb = document.getElementById(`thumb-${i}`); if(thumb) { if(i === activeIndex) { thumb.classList.add('border-luxury-rose', 'scale-105', 'opacity-100'); thumb.classList.remove('border-transparent', 'opacity-60'); } else { thumb.classList.remove('border-luxury-rose', 'scale-105', 'opacity-100'); thumb.classList.add('border-transparent', 'opacity-60'); } } } }); }
 
 // 🚨 3-STEP UNIFIED CHECKOUT ENGINE 🚨
-window.th_routeCheckoutFromModal = function(id, event) { 
+function routeCheckoutFromModal(id, event) { 
     if(event) { event.preventDefault(); event.stopPropagation(); } 
     const p = products.find(x => x.id == id); 
     if(!p) return;
     currentCommissionContext = 'single'; 
     singleProductToCommission = {...p, qty: 1}; 
     openCheckoutBase(); 
-};
-function routeCheckoutFromCart(event) { if(event) { event.preventDefault(); event.stopPropagation(); } forceCloseCart(); setTimeout(() => { currentCommissionContext = 'cart'; singleProductToCommission = null; if(cart.length === 0) return showToast("Your bag is empty!", "fa-times", "text-red-500"); openCheckoutBase(); }, 300); }
-function openProfileFromHeader() { currentCommissionContext = 'header'; openCheckoutBase(); }
+}
 
-window.th_updateCartQty = updateCartQty;
+function routeCheckoutFromCart(event) { 
+    if(event) { event.preventDefault(); event.stopPropagation(); } 
+    forceCloseCart(); 
+    setTimeout(() => { 
+        currentCommissionContext = 'cart'; 
+        singleProductToCommission = null; 
+        if(cart.length === 0) return showToast("Your bag is empty!", "fa-times", "text-red-500"); 
+        openCheckoutBase(); 
+    }, 300); 
+}
+
+function openProfileFromHeader() { 
+    currentCommissionContext = 'header'; 
+    openCheckoutBase(); 
+}
+
+function isProfileComplete() { 
+    return shiprocketProfile.first_name && shiprocketProfile.email && shiprocketProfile.phone && shiprocketProfile.address_1 && shiprocketProfile.city && shiprocketProfile.pincode; 
+}
 
 function openCheckoutBase() {
     currentModalLevel = 1; safePushState(1);
     checkoutStep = 1;
     const overlay = document.getElementById('checkout-overlay');
     if(!overlay) return;
+    
+    // Explicit 100% solidity for no background bleeding
     overlay.classList.remove('hidden');
     document.body.classList.add('overflow-hidden');
     
@@ -464,7 +527,7 @@ function closeCheckout() {
     });
 }
 
-window.updateCheckoutQty = function(id, delta) {
+function updateCheckoutQty(id, delta) {
     if (currentCommissionContext === 'single') {
         if (!singleProductToCommission.qty) singleProductToCommission.qty = 1;
         singleProductToCommission.qty += delta;
@@ -487,7 +550,7 @@ window.updateCheckoutQty = function(id, delta) {
     }
     renderCheckoutItems();
     updateCheckoutUI();
-};
+}
 
 function renderCheckoutItems() {
     const container = document.getElementById('checkout-items-list');
@@ -535,6 +598,7 @@ function renderCheckoutItems() {
     container.innerHTML = itemsHTML;
 }
 
+// 🚨 ENTERPRISE DYNAMIC SHIPPING ENGINE (GST FREE) 🚨
 function calculateDynamicDelivery(subtotal, pincode, items) {
     if (subtotal >= 2499 || subtotal === 0) return 0; 
     
@@ -618,7 +682,7 @@ function updateCheckoutUI() {
     } else if (cart.length > 0) {
         cart.forEach((item) => { 
             const cleanPrice = Number(item.price.toString().replace(/[^0-9.,]/g, '')); const qty = parseInt(item.qty || 1); const discountPercent = getDiscountPercent(item.id.toString()); 
-            trueSubtotal += (Math.round(cleanPrice * (1 + (discountPercent / 100))) * qty) * qty; sellingSubtotal += (cleanPrice * qty); 
+            trueSubtotal += (Math.round(cleanPrice * (1 + (discountPercent / 100))) * qty); sellingSubtotal += (cleanPrice * qty); 
             totalItems += qty;
         });
         itemsToCalculate = cart;
@@ -655,7 +719,7 @@ function updateCheckoutUI() {
         if(lbl2) lbl2.className = "text-[9px] font-bold uppercase tracking-widest text-gray-400";
         if(ind3) ind3.className = "w-8 h-8 rounded-full flex items-center justify-center text-[12px] font-bold transition-colors bg-white text-gray-400 border-2 border-luxury-blush";
         if(lbl3) lbl3.className = "text-[9px] font-bold uppercase tracking-widest text-gray-400";
-        btn.innerHTML = currentCommissionContext === 'header' ? 'Save Profile <i class="fas fa-check"></i>' : 'Continue to Order Summary <i class="fas fa-arrow-right"></i>';
+        btn.innerHTML = currentCommissionContext === 'header' ? 'Save Profile <i class="fas fa-check"></i>' : 'Continue to Review Items <i class="fas fa-arrow-right"></i>';
         btn.classList.remove('hidden');
     } else if (checkoutStep === 2) {
         fill.style.width = '50%';
@@ -820,7 +884,7 @@ async function confirmPaymentAndOrder() {
     document.getElementById('payment-gateway-view').classList.remove('flex');
     
     document.getElementById('success-ref-note').textContent = currentOrderReference;
-    document.getElementById('payment-success-view').remove('hidden');
+    document.getElementById('payment-success-view').classList.remove('hidden');
     document.getElementById('payment-success-view').classList.add('flex');
 
     if(currentCommissionContext === 'cart') { 
@@ -830,6 +894,7 @@ async function confirmPaymentAndOrder() {
     }
 }
 
+// 🚨 GLOBALLY BIND ALL FUNCTIONS TO PREVENT BUTTON FAILURES
 window.closeCheckout = closeCheckout;
 window.handleCheckoutAction = handleCheckoutAction;
 window.openLightboxFromCarousel = openLightboxFromCarousel;
@@ -838,3 +903,7 @@ window.goToSlide = goToSlide;
 window.th_toggleSubCategory = toggleSubCategoryCheckbox;
 window.th_routeCheckoutFromModal = routeCheckoutFromModal;
 window.th_updateCartQty = updateCartQty;
+window.updateCheckoutQty = updateCheckoutQty;
+
+function showToast(msg, icon = 'fa-check', color = 'text-luxury-rose') { const t = document.getElementById('toast'); document.getElementById('toast-msg').textContent = msg; document.getElementById('toast-icon').className = `fas ${icon} ${color} text-sm drop-shadow-sm`; requestAnimationFrame(() => { t.classList.remove('opacity-0', 'translate-y-10'); setTimeout(() => t.classList.add('opacity-0', 'translate-y-10'), 3000); }); }
+function setupScrollReveal() { const observer = new IntersectionObserver((entries) => { entries.forEach(entry => { if(entry.isIntersecting) { requestAnimationFrame(() => { entry.target.classList.remove('opacity-0', 'translate-y-4'); observer.unobserve(entry.target); }); } }); }, { threshold: 0.05, rootMargin: '50px' }); document.querySelectorAll('.scroll-reveal').forEach(el => observer.observe(el)); }

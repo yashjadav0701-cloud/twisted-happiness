@@ -41,7 +41,7 @@
 </head>
 <body class="bg-luxury-bg text-luxury-dark font-sans selection:bg-luxury-blush selection:text-luxury-dark overflow-x-hidden w-full min-h-screen">
 
-    <!-- 🎀 GRAND ENTRANCE PRELOADER 🎀 -->
+    <!-- 🎀 1. GRAND ENTRANCE PRELOADER 🎀 -->
     <div id="luxury-page-preloader" class="fixed inset-0 z-[9999] bg-[#FFF0F2] flex flex-col items-center justify-center transition-opacity duration-700 ease-out">
         <div class="relative w-24 h-24 mb-6 flex items-center justify-center">
             <div class="absolute inset-0 border-t-2 border-r-2 border-[#D9778A] rounded-full animate-spin"></div>
@@ -52,7 +52,7 @@
         <p class="text-[9px] font-bold text-[#8c7a7a] uppercase tracking-[0.3em] mt-4">Curating Beauty...</p>
     </div>
 
-    <!-- 🎀 INTERACTION LOADER 🎀 -->
+    <!-- 🎀 2. INTERACTION LOADER (For Checkout/Processing) 🎀 -->
     <div id="interaction-loader" class="fixed inset-0 z-[9999] bg-white/60 backdrop-blur-md hidden flex-col items-center justify-center transition-opacity duration-300 opacity-0">
         <i class="fas fa-circle-notch fa-spin text-[#D9778A] text-4xl mb-4 shadow-sm rounded-full"></i>
         <span class="text-[10px] font-bold text-luxury-dark uppercase tracking-[0.2em] bg-white px-4 py-2 rounded-full border border-luxury-blush shadow-sm" id="interaction-loader-text">Processing...</span>
@@ -411,10 +411,11 @@
                     </form>
                 </div>
 
-                <!-- STEP 2: REVIEW ITEMS & CUSTOMIZE -->
+                <!-- STEP 2: ORDER SUMMARY & NOTES -->
                 <div id="checkout-step-2" class="w-full bg-white border border-luxury-blush rounded-3xl p-6 md:p-8 shadow-sm hidden flex-col animate-fade-in">
                     <h2 class="font-logo text-2xl text-luxury-dark border-b border-luxury-blush pb-4 mb-6">Review Items & Customize</h2>
                     
+                    <!-- NEW: Item List with Quantity Controls -->
                     <div id="checkout-items-list" class="flex flex-col gap-4 mb-8">
                         <!-- Items injected via JS -->
                     </div>
@@ -501,6 +502,7 @@
 
             <!-- RIGHT COLUMN: Price Details / Quotation Sidebar -->
             <div class="lg:col-span-4 w-full">
+                <!-- NEW: Flipkart style pricing breakdown -->
                 <div class="bg-white border border-luxury-blush rounded-3xl p-6 shadow-float sticky top-[100px] flex flex-col">
                     <h3 class="font-bold text-[12px] text-gray-500 uppercase tracking-widest border-b border-luxury-blush pb-4 mb-5">Price Details</h3>
                     
@@ -531,6 +533,7 @@
                         <span id="qo-final-total" class="font-poppins font-black text-2xl text-luxury-dark tracking-tight">₹0</span>
                     </div>
 
+                    <!-- Savings Alert -->
                     <div class="bg-green-50 text-green-700 text-[11px] font-bold px-3 py-2.5 rounded-lg text-center mb-6 border border-green-100 shadow-inner">
                         You will save ₹<span id="qo-total-savings">0</span> on this order!
                     </div>
@@ -549,6 +552,7 @@
         </div>
     </div>
 
+    <!-- UI MODALS -->
     <!-- Return Policy Modal -->
     <div id="return-policy-modal" role="dialog" aria-modal="true" class="hidden transition-opacity duration-200 opacity-0 fixed inset-0 bg-luxury-dark/60 p-4 flex items-center justify-center z-[4000]">
         <div class="transform scale-95 translate-y-2 transition-all duration-300 bg-white rounded-3xl w-full max-w-md p-6 sm:p-8 shadow-xl relative border border-luxury-rose" id="return-policy-box">
@@ -613,24 +617,8 @@
                 </div>
             </div>
             <button id="btn-cart-checkout" class="bg-luxury-dark text-white hover:bg-luxury-rose w-full py-4 rounded-xl font-bold text-[10px] uppercase flex items-center justify-center gap-2 tracking-[0.1em] shadow-md transition-colors">Proceed to Checkout <i class="fas fa-lock text-[10px]"></i></button>
-            <button id="btn-show-offers" class="w-full text-center text-luxury-rose text-[8px] font-bold uppercase tracking-widest mt-4 hover:text-luxury-gold transition-colors min-h-[44px]">🎀 View VIP Offers</button>
         </footer>
     </aside>
-
-    <!-- Offers Modal -->
-    <div id="offers-modal" role="dialog" aria-modal="true" class="hidden transition-opacity duration-200 opacity-0 fixed inset-0 bg-luxury-dark/60 p-4 flex items-center justify-center z-[1050]">
-        <div class="transform scale-95 translate-y-2 transition-all duration-300 bg-luxury-bg rounded-3xl w-full max-w-xs p-6 sm:p-8 shadow-xl relative border border-luxury-rose" id="offers-box">
-            <button id="btn-close-offers" class="absolute top-4 right-4 text-gray-400 w-8 h-8 bg-white rounded-full flex items-center justify-center border border-luxury-blush hover:text-luxury-dark"><i class="fas fa-times text-xs"></i></button>
-            <h2 class="font-logo font-normal text-2xl text-center text-luxury-dark mb-1.5 mt-1">Exclusive Offers</h2>
-            <p class="text-center text-[8px] font-medium text-gray-400 uppercase tracking-[0.2em] mb-6">Unlock more as you curate</p>
-            <div class="space-y-2.5 font-sans">
-                <div class="bg-white border border-luxury-blush rounded-xl p-3.5 flex items-center justify-between"><span class="text-luxury-dark font-medium text-[11px] sm:text-xs">Orders over <span class="font-poppins font-bold">₹4999</span></span><span class="bg-luxury-blush text-luxury-rose font-bold text-[9px] px-2 py-0.5 rounded-full border border-luxury-rose/30 tracking-wider">15% OFF</span></div>
-                <div class="bg-white border border-luxury-blush rounded-xl p-3.5 flex items-center justify-between"><span class="text-luxury-dark font-medium text-[11px] sm:text-xs">Orders over <span class="font-poppins font-bold">₹2499</span></span><span class="bg-luxury-blush text-luxury-rose font-bold text-[9px] px-2 py-0.5 rounded-full border border-luxury-rose/30 tracking-wider">12% OFF</span></div>
-                <div class="bg-white border border-luxury-blush rounded-xl p-3.5 flex items-center justify-between"><span class="text-luxury-dark font-medium text-[11px] sm:text-xs">Orders over <span class="font-poppins font-bold">₹999</span></span><span class="bg-luxury-blush text-luxury-rose font-bold text-[9px] px-2 py-0.5 rounded-full border border-luxury-rose/30 tracking-wider">10% OFF</span></div>
-                <div class="bg-white border border-luxury-blush rounded-xl p-3.5 flex items-center justify-between"><span class="text-luxury-dark font-medium text-[11px] sm:text-xs">Orders over <span class="font-poppins font-bold">₹499</span></span><span class="bg-luxury-blush text-luxury-rose font-bold text-[9px] px-2 py-0.5 rounded-full border border-luxury-rose/30 tracking-wider">8% OFF</span></div>
-            </div>
-        </div>
-    </div>
 
     <!-- Global Toast Notification -->
     <div id="toast" role="alert" aria-live="assertive" class="fixed bottom-8 left-1/2 transform -translate-x-1/2 bg-luxury-dark text-luxury-bg px-6 py-3 rounded-full shadow-xl flex items-center gap-2.5 transition-all duration-300 opacity-0 pointer-events-none w-max border border-luxury-rose/30 translate-y-10 z-[5000]">
