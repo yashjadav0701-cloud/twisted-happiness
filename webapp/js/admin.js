@@ -1,6 +1,6 @@
 /**
  * Twisted Happiness - Studio Admin Engine
- * Version: 11.0.0
+ * Version: 11.0.0 - Fully Stable
  */
 
 const SUPABASE_URL = "https://gvrfucjtnyqfkdynrmqs.supabase.co"; 
@@ -41,10 +41,22 @@ async function checkSession() {
 }
 
 async function attemptLogin(e) { 
-    e.preventDefault(); const email = document.getElementById('admin-user').value.trim(), pass = document.getElementById('admin-pass').value.trim(), btn = document.getElementById('login-btn'); 
-    if(!email || !pass) return; btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Verifying...'; btn.disabled = true; 
-    try { const { data, error } = await _supabase.auth.signInWithPassword({ email: email, password: pass }); if (error) throw error; if (data.session) unlockDashboard(); } 
-    catch (err) { alert("Access Denied: Check your credentials."); btn.innerHTML = 'Enter Studio'; btn.disabled = false; }
+    e.preventDefault(); 
+    const email = document.getElementById('admin-user').value.trim();
+    const pass = document.getElementById('admin-pass').value.trim();
+    const btn = document.getElementById('login-btn'); 
+    
+    if(!email || !pass) return; 
+    btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Verifying...'; btn.disabled = true; 
+    
+    try { 
+        const { data, error } = await _supabase.auth.signInWithPassword({ email: email, password: pass }); 
+        if (error) throw error; 
+        if (data.session) unlockDashboard(); 
+    } catch (err) { 
+        alert("Access Denied: Check your credentials."); 
+        btn.innerHTML = 'Enter Studio'; btn.disabled = false; 
+    }
 }
 
 async function logoutAdmin() { await _supabase.auth.signOut(); window.location.href = '/'; }
@@ -99,7 +111,7 @@ async function fetchDatabase() {
 
 function renderAdminProducts() { 
     const list = document.getElementById('admin-product-list'); list.innerHTML = ''; 
-    if(products.length === 0) { list.innerHTML = '<div class="text-center text-gray-400 py-10 text-[10px] uppercase tracking-[0.2em] font-medium">No creations in gallery.</div>'; return; } 
+    if(products.length === 0) { list.innerHTML = '<div class="text-center text-gray-400 py-10 text-[10px] uppercase tracking-[0.2em] font-medium"><i class="fas fa-box-open text-2xl block mb-2 opacity-30"></i> No creations in gallery.</div>'; return; } 
     const fragment = document.createDocumentFragment();
     [...products].forEach(p => { 
         const cleanPrice = Number((p.price || 0).toString().replace(/[^0-9.,]/g, '')); const adminImg = p.image1 || 'https://placehold.co/100/F8E9EA/423133';
