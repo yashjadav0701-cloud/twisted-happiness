@@ -13,7 +13,7 @@
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
     <link href="https://fonts.googleapis.com/css2?family=Marcellus&family=Bitter:ital,wght@0,400;0,500;0,600;1,400&family=Poppins:wght@500;600;700;800&family=Montserrat:wght@300;400;500;600&display=swap" rel="stylesheet">
 
-    <!-- 🛡️ ABSOLUTE FAILSAFE: Guarantees loader removal -->
+    <!-- Failsafe Preloader Killer -->
     <script>
         window.addEventListener('DOMContentLoaded', function() {
             setTimeout(function() {
@@ -23,7 +23,6 @@
         });
     </script>
 
-    <!-- Scripts are safely deferred -->
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2" defer></script>
     <script src="./js/app.js" defer></script>
 
@@ -131,7 +130,6 @@
                 </div>
             </aside>
 
-            <!-- Product Grid -->
             <div class="flex-grow w-full min-w-0 pb-12 sm:pb-20">
                 <div id="product-grid" class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-3 sm:gap-4 md:gap-[18px] lg:gap-5 px-3 w-full"></div>
             </div>
@@ -166,7 +164,7 @@
                 </div>
             </div>
         </footer>
-    </main>
+    </header>
 
     <!-- FLOATING WHATSAPP BUTTON -->
     <a href="javascript:void(0)" id="floating-wa-btn" target="_blank" rel="noopener noreferrer" class="fixed bottom-24 md:bottom-6 right-4 z-[900] bg-[#25D366] text-white w-14 h-14 rounded-full flex items-center justify-center shadow-[0_10px_20px_rgba(37,211,102,0.3)] hover:bg-[#20ba56] transition-transform hover:scale-105 border-2 border-white animate-pulse">
@@ -406,8 +404,7 @@
                         <button type="button" onclick="window.closeCheckout()" class="w-full max-w-sm border-2 border-luxury-rose text-luxury-dark hover:bg-luxury-rose hover:text-white py-4 rounded-full font-bold text-[10px] uppercase tracking-[0.15em] transition-colors shadow-sm">Return to Gallery</button>
                     </div>
                 </div>
-                
-                <div class="h-24 lg:hidden block w-full"></div>
+                <div class="h-20 lg:hidden block w-full"></div>
             </div>
 
             <!-- RIGHT COLUMN: Price Details Sidebar -->
@@ -484,8 +481,7 @@
     <div id="customer-auth-modal" role="dialog" aria-modal="true" class="hidden transition-opacity duration-200 opacity-0 fixed inset-0 bg-luxury-dark/60 p-4 flex items-center justify-center z-[4500]">
         <div class="transform scale-95 translate-y-2 transition-all duration-300 bg-white rounded-3xl w-full max-w-sm p-6 sm:p-8 shadow-2xl relative border border-luxury-blush" id="customer-auth-box">
             <button type="button" onclick="window.closeCustomerAuthModal()" class="absolute top-4 right-4 text-gray-400 w-8 h-8 bg-luxury-bg rounded-full flex items-center justify-center border border-luxury-blush hover:text-luxury-dark"><i class="fas fa-times text-xs"></i></button>
-            <div class="w-12 h-12 bg-luxury-bg rounded-full flex items-center justify-center mx-auto mb-4 border border-luxury-blush"><i class="fas fa-fingerprint text-[#D9778A] text-xl"></i></div>
-            <h2 id="auth-panel-heading" class="font-logo font-normal text-2xl text-center text-luxury-dark mb-1">Patron Access</h2>
+            <h2 id="auth-panel-heading" class="font-logo font-normal text-2xl text-center text-luxury-dark mb-1 mt-4">Welcome Back</h2>
             <p id="auth-panel-sub" class="text-center text-[9px] font-bold text-gray-400 uppercase tracking-widest mb-6">Sign in to checkout securely</p>
             
             <form id="customer-auth-form" class="space-y-4">
@@ -498,6 +494,29 @@
                 <button type="submit" id="btn-auth-submit" class="w-full bg-luxury-dark text-white hover:bg-luxury-rose py-3.5 rounded-xl font-bold text-[10px] uppercase tracking-widest transition-colors shadow-sm">Sign In</button>
             </form>
             <div class="mt-5 text-center"><button type="button" onclick="window.toggleAuthViewMode()" class="text-[#D9778A] font-bold tracking-wider text-[10px] uppercase hover:underline">New to the Studio? Create Account</button></div>
+        </div>
+    </div>
+
+    <!-- GUEST TRACK ORDER MODAL -->
+    <div id="track-order-modal" role="dialog" aria-modal="true" class="hidden transition-opacity duration-200 opacity-0 fixed inset-0 bg-luxury-dark/70 p-4 flex items-center justify-center z-[4000]">
+        <div class="transform scale-95 translate-y-2 transition-all duration-300 bg-white rounded-3xl w-full max-w-sm p-6 sm:p-8 shadow-2xl relative border border-luxury-blush" id="track-order-box">
+            <button type="button" onclick="window.closeTrackOrderModal()" class="absolute top-4 right-4 text-gray-400 w-8 h-8 bg-luxury-bg rounded-full flex items-center justify-center border border-luxury-blush hover:text-luxury-dark"><i class="fas fa-times text-xs"></i></button>
+            <div class="w-12 h-12 bg-luxury-bg rounded-full flex items-center justify-center mx-auto mb-4 border border-luxury-blush"><i class="fas fa-map-marker-alt text-luxury-rose text-xl"></i></div>
+            <h2 class="font-logo font-normal text-2xl text-center text-luxury-dark mb-4">Track Order</h2>
+            <form id="track-order-form-guest" class="space-y-4">
+                <div>
+                    <label class="block text-[9px] font-bold text-gray-400 uppercase tracking-widest mb-1.5 pl-1 text-center">Enter Order Reference ID</label>
+                    <input type="text" id="track-order-id-guest" required placeholder="e.g. TH_Rahul_1234" class="w-full px-4 py-3 bg-luxury-bg border border-luxury-blush rounded-xl outline-none text-[12px] font-medium text-luxury-dark text-center focus:ring-2 focus:ring-luxury-rose/30 transition-all">
+                </div>
+                <button type="submit" id="btn-track-submit-guest" class="w-full bg-luxury-dark text-white hover:bg-luxury-rose py-3.5 rounded-xl font-bold text-[10px] uppercase tracking-widest transition-colors shadow-sm">Track Status</button>
+            </form>
+            <div id="track-result-container-guest" class="mt-6 pt-5 border-t border-luxury-blush hidden">
+                <div class="text-center">
+                    <p class="text-[9px] font-bold text-gray-400 uppercase tracking-widest mb-1">Current Status</p>
+                    <h3 id="track-result-status-guest" class="font-poppins font-bold text-[#D9778A] text-lg tracking-wide mb-2"></h3>
+                    <p id="track-result-desc-guest" class="text-[11px] text-gray-500 font-medium"></p>
+                </div>
+            </div>
         </div>
     </div>
 
