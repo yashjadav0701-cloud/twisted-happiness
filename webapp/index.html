@@ -7,14 +7,18 @@
     <!-- SEO & Meta -->
     <title>Twisted Happiness | Fine Art & Handcrafted Gifts</title>
     <meta name="description" content="Discover handcrafted canvas paintings, bespoke clay art, and premium gifts. Curate your perfect space.">
+    <link rel="canonical" href="https://twisted-happiness.vercel.app" />
     
+    <!-- Preconnect to external domains for performance -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    
+    <!-- Styles -->
     <link href="./output.css" rel="stylesheet">
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
     <link href="https://fonts.googleapis.com/css2?family=Marcellus&family=Bitter:ital,wght@0,400;0,500;0,600;1,400&family=Poppins:wght@500;600;700;800&family=Montserrat:wght@300;400;500;600&display=swap" rel="stylesheet">
 
-    <!-- Absolute Failsafe Preloader Killer -->
+    <!-- 🛡️ ABSOLUTE FAILSAFE: Guarantees loader removal even if JS is blocked -->
     <script>
         window.addEventListener('DOMContentLoaded', function() {
             setTimeout(function() {
@@ -23,6 +27,10 @@
             }, 4500);
         });
     </script>
+
+    <!-- Essential Scripts (Deferred to prevent blocking) -->
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2" defer></script>
+    <script src="./js/app.js" defer></script>
 
     <style>
         .scrollbar-hide::-webkit-scrollbar { display: none; } 
@@ -34,7 +42,7 @@
 </head>
 <body class="bg-luxury-bg text-luxury-dark font-sans selection:bg-luxury-blush selection:text-luxury-dark overflow-x-hidden w-full min-h-screen">
 
-    <!-- 🎀 GRAND ENTRANCE PRELOADER 🎀 -->
+    <!-- PRELOADER -->
     <div id="luxury-page-preloader" class="fixed inset-0 z-[9999] bg-[#FFF0F2] flex flex-col items-center justify-center transition-opacity duration-700 ease-out">
         <div class="relative w-24 h-24 mb-6 flex items-center justify-center">
             <div class="absolute inset-0 border-t-2 border-r-2 border-[#D9778A] rounded-full animate-spin"></div>
@@ -45,7 +53,7 @@
         <p class="text-[9px] font-bold text-[#8c7a7a] uppercase tracking-[0.3em] mt-4">Curating Beauty...</p>
     </div>
 
-    <!-- 🎀 INTERACTION LOADER 🎀 -->
+    <!-- INTERACTION LOADER -->
     <div id="interaction-loader" class="fixed inset-0 z-[9999] bg-white/60 backdrop-blur-md hidden flex-col items-center justify-center transition-opacity duration-300 opacity-0">
         <i class="fas fa-circle-notch fa-spin text-[#D9778A] text-4xl mb-4 shadow-sm rounded-full"></i>
         <span class="text-[10px] font-bold text-luxury-dark uppercase tracking-[0.2em] bg-white px-4 py-2 rounded-full border border-luxury-blush shadow-sm" id="interaction-loader-text">Processing...</span>
@@ -53,20 +61,22 @@
 
     <!-- MAIN STOREFRONT VIEW -->
     <main id="customer-view" class="w-full relative block flex flex-col min-h-screen">
-        <!-- Header -->
         <header class="fixed top-0 left-0 w-full bg-white/95 backdrop-blur-md shadow-sm z-[999] border-b border-luxury-blush/50">
             <div class="w-full flex flex-col bg-transparent">
                 <div class="max-w-[1600px] mx-auto w-full px-4 sm:px-8 py-3 flex items-center justify-between gap-4">
+                    <!-- Logo -->
                     <a href="/" class="flex items-center gap-3 shrink-0">
-                        <img src="https://i.ibb.co/0RRrFK9N/TH-logo-1.png" class="w-9 h-9 sm:w-11 sm:h-11 rounded-full object-cover border border-luxury-rose" alt="Logo">
+                        <img src="https://i.ibb.co/0RRrFK9N/TH-logo-1.png" class="w-9 h-9 sm:w-11 sm:h-11 rounded-full object-cover border border-luxury-rose" alt="">
                         <span class="font-logo font-normal text-[20px] sm:text-2xl text-luxury-dark mt-0.5 tracking-wide" id="dynamic-store-name">Twisted Happiness</span>
                     </a>
 
+                    <!-- Desktop Search -->
                     <div class="hidden md:flex relative w-full max-w-lg mx-auto group">
                         <i class="fas fa-search absolute left-4 top-1/2 transform -translate-y-1/2 text-luxury-rose text-xs"></i>
                         <input type="search" id="searchInputDesk" autocomplete="off" spellcheck="false" placeholder="Discover your next piece..." class="w-full pl-9 pr-4 py-2 bg-luxury-bg border border-luxury-blush rounded-full focus:border-luxury-rose outline-none text-[11px] font-medium transition-colors">
                     </div>
 
+                    <!-- User Actions -->
                     <nav class="flex items-center shrink-0 gap-1 sm:gap-3">
                         <button type="button" onclick="window.openTrackOrderModal()" class="text-luxury-dark hover:text-luxury-rose transition-colors p-2 min-w-[44px] min-h-[44px] flex items-center justify-center flex-col gap-0.5" aria-label="Track Order">
                             <i class="fas fa-map-marker-alt text-lg"></i>
@@ -81,6 +91,7 @@
                     </nav>
                 </div>
 
+                <!-- Mobile Search -->
                 <div class="md:hidden w-full px-4 pb-2.5 pt-1">
                     <div class="relative w-full group">
                         <i class="fas fa-search absolute left-4 top-1/2 transform -translate-y-1/2 text-luxury-rose text-xs"></i>
@@ -101,7 +112,6 @@
             <div class="w-full bg-white flex flex-col border-b border-luxury-blush">
                 <nav id="main-category-filters" class="max-w-[1600px] mx-auto w-full flex overflow-x-auto scrollbar-hide px-2 sm:px-4 items-center border-b border-luxury-blush/50 lg:border-none"></nav>
                 
-                <!-- Mobile Filters -->
                 <div class="lg:hidden max-w-[1600px] mx-auto w-full flex items-center overflow-hidden">
                     <select id="sortInputMob" class="bg-transparent text-[8px] sm:text-[9px] font-bold uppercase tracking-[0.15em] outline-none cursor-pointer text-luxury-dark shrink-0 border-r border-luxury-blush pl-3 pr-4 py-3">
                         <option value="newest">Sort: Newest</option>
@@ -146,26 +156,21 @@
         <footer class="w-full py-14 sm:py-16 bg-[#FFF0F2] border-t border-[#f4c6ce] mt-auto">
             <div class="max-w-[1200px] mx-auto px-6 grid grid-cols-1 md:grid-cols-3 gap-10">
                 <div class="flex flex-col items-center md:items-start text-center md:text-left">
-                    <h3 class="font-logo font-normal text-3xl sm:text-4xl text-[#D9778A] mb-3 tracking-wide" id="footer-dynamic-name">Twisted Happiness</h3>
+                    <h3 class="font-logo font-normal text-3xl sm:text-4xl text-[#D9778A] mb-3" id="footer-dynamic-name">Twisted Happiness</h3>
                     <p class="text-[#8c7a7a] text-[12px] font-medium leading-relaxed max-w-[280px]">Curating bespoke canvas paintings, textured clay art, and premium handcrafted gifts tailored to your aesthetic.</p>
                 </div>
                 <div class="flex flex-col items-center text-center">
                     <h4 class="text-[#D9778A] font-bold text-[10px] uppercase tracking-[0.2em] mb-5">Our Policies</h4>
                     <div class="flex flex-col gap-3 items-center">
-                        <button type="button" onclick="window.openPolicyModal('return-policy-modal', 'return-policy-box')" class="text-[#8c7a7a] hover:text-[#D9778A] transition-colors text-[12px] font-bold">Strict Return Policy</button>
-                        <button type="button" onclick="window.openPolicyModal('privacy-policy-modal', 'privacy-policy-box')" class="text-[#8c7a7a] hover:text-[#D9778A] transition-colors text-[12px] font-bold">Privacy Policy</button>
-                        <span class="text-[#D9778A]/80 text-[10px] italic mt-2 font-medium">100% Handcrafted. All sales final.</span>
+                        <button type="button" onclick="window.openPolicyModal('return-policy-modal', 'return-policy-box')" class="text-[#8c7a7a] hover:text-[#D9778A] text-[12px] font-bold">Strict Return Policy</button>
+                        <button type="button" onclick="window.openPolicyModal('privacy-policy-modal', 'privacy-policy-box')" class="text-[#8c7a7a] hover:text-[#D9778A] text-[12px] font-bold">Privacy Policy</button>
                     </div>
                 </div>
                 <div class="flex flex-col items-center md:items-end text-center md:text-right">
                     <h4 class="text-[#D9778A] font-bold text-[10px] uppercase tracking-[0.2em] mb-5">Connect With Us</h4>
                     <div class="flex gap-4 mb-4 justify-center md:justify-end">
-                        <a href="javascript:void(0)" id="footer-whatsapp" target="_blank" rel="noopener noreferrer" class="w-10 h-10 rounded-full bg-white flex items-center justify-center text-[#D9778A] border border-[#f4c6ce] hover:bg-[#D9778A] hover:text-white hover:scale-110 transition-all shadow-sm">
-                            <i class="fab fa-whatsapp text-lg"></i>
-                        </a>
-                        <a href="javascript:void(0)" id="footer-instagram" target="_blank" rel="noopener noreferrer" class="hidden w-10 h-10 rounded-full bg-white items-center justify-center text-[#D9778A] border border-[#f4c6ce] hover:bg-[#D9778A] hover:text-white hover:scale-110 transition-all shadow-sm">
-                            <i class="fab fa-instagram text-lg"></i>
-                        </a>
+                        <a href="javascript:void(0)" id="footer-whatsapp" target="_blank" class="w-10 h-10 rounded-full bg-white flex items-center justify-center text-[#D9778A] border border-[#f4c6ce] hover:bg-[#D9778A] hover:text-white transition-all"><i class="fab fa-whatsapp text-lg"></i></a>
+                        <a href="javascript:void(0)" id="footer-instagram" target="_blank" class="hidden w-10 h-10 rounded-full bg-white items-center justify-center text-[#D9778A] border border-[#f4c6ce] hover:bg-[#D9778A] hover:text-white transition-all"><i class="fab fa-instagram text-lg"></i></a>
                     </div>
                     <p class="font-medium tracking-[0.2em] text-[#a49696] text-[9px] uppercase mt-2">© <span id="current-year">2026</span>. Handcrafted in India.</p>
                 </div>
@@ -181,21 +186,20 @@
     <!-- PRODUCT DETAIL PAGE -->
     <article id="product-view" class="hidden w-full min-h-screen bg-white relative z-[80] pb-24 md:pb-10">
         <header class="sticky top-0 w-full bg-white/95 backdrop-blur-md border-b border-luxury-blush px-4 py-3 flex items-center justify-between shadow-sm z-[999]">
-            <button onclick="window.closeProductPage()" class="flex items-center gap-2 text-luxury-dark font-bold text-[10px] uppercase tracking-widest hover:text-luxury-rose transition-colors min-h-[44px]"><i class="fas fa-arrow-left text-sm"></i> Gallery</button>
-            <button type="button" onclick="window.openCheckoutBase()" class="relative flex items-center justify-center p-2 min-w-[44px] min-h-[44px] text-luxury-dark hover:text-luxury-rose transition-colors">
+            <button onclick="window.closeProductPage()" class="flex items-center gap-2 text-luxury-dark font-bold text-[10px] uppercase tracking-widest hover:text-luxury-rose min-h-[44px]"><i class="fas fa-arrow-left text-sm"></i> Gallery</button>
+            <button type="button" onclick="window.openCheckoutBase()" class="relative flex items-center justify-center p-2 min-w-[44px] min-h-[44px] text-luxury-dark hover:text-luxury-rose">
                 <i class="fas fa-shopping-bag text-xl"></i> 
                 <span id="product-page-cart-count" class="absolute top-1 right-1 font-bold text-[8px] bg-luxury-rose text-white w-[16px] h-[16px] flex items-center justify-center rounded-full border border-white shadow-sm font-poppins">0</span>
             </button>
         </header>
 
         <div class="w-full max-w-[1100px] mx-auto flex flex-col md:flex-row items-start pt-4 md:pt-10 px-4 sm:px-6 lg:px-8 gap-4 md:gap-12 relative">
-            
             <div class="w-full md:w-[400px] shrink-0 flex flex-col md:sticky md:top-[100px] z-10 mx-auto md:mx-0">
-                <div class="relative w-full aspect-square md:aspect-auto md:h-[450px] bg-[#fdfbfb] border border-luxury-blush rounded-2xl cursor-zoom-in shadow-sm overflow-hidden flex items-center justify-center group">
-                    <button id="btn-slide-prev" class="absolute left-3 top-1/2 -translate-y-1/2 z-20 bg-white/95 shadow-sm text-luxury-dark hover:text-luxury-rose w-10 h-10 rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-300"><i class="fas fa-chevron-left text-sm"></i></button>
+                <div class="relative w-full aspect-square md:aspect-auto md:h-[450px] bg-[#fdfbfb] border border-luxury-blush rounded-2xl cursor-zoom-in overflow-hidden flex items-center justify-center group">
+                    <button id="btn-slide-prev" class="absolute left-3 top-1/2 -translate-y-1/2 z-20 bg-white/95 shadow-sm text-luxury-dark w-10 h-10 rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"><i class="fas fa-chevron-left text-sm"></i></button>
                     <div id="modal-carousel-track" class="flex w-full h-full relative touch-pan-y items-center"></div>
-                    <button id="btn-slide-next" class="absolute right-3 top-1/2 -translate-y-1/2 z-20 bg-white/95 shadow-sm text-luxury-dark hover:text-luxury-rose w-10 h-10 rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-300"><i class="fas fa-chevron-right text-sm"></i></button>
-                    <span class="absolute bottom-3 right-3 bg-white/95 backdrop-blur-sm text-luxury-dark text-[8px] font-bold px-3 py-1.5 rounded-full pointer-events-none tracking-widest border border-luxury-blush shadow-sm"><i class="fas fa-expand-alt mr-1"></i> ZOOM</span>
+                    <button id="btn-slide-next" class="absolute right-3 top-1/2 -translate-y-1/2 z-20 bg-white/95 shadow-sm text-luxury-dark w-10 h-10 rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"><i class="fas fa-chevron-right text-sm"></i></button>
+                    <span class="absolute bottom-3 right-3 bg-white/95 backdrop-blur-sm text-luxury-dark text-[8px] font-bold px-3 py-1.5 rounded-full shadow-sm tracking-widest border border-luxury-blush pointer-events-none"><i class="fas fa-expand-alt mr-1"></i> ZOOM</span>
                 </div>
                 <div id="modal-thumbnails" class="flex gap-3 overflow-x-auto scrollbar-hide py-4 mt-1 justify-center md:justify-start w-full"></div>
             </div>
@@ -203,11 +207,11 @@
             <div class="flex-1 w-full min-w-0 flex flex-col pb-4">
                 <div class="flex justify-between items-start w-full">
                     <nav class="flex text-[9px] sm:text-[10px] text-gray-400 mb-2 space-x-1.5 font-sans uppercase tracking-widest whitespace-nowrap overflow-hidden text-ellipsis">
-                        <button class="hover:text-luxury-dark cursor-pointer transition-colors" onclick="window.closeProductPage()">Gallery</button>
-                        <span>&rsaquo;</span><span id="breadcrumb-main-cat" class="truncate"></span>
-                        <span>&rsaquo;</span><span id="breadcrumb-sub-cat" class="font-bold text-luxury-dark truncate"></span>
+                        <button class="hover:text-luxury-dark cursor-pointer transition-colors" onclick="window.closeProductPage()">Gallery</button><span>&rsaquo;</span>
+                        <span id="breadcrumb-main-cat" class="truncate"></span><span>&rsaquo;</span>
+                        <span id="breadcrumb-sub-cat" class="font-bold text-luxury-dark truncate"></span>
                     </nav>
-                    <button type="button" id="modal-wishlist-toggle-btn" class="text-gray-300 hover:text-red-500 text-lg p-2 transition-colors duration-300"><i class="fas fa-heart"></i></button>
+                    <button type="button" id="modal-wishlist-toggle-btn" class="text-gray-300 hover:text-red-500 text-lg p-2 transition-colors"><i class="fas fa-heart"></i></button>
                 </div>
 
                 <span id="modal-main-category" class="text-luxury-rose text-[9px] sm:text-[10px] font-bold uppercase tracking-[0.25em] mb-1 block"></span>
@@ -234,20 +238,20 @@
                 </div>
                 
                 <div class="flex items-center justify-center md:justify-start gap-5 mt-4 md:mt-3 text-[9px] sm:text-[10px] text-gray-500 font-sans font-medium">
-                    <span class="flex items-center gap-1.5"><i class="fas fa-lock text-gray-400"></i> Secure Checkout</span>
-                    <span class="flex items-center gap-1.5"><i class="fas fa-gem text-gray-400"></i> Authentic Handcrafted</span>
+                    <span class="flex items-center gap-1.5"><i class="fas fa-lock"></i> Secure Checkout</span>
+                    <span class="flex items-center gap-1.5"><i class="fas fa-gem"></i> Authentic Handcrafted</span>
                 </div>
                 
                 <div class="divide-y border-t border-b border-luxury-blush w-full mt-6 bg-luxury-bg rounded-xl px-4">
                     <details class="group" open>
-                        <summary class="flex justify-between items-center font-bold text-[10px] sm:text-[11px] uppercase tracking-[0.15em] cursor-pointer list-none py-4 text-luxury-dark hover:text-luxury-rose transition focus:outline-none min-h-[44px]">
+                        <summary class="flex justify-between items-center font-bold text-[10px] sm:text-[11px] uppercase tracking-[0.15em] cursor-pointer list-none py-4 text-luxury-dark hover:text-luxury-rose">
                             <span class="flex items-center gap-2"><i class="fas fa-info-circle text-luxury-rose"></i> The Details</span>
                             <span class="transition-transform duration-300 group-open:rotate-180 text-gray-400"><i class="fas fa-chevron-down"></i></span>
                         </summary>
                         <div class="text-[12px] sm:text-[13px] text-luxury-dark/80 pb-5 animate-fade-in font-medium whitespace-pre-wrap leading-relaxed" id="modal-specs"></div>
                     </details>
                     <details class="group">
-                        <summary class="flex justify-between items-center font-bold text-[10px] sm:text-[11px] uppercase tracking-[0.15em] cursor-pointer list-none py-4 text-luxury-dark hover:text-luxury-rose transition focus:outline-none min-h-[44px]">
+                        <summary class="flex justify-between items-center font-bold text-[10px] sm:text-[11px] uppercase tracking-[0.15em] cursor-pointer list-none py-4 text-luxury-dark hover:text-luxury-rose">
                             <span class="flex items-center gap-2"><i class="fas fa-leaf text-luxury-rose"></i> Care Guide</span>
                             <span class="transition-transform duration-300 group-open:rotate-180 text-gray-400"><i class="fas fa-chevron-down"></i></span>
                         </summary>
@@ -267,14 +271,14 @@
         </section>
     </article>
 
-    <!-- 🚨 MASTER CHECKOUT ENGINE 🚨 -->
+    <!-- MASTER CHECKOUT ENGINE -->
     <div id="checkout-overlay" class="fixed inset-0 bg-[#FFF0F2] z-[3000] hidden overflow-y-auto custom-scroll transition-opacity duration-300 opacity-0">
         <header class="w-full bg-white border-b border-luxury-blush px-4 py-4 flex items-center justify-between sticky top-0 z-50 shadow-sm">
             <div class="flex items-center gap-3">
                 <img src="https://i.ibb.co/0RRrFK9N/TH-logo-1.png" class="w-8 h-8 rounded-full border border-luxury-rose object-cover" alt="Logo">
                 <span class="font-logo text-xl text-luxury-dark">Secure Checkout</span>
             </div>
-            <button type="button" onclick="window.closeCheckout()" class="text-luxury-dark text-[10px] font-bold uppercase tracking-widest hover:text-luxury-rose transition-colors flex items-center gap-2 min-h-[44px]">
+            <button type="button" onclick="window.closeCheckout()" class="text-luxury-dark text-[10px] font-bold uppercase tracking-widest hover:text-luxury-rose flex items-center gap-2">
                 Close <i class="fas fa-times text-sm"></i>
             </button>
         </header>
@@ -332,15 +336,15 @@
                 <div id="checkout-step-2" class="w-full bg-white border border-luxury-blush rounded-3xl p-5 md:p-8 shadow-sm hidden flex-col animate-fade-in">
                     <h2 class="font-logo text-2xl text-luxury-dark border-b border-luxury-blush pb-4 mb-6">Delivery Address</h2>
                     <div id="address-book-container" class="flex flex-col gap-4 mb-4"></div>
-                    <button type="button" id="btn-show-add-address" onclick="window.showAddressForm()" class="text-[#D9778A] text-[10px] font-bold uppercase tracking-widest flex items-center gap-2 mb-6 w-max hidden hover:text-luxury-dark transition-colors"><i class="fas fa-plus"></i> Add New Address</button>
+                    <button type="button" id="btn-show-add-address" onclick="window.showAddressForm()" class="text-[#D9778A] text-[10px] font-bold uppercase tracking-widest flex items-center gap-2 mb-6 w-max hidden hover:text-luxury-dark"><i class="fas fa-plus"></i> Add New Address</button>
 
                     <form id="checkout-profile-form" class="space-y-4 font-sans hidden">
                         <div class="grid grid-cols-2 gap-4">
-                            <div><label class="block text-[9px] font-bold text-gray-400 uppercase tracking-widest mb-1.5 pl-1">First Name *</label><input type="text" id="prof-fname" required class="w-full px-4 py-3 bg-luxury-bg border border-luxury-blush rounded-xl outline-none text-[12px] font-medium text-luxury-dark focus:ring-2 focus:ring-luxury-rose/30 transition-all"></div>
-                            <div><label class="block text-[9px] font-bold text-gray-400 uppercase tracking-widest mb-1.5 pl-1">Last Name *</label><input type="text" id="prof-lname" required class="w-full px-4 py-3 bg-luxury-bg border border-luxury-blush rounded-xl outline-none text-[12px] font-medium text-luxury-dark focus:ring-2 focus:ring-luxury-rose/30 transition-all"></div>
+                            <div><label class="block text-[9px] font-bold text-gray-400 uppercase tracking-widest mb-1.5 pl-1">First Name *</label><input type="text" id="prof-fname" required class="w-full px-4 py-3 bg-luxury-bg border border-luxury-blush rounded-xl outline-none text-[12px] font-medium text-luxury-dark focus:ring-2 focus:ring-luxury-rose/30"></div>
+                            <div><label class="block text-[9px] font-bold text-gray-400 uppercase tracking-widest mb-1.5 pl-1">Last Name *</label><input type="text" id="prof-lname" required class="w-full px-4 py-3 bg-luxury-bg border border-luxury-blush rounded-xl outline-none text-[12px] font-medium text-luxury-dark focus:ring-2 focus:ring-luxury-rose/30"></div>
                         </div>
                         <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                            <div><label class="block text-[9px] font-bold text-gray-400 uppercase tracking-widest mb-1.5 pl-1">Email *</label><input type="email" id="prof-email" required class="w-full px-4 py-3 bg-luxury-bg border border-luxury-blush rounded-xl outline-none text-[12px] font-medium text-luxury-dark focus:ring-2 focus:ring-luxury-rose/30 transition-all"></div>
+                            <div><label class="block text-[9px] font-bold text-gray-400 uppercase tracking-widest mb-1.5 pl-1">Email *</label><input type="email" id="prof-email" required class="w-full px-4 py-3 bg-luxury-bg border border-luxury-blush rounded-xl outline-none text-[12px] font-medium text-luxury-dark focus:ring-2 focus:ring-luxury-rose/30"></div>
                             <div>
                                 <label class="block text-[9px] font-bold text-gray-400 uppercase tracking-widest mb-1.5 pl-1">WhatsApp / Phone *</label>
                                 <div class="w-full bg-luxury-bg border border-luxury-blush rounded-xl overflow-hidden focus-within:ring-2 focus-within:ring-luxury-rose/30 flex items-stretch transition-all">
@@ -349,12 +353,12 @@
                                 </div>
                             </div>
                         </div>
-                        <div><label class="block text-[9px] font-bold text-gray-400 uppercase tracking-widest mb-1.5 pl-1">Flat / House / Building *</label><input type="text" id="prof-add1" required class="w-full px-4 py-3 bg-luxury-bg border border-luxury-blush rounded-xl outline-none text-[12px] font-medium text-luxury-dark focus:ring-2 focus:ring-luxury-rose/30 transition-all"></div>
-                        <div><label class="block text-[9px] font-bold text-gray-400 uppercase tracking-widest mb-1.5 pl-1">Area / Street / Sector</label><input type="text" id="prof-add2" class="w-full bg-luxury-bg border border-luxury-blush rounded-xl outline-none text-[12px] font-medium text-luxury-dark focus:ring-2 focus:ring-luxury-rose/30 transition-all"></div>
+                        <div><label class="block text-[9px] font-bold text-gray-400 uppercase tracking-widest mb-1.5 pl-1">Flat / House / Building *</label><input type="text" id="prof-add1" required class="w-full px-4 py-3 bg-luxury-bg border border-luxury-blush rounded-xl outline-none text-[12px] font-medium text-luxury-dark focus:ring-2 focus:ring-luxury-rose/30"></div>
+                        <div><label class="block text-[9px] font-bold text-gray-400 uppercase tracking-widest mb-1.5 pl-1">Area / Street / Sector</label><input type="text" id="prof-add2" class="w-full bg-luxury-bg border border-luxury-blush rounded-xl outline-none text-[12px] font-medium text-luxury-dark focus:ring-2 focus:ring-luxury-rose/30"></div>
                         <div class="grid grid-cols-2 md:grid-cols-3 gap-4">
-                            <div class="col-span-2 md:col-span-1"><label class="block text-[9px] font-bold text-gray-400 uppercase tracking-widest mb-1.5 pl-1">Pincode *</label><input type="text" id="prof-pin" required maxlength="6" class="w-full px-4 py-3 bg-luxury-bg border border-luxury-blush rounded-xl outline-none text-[12px] font-medium text-luxury-dark focus:ring-2 focus:ring-luxury-rose/30 transition-all"></div>
-                            <div><label class="block text-[9px] font-bold text-gray-400 uppercase tracking-widest mb-1.5 pl-1">City *</label><input type="text" id="prof-city" required class="w-full px-4 py-3 bg-luxury-bg border border-luxury-blush rounded-xl outline-none text-[12px] font-medium text-luxury-dark focus:ring-2 focus:ring-luxury-rose/30 transition-all"></div>
-                            <div><label class="block text-[9px] font-bold text-gray-400 uppercase tracking-widest mb-1.5 pl-1">State *</label><input type="text" id="prof-state" required class="w-full px-4 py-3 bg-luxury-bg border border-luxury-blush rounded-xl outline-none text-[12px] font-medium text-luxury-dark focus:ring-2 focus:ring-luxury-rose/30 transition-all"></div>
+                            <div class="col-span-2 md:col-span-1"><label class="block text-[9px] font-bold text-gray-400 uppercase tracking-widest mb-1.5 pl-1">Pincode *</label><input type="text" id="prof-pin" required maxlength="6" class="w-full px-4 py-3 bg-luxury-bg border border-luxury-blush rounded-xl outline-none text-[12px] font-medium text-luxury-dark focus:ring-2 focus:ring-luxury-rose/30"></div>
+                            <div><label class="block text-[9px] font-bold text-gray-400 uppercase tracking-widest mb-1.5 pl-1">City *</label><input type="text" id="prof-city" required class="w-full px-4 py-3 bg-luxury-bg border border-luxury-blush rounded-xl outline-none text-[12px] font-medium text-luxury-dark focus:ring-2 focus:ring-luxury-rose/30"></div>
+                            <div><label class="block text-[9px] font-bold text-gray-400 uppercase tracking-widest mb-1.5 pl-1">State *</label><input type="text" id="prof-state" required class="w-full px-4 py-3 bg-luxury-bg border border-luxury-blush rounded-xl outline-none text-[12px] font-medium text-luxury-dark focus:ring-2 focus:ring-luxury-rose/30"></div>
                         </div>
                         <div class="flex gap-3 pt-3 mb-4">
                             <button type="button" onclick="window.saveAddressFromForm()" class="bg-luxury-dark text-white hover:bg-[#D9778A] px-6 py-3 rounded-xl font-bold text-[10px] uppercase tracking-widest transition-colors shadow-sm">Save Address</button>
@@ -438,7 +442,7 @@
 
                     <div class="fixed bottom-0 left-0 w-full p-4 bg-white/95 backdrop-blur-md border-t border-luxury-blush z-[100] lg:relative lg:bg-transparent lg:border-none lg:p-0 lg:z-auto">
                         <button type="button" id="checkout-action-btn-mobile" onclick="window.handleMobileStickyAction()" class="w-full bg-luxury-dark text-white hover:bg-[#D9778A] py-4 rounded-xl font-bold text-[11px] uppercase tracking-[0.15em] transition-all shadow-float flex items-center justify-center gap-2">
-                            Pay <span id="mobile-sticky-total">₹0</span> <i class="fas fa-arrow-right"></i>
+                            Next <i class="fas fa-arrow-right"></i>
                         </button>
                     </div>
                 </div>
@@ -446,7 +450,7 @@
         </div>
     </div>
 
-    <!-- 🚨 PROFILE DASHBOARD 🚨 -->
+    <!-- PROFILE DASHBOARD OVERLAY -->
     <div id="customer-profile-overlay" class="fixed inset-0 bg-[#FFF0F2] z-[2500] hidden overflow-y-auto custom-scroll transition-opacity duration-300 opacity-0">
         <header class="w-full bg-white border-b border-luxury-blush px-4 py-4 flex items-center justify-between sticky top-0 z-50 shadow-sm">
             <div class="flex items-center gap-3">
@@ -468,7 +472,7 @@
         </div>
     </div>
 
-    <!-- 🚨 AUTHENTICATION MODAL 🚨 -->
+    <!-- AUTHENTICATION MODAL -->
     <div id="customer-auth-modal" role="dialog" aria-modal="true" class="hidden transition-opacity duration-200 opacity-0 fixed inset-0 bg-luxury-dark/60 p-4 flex items-center justify-center z-[4500]">
         <div class="transform scale-95 translate-y-2 transition-all duration-300 bg-white rounded-3xl w-full max-w-sm p-6 sm:p-8 shadow-2xl relative border border-luxury-blush" id="customer-auth-box">
             <button type="button" onclick="window.closeCustomerAuthModal()" class="absolute top-4 right-4 text-gray-400 w-8 h-8 bg-luxury-bg rounded-full flex items-center justify-center border border-luxury-blush hover:text-luxury-dark"><i class="fas fa-times text-xs"></i></button>
@@ -543,14 +547,10 @@
     </div>
 
     <!-- Global Toast Notification -->
-    <div id="toast" role="alert" aria-live="assertive" class="fixed bottom-24 md:bottom-10 left-1/2 transform -translate-x-1/2 bg-luxury-dark text-luxury-bg px-8 py-3.5 rounded-full shadow-float flex items-center gap-3 transition-all duration-500 ease-luxury-ease opacity-0 pointer-events-none w-max border border-luxury-rose/30 translate-y-10 z-[5000]">
-        <i id="toast-icon" class="fas fa-check text-luxury-rose text-sm"></i> 
+    <div id="toast" role="alert" aria-live="assertive" class="fixed bottom-24 md:bottom-10 left-1/2 transform -translate-x-1/2 bg-white/90 backdrop-blur-md text-luxury-dark px-8 py-3.5 rounded-full shadow-float flex items-center gap-3 transition-all duration-500 ease-luxury-ease opacity-0 pointer-events-none w-max border border-white translate-y-10 z-[5000]">
+        <i id="toast-icon" class="fas fa-check text-[#D9778A] text-sm"></i> 
         <span id="toast-msg" class="text-[11px] font-body font-bold tracking-[0.1em] uppercase pt-0.5"></span>
     </div>
-
-    <!-- Move external JS to bottom of body to guarantee parsing order -->
-    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-    <script src="./js/app.js"></script>
 
 </body>
 </html>

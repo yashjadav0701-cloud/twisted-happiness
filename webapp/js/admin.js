@@ -1,6 +1,6 @@
 /**
  * Twisted Happiness - Studio Admin Engine
- * Version: 11.0.0 - Fully Stable
+ * Version: 11.5.0 - Bulletproof Startup Engine & Safe Tracking
  */
 
 const SUPABASE_URL = "https://gvrfucjtnyqfkdynrmqs.supabase.co"; 
@@ -9,6 +9,7 @@ let _supabase;
 
 const countryCodeMapping = { "+91": "🇮🇳 IN (+91)", "+1": "🇺🇸 US (+1)", "+44": "🇬🇧 UK (+44)" };
 
+// 🛡️ DEFENSIVE CACHE PARSER
 function safeJSONParse(key, fallback) { 
     try { 
         const item = localStorage.getItem(key); 
@@ -21,12 +22,21 @@ function safeJSONParse(key, fallback) {
 let settings = safeJSONParse('th_settings', { storeName: "Twisted Happiness", instagram: "", whatsapp: "9909310501", upiId: "khushisj315@oksbi", countryCode: "+91" });
 let products = []; let allOrders = []; let selectedFilesData = []; let editModeId = null; let mainImageIndex = 0;
 
-document.addEventListener('DOMContentLoaded', () => {
-    _supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
-    populateCountryCodes();
-    bindAdminEvents();
-    checkSession();
-});
+// 🚀 BULLETPROOF INITIALIZATION
+function initApp() {
+    try { 
+        _supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY); 
+        populateCountryCodes();
+        bindAdminEvents();
+        checkSession();
+    } catch (e) { 
+        console.error("Supabase Init Error:", e); 
+    }
+}
+
+if (document.readyState === 'loading') { document.addEventListener('DOMContentLoaded', initApp); } 
+else { initApp(); }
+
 
 function populateCountryCodes() {
     const select = document.getElementById('admin-country-code'); if (!select) return;
@@ -41,22 +51,10 @@ async function checkSession() {
 }
 
 async function attemptLogin(e) { 
-    e.preventDefault(); 
-    const email = document.getElementById('admin-user').value.trim();
-    const pass = document.getElementById('admin-pass').value.trim();
-    const btn = document.getElementById('login-btn'); 
-    
-    if(!email || !pass) return; 
-    btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Verifying...'; btn.disabled = true; 
-    
-    try { 
-        const { data, error } = await _supabase.auth.signInWithPassword({ email: email, password: pass }); 
-        if (error) throw error; 
-        if (data.session) unlockDashboard(); 
-    } catch (err) { 
-        alert("Access Denied: Check your credentials."); 
-        btn.innerHTML = 'Enter Studio'; btn.disabled = false; 
-    }
+    e.preventDefault(); const email = document.getElementById('admin-user').value.trim(), pass = document.getElementById('admin-pass').value.trim(), btn = document.getElementById('login-btn'); 
+    if(!email || !pass) return; btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Verifying...'; btn.disabled = true; 
+    try { const { data, error } = await _supabase.auth.signInWithPassword({ email: email, password: pass }); if (error) throw error; if (data.session) unlockDashboard(); } 
+    catch (err) { alert("Access Denied: Check your credentials."); btn.innerHTML = 'Enter Studio'; btn.disabled = false; }
 }
 
 async function logoutAdmin() { await _supabase.auth.signOut(); window.location.href = '/'; }
@@ -98,7 +96,7 @@ function saveSettings(e) {
 async function fetchDatabase() { 
     try { 
         const { data, error } = await _supabase.from('creations').select('*').order('created_at', { ascending: false }); if (error) throw error;
-        products = data.map(row => {
+        products = (data || []).map(row => {
             let parsedImages = []; try { parsedImages = JSON.parse(row.image_url) || []; } catch(e) {}
             return {
                 id: row.id, name: row.name, category: row.category, mainCategory: row.main_category || 'Pipe Cleaner Crafts', price: row.price, prepTime: row.prep_time, specs: row.specs, dimensions: row.dimensions || '', isCustomizable: row.is_customizable || false,
@@ -254,7 +252,19 @@ async function fetchOrders() {
     } catch (err) { console.error("Error fetching orders", err); }
 }
 
-function extractCustomerData(reqsString) { const nameMatch = reqsString.match(/Patron:\s*([^|]+)/); const phoneMatch = reqsString.match(/Phone:\s*([^|]+)/); const prepMatch = reqsString.match(/Est.\s*Prep:\s*([^|]+)/); return { name: nameMatch ? nameMatch[1].trim() : "Esteemed Patron", phone: phoneMatch ? phoneMatch[1].trim() : "", prepTime: prepMatch ? prepMatch[1].trim() : "a few days" }; }
+// 🛡️ Safe Extraction Regex
+function extractCustomerData(reqsString) { 
+    const nameMatch = reqsString.match(/Patron:\s*([^|]+)/); 
+    const phoneMatch = reqsString.match(/Phone:\s*([^|]+)/); 
+    const prepMatch = reqsString.match(/Est.\s*Prep:\s*([^|]+)/); 
+    const idMatch = reqsString.match(/Order ID:\s*([^|]+)/); 
+    return { 
+        name: nameMatch ? nameMatch[1].trim() : "Esteemed Patron", 
+        phone: phoneMatch ? phoneMatch[1].trim() : "", 
+        prepTime: prepMatch ? prepMatch[1].trim() : "a few days",
+        orderId: idMatch ? idMatch[1].trim() : "TH_LEGACY"
+    }; 
+}
 
 function buildOrderItemsVisual(orderDetailsData) {
     let items = [], html = "";
@@ -286,7 +296,7 @@ function renderActiveOrders() {
             actionButton = `<button type="button" onclick="window.th_pushToShiprocket('${order.id}', event)" class="px-5 py-2.5 rounded-full bg-[#E0F2FE] text-[#1E3A8A] font-bold text-[9px] uppercase tracking-widest shadow-sm"><i class="fas fa-rocket mr-1.5"></i> Push to Shiprocket</button><button type="button" onclick="window.th_markOrderDelivered('${order.id}')" class="px-5 py-2.5 rounded-full bg-luxury-rose text-white font-bold text-[9px] uppercase tracking-widest shadow-sm"><i class="fas fa-dove mr-2"></i> 🕊️ Delivered</button>`;
         }
 
-        container.innerHTML += `<div class="border border-luxury-blush rounded-xl p-5 bg-luxury-bg shadow-sm relative overflow-hidden group hover:border-luxury-rose/50 transition-colors"><div class="absolute top-0 left-0 w-1.5 h-full ${order.status === 'new' || order.status === 'pending' ? 'bg-yellow-400' : (order.status === 'curating' ? 'bg-luxury-gold' : 'bg-luxury-rose')}"></div><div class="flex justify-between items-start mb-4"><div><h4 class="font-logo font-normal text-xl text-luxury-dark mb-0.5">${customerData.name}</h4><span class="text-[8px] font-bold text-gray-400 uppercase tracking-widest"><i class="far fa-clock mr-1"></i> ${date}</span></div>${statusBadge}</div><div class="mb-5">${visualItems}<div class="bg-white border border-luxury-blush p-3 rounded-lg text-gray-500 text-[10px] sm:text-[11px] leading-relaxed font-sans shadow-inner whitespace-pre-wrap">${order.customer_reqs}</div></div><div class="flex flex-col xl:flex-row xl:justify-between xl:items-center border-t border-luxury-blush pt-4 mt-2 gap-4"><div><p class="text-[8px] font-bold text-gray-400 uppercase tracking-widest mb-0.5">Final Invoice Total</p><p class="font-poppins font-extrabold text-luxury-dark text-xl">₹${order.total}</p></div><div class="flex gap-2 w-full xl:w-auto justify-start xl:justify-end flex-wrap">${actionButton}</div></div></div>`;
+        container.innerHTML += `<div class="border border-luxury-blush rounded-xl p-5 bg-luxury-bg shadow-sm relative overflow-hidden group hover:border-luxury-rose/50 transition-colors"><div class="absolute top-0 left-0 w-1.5 h-full ${order.status === 'new' || order.status === 'pending' ? 'bg-yellow-400' : (order.status === 'curating' ? 'bg-luxury-gold' : 'bg-luxury-rose')}"></div><div class="flex justify-between items-start mb-4"><div><h4 class="font-logo font-normal text-xl text-luxury-dark mb-0.5">${customerData.name}</h4><span class="text-[8px] font-bold text-gray-400 uppercase tracking-widest"><i class="far fa-clock mr-1"></i> ${date} | ${customerData.orderId}</span></div>${statusBadge}</div><div class="mb-5">${visualItems}<div class="bg-white border border-luxury-blush p-3 rounded-lg text-gray-500 text-[10px] sm:text-[11px] leading-relaxed font-sans shadow-inner whitespace-pre-wrap">${order.customer_reqs}</div></div><div class="flex flex-col xl:flex-row xl:justify-between xl:items-center border-t border-luxury-blush pt-4 mt-2 gap-4"><div><p class="text-[8px] font-bold text-gray-400 uppercase tracking-widest mb-0.5">Final Invoice Total</p><p class="font-poppins font-extrabold text-luxury-dark text-xl">₹${order.total}</p></div><div class="flex gap-2 w-full xl:w-auto justify-start xl:justify-end flex-wrap">${actionButton}</div></div></div>`;
     });
 }
 
@@ -295,7 +305,7 @@ function renderCompletedOrders() {
     if (completedOrders.length === 0) { container.innerHTML = '<div class="text-center text-gray-400 py-10 text-[10px] uppercase tracking-[0.2em] font-medium"><i class="fas fa-archive text-2xl mb-3 opacity-50 block"></i> No archived deliveries yet.</div>'; return; }
     completedOrders.forEach(order => {
         const date = new Date(order.created_at).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' }); const customerData = extractCustomerData(order.customer_reqs); const visualItems = buildOrderItemsVisual(order.order_details);
-        container.innerHTML += `<div class="border border-luxury-blush rounded-xl p-5 bg-white shadow-sm relative overflow-hidden opacity-80 hover:opacity-100 transition-opacity"><div class="flex justify-between items-start mb-3"><div><h4 class="font-logo font-normal text-lg text-luxury-dark mb-0.5">${customerData.name}</h4><span class="text-[8px] font-bold text-gray-400 uppercase tracking-widest"><i class="fas fa-check-double mr-1 text-luxury-rose"></i> ${date}</span></div><span class="bg-gray-100 text-gray-500 text-[8px] font-bold uppercase tracking-widest px-2.5 py-1 rounded-md border border-gray-200">Elegantly Delivered</span></div><div class="mb-3">${visualItems}</div><div class="flex justify-between items-center border-t border-luxury-blush pt-3 mt-2"><p class="text-[9px] font-bold text-gray-400 uppercase tracking-widest">Total <span class="font-poppins text-luxury-dark text-[11px] ml-1">₹${order.total}</span></p><button type="button" onclick="window.th_rejectOrder('${order.id}')" class="text-red-400 hover:text-red-600 text-[10px] uppercase font-bold tracking-widest cursor-pointer transition-colors"><i class="fas fa-trash-alt mr-1"></i> Purge</button></div></div>`;
+        container.innerHTML += `<div class="border border-luxury-blush rounded-xl p-5 bg-white shadow-sm relative overflow-hidden opacity-80 hover:opacity-100 transition-opacity"><div class="flex justify-between items-start mb-3"><div><h4 class="font-logo font-normal text-lg text-luxury-dark mb-0.5">${customerData.name}</h4><span class="text-[8px] font-bold text-gray-400 uppercase tracking-widest"><i class="fas fa-check-double mr-1 text-luxury-rose"></i> ${date} | ${customerData.orderId}</span></div><span class="bg-gray-100 text-gray-500 text-[8px] font-bold uppercase tracking-widest px-2.5 py-1 rounded-md border border-gray-200">Elegantly Delivered</span></div><div class="mb-3">${visualItems}</div><div class="flex justify-between items-center border-t border-luxury-blush pt-3 mt-2"><p class="text-[9px] font-bold text-gray-400 uppercase tracking-widest">Total <span class="font-poppins text-luxury-dark text-[11px] ml-1">₹${order.total}</span></p><button type="button" onclick="window.th_rejectOrder('${order.id}')" class="text-red-400 hover:text-red-600 text-[10px] uppercase font-bold tracking-widest cursor-pointer transition-colors"><i class="fas fa-trash-alt mr-1"></i> Purge</button></div></div>`;
     });
 }
 

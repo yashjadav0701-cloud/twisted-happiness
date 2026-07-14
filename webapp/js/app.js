@@ -1,6 +1,6 @@
 /**
  * Twisted Happiness - Enterprise Storefront Engine
- * Version: 11.0.0 - Fully Stable Unminified Build, Cache Defender, Safe Database Fetching
+ * Version: 11.5.0 - Bulletproof Startup Engine & Full State Safety
  */
 
 const SUPABASE_URL = "https://gvrfucjtnyqfkdynrmqs.supabase.co"; 
@@ -15,13 +15,9 @@ const DISCOUNT_TIERS = [
     { threshold: 299,  type: 'flat',    value: 30, label: '₹30 OFF VIP' }
 ];
 
-const countryCodeMapping = { 
-    "+91": "🇮🇳 IN (+91)", 
-    "+1": "🇺🇸 US (+1)", 
-    "+44": "🇬🇧 UK (+44)" 
-};
+const countryCodeMapping = { "+91": "🇮🇳 IN (+91)", "+1": "🇺🇸 US (+1)", "+44": "🇬🇧 UK (+44)" };
 
-// 🛡️ DEFENSIVE CACHE PARSER (Prevents Blank Screens)
+// 🛡️ DEFENSIVE CACHE PARSER
 function safeJSONParse(key, fallback) { 
     try { 
         const item = localStorage.getItem(key); 
@@ -68,8 +64,8 @@ let editingAddressIndex = null;
 let currentSessionUser = null; 
 let authModalMode = "login"; 
 
-// 🚀 INITIALIZATION
-document.addEventListener('DOMContentLoaded', () => {
+// 🚀 BULLETPROOF INITIALIZATION (Works no matter when the script loads)
+function initApp() {
     try { 
         _supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY); 
         setupAuthSessionListener(); 
@@ -83,9 +79,15 @@ document.addEventListener('DOMContentLoaded', () => {
     injectSkeletons(); 
     updateCartCount(); 
     setupSocialLinks();
-});
+}
 
-// 🚨 PRELOADER & LOADERS
+if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', initApp);
+} else {
+    initApp();
+}
+
+// 🚨 LOADERS
 function dismissPreloader() {
     const preloader = document.getElementById('luxury-page-preloader');
     if (preloader && !preloader.classList.contains('hidden')) {
@@ -281,7 +283,7 @@ function updateWishlistUIElements(id, isAdded) {
 
 // 🚨 LOGIC CALCS 🚨
 function calculateEDDBracket(prepTimeStr) {
-    const matches = prepTimeStr.match(/\d+/g); 
+    const matches = (prepTimeStr || '3').match(/\d+/g); 
     let minDays = matches ? parseInt(matches[0]) : 3; 
     let maxDays = matches && matches[1] ? parseInt(matches[1]) : minDays + 2;
     const today = new Date(); 
@@ -332,7 +334,7 @@ async function fetchDatabase() {
     try { 
         const { data, error } = await _supabase.from('creations').select('*').order('created_at', { ascending: false }); 
         if (error) throw error;
-        products = data.map(row => {
+        products = (data || []).map(row => {
             let parsedImages = []; 
             try { parsedImages = JSON.parse(row.image_url) || []; } catch(e) {}
             return {
@@ -377,7 +379,7 @@ function renderProducts(searchQuery = '') {
     if(currentSortMode === 'newest') filtered.reverse(); 
 
     if(filtered.length === 0) {
-        grid.innerHTML = '<div class="col-span-full text-center py-20 text-gray-400 font-medium text-sm w-full"><i class="fas fa-box-open text-4xl block mb-3 opacity-30"></i> No creations found matching your search.</div>';
+        grid.innerHTML = '<div class="col-span-full text-center py-20 text-gray-400 font-medium text-sm w-full"><i class="fas fa-box-open text-4xl block mb-3 opacity-30"></i> No creations found.</div>';
         return;
     }
 
@@ -765,13 +767,12 @@ function updateCheckoutUI() {
     if(document.getElementById('qo-total-savings')) document.getElementById('qo-total-savings').textContent = totalSavings;
     if(document.getElementById('qo-final-total')) document.getElementById('qo-final-total').textContent = `₹${finalTotal}`;
 
-    // Mobile specific button handling
     if(mobileBtn) {
         if(checkoutStep === 1) {
-            mobileBtn.innerHTML = `Pay ₹${finalTotal} <i class="fas fa-arrow-right ml-1"></i>`;
+            mobileBtn.innerHTML = `Next: Delivery <i class="fas fa-arrow-right ml-1"></i>`;
             if(cart.length === 0) { mobileBtn.disabled = true; mobileBtn.classList.add('opacity-50', 'cursor-not-allowed'); } else { mobileBtn.disabled = false; mobileBtn.classList.remove('opacity-50', 'cursor-not-allowed'); }
         } else if (checkoutStep === 2) {
-            mobileBtn.innerHTML = `Verify to Pay ₹${finalTotal} <i class="fas fa-lock ml-1"></i>`;
+            mobileBtn.innerHTML = `Next: Secure Payment <i class="fas fa-lock ml-1"></i>`;
             mobileBtn.disabled = false; mobileBtn.classList.remove('opacity-50', 'cursor-not-allowed');
         }
     }
@@ -842,15 +843,18 @@ function preparePaymentGateway() {
     const fullContactPhone = safeCountryCode + " " + targetAddress.phone;
     
     let fullAddress = `${targetAddress.address_1}, ${targetAddress.address_2 ? targetAddress.address_2 + ', ' : ''}${targetAddress.city}, ${targetAddress.state} - ${targetAddress.pincode}`;
-    let artDetails = `Phone: ${fullContactPhone} | Patron: ${targetAddress.first_name} ${targetAddress.last_name || ''} | Email: ${targetAddress.email} | Address: ${fullAddress} | Purpose: ${type} | Notes: ${colors} | Delivery Fee: ₹${currentDeliveryFee}`;
+    
+    const cleanNameForNote = targetAddress.first_name.replace(/[^a-zA-Z0-9]/g, '').substring(0, 10); 
+    currentOrderReference = `TH_${cleanNameForNote}_${String(Date.now()).slice(-4)}`; 
+
+    // 🔥 SAFE STRING EMBEDDING (Prevents SQL column crash) 🔥
+    let artDetails = `Order ID: ${currentOrderReference} | Phone: ${fullContactPhone} | Patron: ${targetAddress.first_name} ${targetAddress.last_name || ''} | Email: ${targetAddress.email} | Address: ${fullAddress} | Purpose: ${type} | Notes: ${colors} | Delivery Fee: ₹${currentDeliveryFee}`;
     if(activeCouponValue > 0) artDetails += ` | Coupon: ${activeCouponCode} (-₹${couponSubtraction})`;
     if(dims && document.getElementById('comm-dimensions-wrapper') && !document.getElementById('comm-dimensions-wrapper').classList.contains('hidden')) { artDetails += ` | Size: ${dims}`; } 
     artDetails += ` | Est. Prep: ${totalPrepTime}`; 
 
     const formattedTotal = Number(finalTotal).toFixed(2);
     const cleanUpiId = (settings.upiId || "khushisj315@oksbi").trim();
-    const cleanNameForNote = targetAddress.first_name.replace(/[^a-zA-Z0-9]/g, '').substring(0, 10); 
-    currentOrderReference = `TH_${cleanNameForNote}_${String(Date.now()).slice(-4)}`; 
     
     const upiLink = `upi://pay?pa=${cleanUpiId}&pn=${settings.storeName ? settings.storeName.replace(/\s+/g, '_') : 'Twisted_Happiness'}&am=${formattedTotal}&cu=INR&tn=${currentOrderReference}`;
 
@@ -892,7 +896,6 @@ async function confirmPaymentAndOrder() {
     const btn = document.getElementById('btn-confirm-payment'); 
     if(btn) { btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Securing Order...'; btn.disabled = true; }
     
-    pendingOrderPayload.order_id = currentOrderReference; 
     const { error } = await _supabase.from('orders').insert([pendingOrderPayload]);
     
     if (error) { 
@@ -933,7 +936,11 @@ async function renderCustomerOrdersPipeline() {
             else if (order.status === 'ready') { txt = "Ready for Dispatch"; cls = "text-purple-600 bg-purple-50"; } 
             else if (order.status === 'completed') { txt = "Elegantly Delivered"; cls = "text-green-600 bg-green-50"; }
             
-            html += `<div class="bg-white border border-luxury-blush p-4 rounded-2xl shadow-sm"><div class="flex justify-between border-b pb-2 mb-2"><div><span class="text-[8px] text-gray-400 uppercase tracking-widest block">Reference</span><h4 class="font-poppins font-bold text-sm">${order.order_id || 'TH_LOG'}</h4></div><span class="text-[8px] font-bold border px-2 py-0.5 rounded uppercase ${cls}">${txt}</span></div><p class="text-gray-400 text-[10px]">Placed on ${date}</p><p class="font-bold text-luxury-dark text-[12px] mt-1">Invoice Total: ₹${order.total}</p></div>`;
+            // Extract the secure ID from the customer_reqs string without breaking SQL
+            const idMatch = order.customer_reqs.match(/Order ID:\s*([^|]+)/);
+            const extractedId = idMatch ? idMatch[1].trim() : 'TH_LOG';
+
+            html += `<div class="bg-white border border-luxury-blush p-4 rounded-2xl shadow-sm"><div class="flex justify-between border-b pb-2 mb-2"><div><span class="text-[8px] text-gray-400 uppercase tracking-widest block">Reference</span><h4 class="font-poppins font-bold text-sm">${extractedId}</h4></div><span class="text-[8px] font-bold border px-2 py-0.5 rounded uppercase ${cls}">${txt}</span></div><p class="text-gray-400 text-[10px]">Placed on ${date}</p><p class="font-bold text-luxury-dark text-[12px] mt-1">Invoice Total: ₹${order.total}</p></div>`;
         });
         container.innerHTML = html;
     } catch(err) { 
@@ -981,59 +988,8 @@ async function handleTrackOrder(e) {
     btn.disabled = false;
 }
 
-// GLOBALLY BIND ALL FUNCTIONS
-window.openCheckoutBase = openCheckoutBase; 
-window.closeCheckout = closeCheckout; 
-window.handleCheckoutAction = handleCheckoutAction; 
-window.handleMobileStickyAction = handleMobileStickyAction; 
-window.openLightboxFromCarousel = openLightboxFromCarousel; 
-window.moveLightboxSlide = moveLightboxSlide; 
-window.goToSlide = goToSlide; 
-window.th_toggleSubCategory = th_toggleSubCategory; 
-window.routeCheckoutFromModal = routeCheckoutFromModal; 
-window.th_updateCartQty = updateCartQty; 
-window.updateCheckoutQty = updateCheckoutQty; 
-window.goToCheckoutStep = goToCheckoutStep; 
-window.confirmPaymentAndOrder = confirmPaymentAndOrder; 
-window.showAddressForm = showAddressForm; 
-window.hideAddressForm = hideAddressForm; 
-window.saveAddressFromForm = saveAddressFromForm; 
-window.selectAddress = selectAddress; 
-window.editAddress = editAddress; 
-window.openPolicyModal = openPolicyModal; 
-window.closePolicyModal = closePolicyModal; 
-window.closeProductPage = closeProductPage; 
-window.handleAccountHeaderClick = handleAccountHeaderClick; 
-window.closeCustomerProfile = closeCustomerProfile; 
-window.handleCustomerLogout = handleCustomerLogout; 
-window.toggleAuthViewMode = toggleAuthViewMode; 
-window.closeCustomerAuthModal = closeCustomerAuthModal; 
-window.handleGoogleOAuthLogin = handleGoogleOAuthLogin; 
-window.th_toggleWishlistProduct = toggleWishlistProduct; 
-window.th_applyCouponCode = applyCouponCode; 
-window.openTrackOrderModal = openTrackOrderModal; 
-window.closeTrackOrderModal = closeTrackOrderModal;
+// 🚨 GLOBALLY BIND ALL LIFECYCLE CHANNELS (Fully Synchronized) 🚨
+window.openCheckoutBase = openCheckoutBase; window.closeCheckout = closeCheckout; window.handleCheckoutAction = handleCheckoutAction; window.handleMobileStickyAction = handleMobileStickyAction; window.openLightboxFromCarousel = openLightboxFromCarousel; window.moveLightboxSlide = moveLightboxSlide; window.goToSlide = goToSlide; window.th_toggleSubCategory = th_toggleSubCategory; window.th_updateCartQty = updateCartQty; window.updateCheckoutQty = updateCheckoutQty; window.goToCheckoutStep = goToCheckoutStep; window.confirmPaymentAndOrder = confirmPaymentAndOrder; window.showAddressForm = showAddressForm; window.hideAddressForm = hideAddressForm; window.saveAddressFromForm = saveAddressFromForm; window.selectAddress = selectAddress; window.editAddress = editAddress; window.openPolicyModal = openPolicyModal; window.closePolicyModal = closePolicyModal; window.closeProductPage = closeProductPage; window.handleAccountHeaderClick = handleAccountHeaderClick; window.closeCustomerProfile = closeCustomerProfile; window.handleCustomerLogout = handleCustomerLogout; window.toggleAuthViewMode = toggleAuthViewMode; window.closeCustomerAuthModal = closeCustomerAuthModal; window.handleGoogleOAuthLogin = handleGoogleOAuthLogin; window.th_toggleWishlistProduct = toggleWishlistProduct; window.th_applyCouponCode = applyCouponCode; window.openTrackOrderModal = openTrackOrderModal; window.closeTrackOrderModal = closeTrackOrderModal;
 
-function showToast(msg, icon = 'fa-check', color = 'text-luxury-rose') { 
-    const t = document.getElementById('toast'); 
-    document.getElementById('toast-msg').textContent = msg; 
-    document.getElementById('toast-icon').className = `fas ${icon} ${color} text-sm drop-shadow-sm`; 
-    requestAnimationFrame(() => { 
-        t.classList.remove('opacity-0', 'translate-y-10'); 
-        setTimeout(() => t.classList.add('opacity-0', 'translate-y-10'), 3000); 
-    }); 
-}
-
-function setupScrollReveal() { 
-    const observer = new IntersectionObserver((entries) => { 
-        entries.forEach(entry => { 
-            if(entry.isIntersecting) { 
-                requestAnimationFrame(() => { 
-                    entry.target.classList.remove('opacity-0', 'translate-y-4'); 
-                    observer.unobserve(entry.target); 
-                }); 
-            } 
-        }); 
-    }, { threshold: 0.05, rootMargin: '50px' }); 
-    document.querySelectorAll('.scroll-reveal').forEach(el => observer.observe(el)); 
-}
+function showToast(msg, icon = 'fa-check', color = 'text-luxury-rose') { const t = document.getElementById('toast'); document.getElementById('toast-msg').textContent = msg; document.getElementById('toast-icon').className = `fas ${icon} ${color} text-sm drop-shadow-sm`; requestAnimationFrame(() => { t.classList.remove('opacity-0', 'translate-y-10'); setTimeout(() => t.classList.add('opacity-0', 'translate-y-10'), 3000); }); }
+function setupScrollReveal() { const observer = new IntersectionObserver((entries) => { entries.forEach(entry => { if(entry.isIntersecting) { requestAnimationFrame(() => { entry.target.classList.remove('opacity-0', 'translate-y-4'); observer.unobserve(entry.target); }); } }); }, { threshold: 0.05, rootMargin: '50px' }); document.querySelectorAll('.scroll-reveal').forEach(el => observer.observe(el)); }
