@@ -1,6 +1,6 @@
 /**
  * Twisted Happiness - Studio Admin Engine
- * Version: 12.5.0 - Fully Stable Safe Build
+ * Version: 13.0.0 - Fully Stable Code
  */
 
 const SUPABASE_URL = "https://gvrfucjtnyqfkdynrmqs.supabase.co"; 
@@ -250,11 +250,13 @@ async function fetchOrders() {
     } catch (err) { console.error("Error fetching orders", err); }
 }
 
+// 🛡️ Safe Regex Parser
 function extractCustomerData(reqsString) { 
-    const nameMatch = reqsString.match(/Patron:\s*([^|]+)/); 
-    const phoneMatch = reqsString.match(/Phone:\s*([^|]+)/); 
-    const prepMatch = reqsString.match(/Est.\s*Prep:\s*([^|]+)/); 
-    const idMatch = reqsString.match(/Order ID:\s*([^|]+)/); 
+    const safeStr = reqsString || "";
+    const nameMatch = safeStr.match(/Patron:\s*([^|]+)/); 
+    const phoneMatch = safeStr.match(/Phone:\s*([^|]+)/); 
+    const prepMatch = safeStr.match(/Est.\s*Prep:\s*([^|]+)/); 
+    const idMatch = safeStr.match(/Order ID:\s*([^|]+)/); 
     return { 
         name: nameMatch ? nameMatch[1].trim() : "Esteemed Patron", 
         phone: phoneMatch ? phoneMatch[1].trim() : "", 
@@ -268,7 +270,7 @@ function buildOrderItemsVisual(orderDetailsData) {
     try { 
         items = JSON.parse(orderDetailsData); html = `<div class="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-3">`;
         items.forEach(i => { const img = i.image || 'https://placehold.co/100/F8E9EA/423133'; html += `<div class="flex items-center gap-3 bg-white p-2 rounded-lg border border-luxury-blush shadow-sm"><img src="${img}" class="w-12 h-12 object-cover rounded-md border border-luxury-blush bg-luxury-bg"><div><p class="text-[11px] font-bitter font-semibold text-luxury-dark line-clamp-1">${i.name}</p><p class="text-[9px] font-poppins font-bold text-luxury-rose">${i.qty}x <span class="text-gray-400 font-medium">₹${i.price}</span></p></div></div>`; }); html += `</div>`;
-    } catch { html = `<p class="font-bitter text-luxury-dark text-[13px] whitespace-pre-wrap font-semibold mb-2 leading-relaxed">${orderDetailsData.trim()}</p>`; }
+    } catch { html = `<p class="font-bitter text-luxury-dark text-[13px] whitespace-pre-wrap font-semibold mb-2 leading-relaxed">${(orderDetailsData || '').trim()}</p>`; }
     return html;
 }
 
@@ -293,7 +295,7 @@ function renderActiveOrders() {
             actionButton = `<button type="button" onclick="window.th_pushToShiprocket('${order.id}', event)" class="px-5 py-2.5 rounded-full bg-[#E0F2FE] text-[#1E3A8A] font-bold text-[9px] uppercase tracking-widest shadow-sm"><i class="fas fa-rocket mr-1.5"></i> Push to Shiprocket</button><button type="button" onclick="window.th_markOrderDelivered('${order.id}')" class="px-5 py-2.5 rounded-full bg-luxury-rose text-white font-bold text-[9px] uppercase tracking-widest shadow-sm"><i class="fas fa-dove mr-2"></i> 🕊️ Delivered</button>`;
         }
 
-        container.innerHTML += `<div class="border border-luxury-blush rounded-xl p-5 bg-luxury-bg shadow-sm relative overflow-hidden group hover:border-luxury-rose/50 transition-colors"><div class="absolute top-0 left-0 w-1.5 h-full ${order.status === 'new' || order.status === 'pending' ? 'bg-yellow-400' : (order.status === 'curating' ? 'bg-luxury-gold' : 'bg-luxury-rose')}"></div><div class="flex justify-between items-start mb-4"><div><h4 class="font-logo font-normal text-xl text-luxury-dark mb-0.5">${customerData.name}</h4><span class="text-[8px] font-bold text-gray-400 uppercase tracking-widest"><i class="far fa-clock mr-1"></i> ${date} | ${customerData.orderId}</span></div>${statusBadge}</div><div class="mb-5">${visualItems}<div class="bg-white border border-luxury-blush p-3 rounded-lg text-gray-500 text-[10px] sm:text-[11px] leading-relaxed font-sans shadow-inner whitespace-pre-wrap">${order.customer_reqs}</div></div><div class="flex flex-col xl:flex-row xl:justify-between xl:items-center border-t border-luxury-blush pt-4 mt-2 gap-4"><div><p class="text-[8px] font-bold text-gray-400 uppercase tracking-widest mb-0.5">Final Invoice Total</p><p class="font-poppins font-extrabold text-luxury-dark text-xl">₹${order.total}</p></div><div class="flex gap-2 w-full xl:w-auto justify-start xl:justify-end flex-wrap">${actionButton}</div></div></div>`;
+        container.innerHTML += `<div class="border border-luxury-blush rounded-xl p-5 bg-luxury-bg shadow-sm relative overflow-hidden group hover:border-luxury-rose/50 transition-colors"><div class="absolute top-0 left-0 w-1.5 h-full ${order.status === 'new' || order.status === 'pending' ? 'bg-yellow-400' : (order.status === 'curating' ? 'bg-luxury-gold' : 'bg-luxury-rose')}"></div><div class="flex justify-between items-start mb-4"><div><h4 class="font-logo font-normal text-xl text-luxury-dark mb-0.5">${customerData.name}</h4><span class="text-[8px] font-bold text-gray-400 uppercase tracking-widest"><i class="far fa-clock mr-1"></i> ${date} | ${customerData.orderId}</span></div>${statusBadge}</div><div class="mb-5">${visualItems}<div class="bg-white border border-luxury-blush p-3 rounded-lg text-gray-500 text-[10px] sm:text-[11px] leading-relaxed font-sans shadow-inner whitespace-pre-wrap">${order.customer_reqs || ''}</div></div><div class="flex flex-col xl:flex-row xl:justify-between xl:items-center border-t border-luxury-blush pt-4 mt-2 gap-4"><div><p class="text-[8px] font-bold text-gray-400 uppercase tracking-widest mb-0.5">Final Invoice Total</p><p class="font-poppins font-extrabold text-luxury-dark text-xl">₹${order.total}</p></div><div class="flex gap-2 w-full xl:w-auto justify-start xl:justify-end flex-wrap">${actionButton}</div></div></div>`;
     });
 }
 

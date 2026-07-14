@@ -13,7 +13,7 @@
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
     <link href="https://fonts.googleapis.com/css2?family=Marcellus&family=Bitter:ital,wght@0,400;0,500;0,600;1,400&family=Poppins:wght@500;600;700;800&family=Montserrat:wght@300;400;500;600&display=swap" rel="stylesheet">
 
-    <!-- Failsafe Preloader Killer -->
+    <!-- 🛡️ ABSOLUTE FAILSAFE: Guarantees loader removal -->
     <script>
         window.addEventListener('DOMContentLoaded', function() {
             setTimeout(function() {
@@ -23,7 +23,7 @@
         });
     </script>
 
-    <!-- Scripts are safely deferred in the head -->
+    <!-- Scripts are safely deferred -->
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2" defer></script>
     <script src="./js/app.js" defer></script>
 
@@ -70,6 +70,7 @@
                     </div>
 
                     <nav class="flex items-center shrink-0 gap-1 sm:gap-3">
+                        <!-- Consolidated Account & Tracking Hub -->
                         <button type="button" onclick="window.handleAccountHeaderClick()" class="text-luxury-dark hover:text-luxury-rose transition-colors p-2 min-w-[44px] min-h-[44px] flex items-center justify-center" id="header-account-btn" aria-label="Customer Account">
                             <i class="far fa-user text-lg"></i>
                         </button>
@@ -137,7 +138,6 @@
             </div>
         </section>
         
-        <!-- FOOTER -->
         <footer class="w-full py-14 sm:py-16 bg-[#FFF0F2] border-t border-[#f4c6ce] mt-auto">
             <div class="max-w-[1200px] mx-auto px-6 grid grid-cols-1 md:grid-cols-3 gap-10">
                 <div class="flex flex-col items-center md:items-start text-center md:text-left">
@@ -228,8 +228,8 @@
                 </div>
                 
                 <div class="flex items-center justify-center md:justify-start gap-5 mt-4 md:mt-3 text-[9px] sm:text-[10px] text-gray-500 font-sans font-medium">
-                    <span class="flex items-center gap-1.5"><i class="fas fa-lock"></i> Secure Checkout</span>
-                    <span class="flex items-center gap-1.5"><i class="fas fa-gem"></i> Authentic Handcrafted</span>
+                    <span class="flex items-center gap-1.5"><i class="fas fa-lock text-gray-400"></i> Secure Checkout</span>
+                    <span class="flex items-center gap-1.5"><i class="fas fa-gem text-gray-400"></i> Authentic Handcrafted</span>
                 </div>
                 
                 <div class="divide-y border-t border-b border-luxury-blush w-full mt-6 bg-luxury-bg rounded-xl px-4">
@@ -268,7 +268,7 @@
                 <img src="https://i.ibb.co/0RRrFK9N/TH-logo-1.png" class="w-8 h-8 rounded-full border border-luxury-rose object-cover" alt="Logo">
                 <span class="font-logo text-xl text-luxury-dark">Secure Checkout</span>
             </div>
-            <button type="button" onclick="window.closeCheckout()" class="text-luxury-dark text-[10px] font-bold uppercase tracking-widest hover:text-luxury-rose flex items-center gap-2 min-h-[44px]">
+            <button type="button" onclick="window.closeCheckout()" class="text-luxury-dark text-[10px] font-bold uppercase tracking-widest hover:text-luxury-rose transition-colors flex items-center gap-2 min-h-[44px]">
                 Close <i class="fas fa-times text-sm"></i>
             </button>
         </header>
@@ -276,7 +276,7 @@
         <div class="max-w-[1200px] mx-auto w-full px-4 sm:px-6 py-6 md:py-10 grid grid-cols-1 lg:grid-cols-12 gap-6 md:gap-12 relative">
             <div class="lg:col-span-8 flex flex-col gap-6 md:gap-8">
                 
-                <!-- Explicit Clickable Stepper -->
+                <!-- Explicit Gated Stepper -->
                 <div class="flex items-center justify-between w-full relative mb-2 md:mb-4">
                     <div class="absolute left-0 top-1/2 -translate-y-1/2 w-full h-[2px] bg-luxury-blush z-0"></div>
                     <div id="progress-bar-fill" class="absolute left-0 top-1/2 -translate-y-1/2 h-[2px] bg-luxury-rose z-0 transition-all duration-500 w-0"></div>
@@ -363,7 +363,7 @@
                         </div>
                         <div class="flex gap-3 pt-3 mb-4">
                             <button type="button" onclick="window.saveAddressFromForm()" class="bg-luxury-dark text-white hover:bg-[#D9778A] px-6 py-3 rounded-xl font-bold text-[10px] uppercase tracking-widest transition-colors shadow-sm">Save Address</button>
-                            <button type="button" id="btn-cancel-address" onclick="window.hideAddressForm()" class="border border-luxury-blush text-gray-500 hover:text-luxury-dark px-6 py-3 rounded-xl font-bold text-[10px] uppercase tracking-widest hidden transition-colors">Cancel</button>
+                            <button type="button" onclick="window.hideAddressForm()" id="btn-cancel-address" class="border border-luxury-blush text-gray-500 hover:text-luxury-dark px-6 py-3 rounded-xl font-bold text-[10px] uppercase tracking-widest hidden transition-colors">Cancel</button>
                         </div>
                     </form>
                 </div>
@@ -389,7 +389,7 @@
                         <p class="text-[8px] text-gray-400 uppercase tracking-widest max-w-xs mx-auto mt-2">Only click verify after your banking app confirms the transaction is successful.</p>
                         
                         <div class="w-full border-t border-luxury-blush pt-5 mt-4">
-                            <button type="button" id="btn-confirm-payment" onclick="window.confirmPaymentAndOrder()" class="w-full bg-green-600 text-white hover:bg-green-700 py-4 rounded-xl font-bold text-[10px] uppercase flex items-center justify-center gap-2 tracking-[0.15em] shadow-md transition-colors">
+                            <button type="button" onclick="window.confirmPaymentAndOrder()" class="w-full bg-green-600 text-white hover:bg-green-700 py-4 rounded-xl font-bold text-[10px] uppercase flex items-center justify-center gap-2 tracking-[0.15em] shadow-md transition-colors" id="btn-confirm-payment">
                                 I Have Completed Payment <i class="fas fa-check-circle"></i>
                             </button>
                         </div>
@@ -410,9 +410,10 @@
                 <div class="h-24 lg:hidden block w-full"></div>
             </div>
 
-            <!-- RIGHT COLUMN: Price Details Sidebar (Hidden on Mobile Steps 2/3) -->
+            <!-- RIGHT COLUMN: Price Details Sidebar -->
             <div id="checkout-price-sidebar" class="hidden lg:block lg:col-span-4 w-full">
                 <div class="bg-white border border-luxury-blush rounded-3xl p-6 shadow-float lg:sticky lg:top-[100px] flex flex-col z-10 gap-4">
+                    
                     <h3 class="font-bold text-[12px] text-gray-500 uppercase tracking-widest border-b border-luxury-blush pb-2 mb-1">Price Details</h3>
                     <div class="space-y-4 mb-2 text-[13px] font-medium text-luxury-dark">
                         <div class="flex justify-between items-center"><span>Price (<span id="qo-item-count">0</span> items)</span><span id="qo-original-value">₹0</span></div>
@@ -433,7 +434,7 @@
 
             <!-- MOBILE STICKY BOTTOM BAR -->
             <div id="mobile-sticky-checkout-bar" class="fixed bottom-0 left-0 w-full p-4 bg-white/95 backdrop-blur-md border-t border-luxury-blush z-[100] lg:hidden">
-                <button type="button" id="checkout-action-btn-mobile" onclick="window.handleMobileStickyAction()" class="w-full bg-luxury-dark text-white hover:bg-[#D9778A] py-4 rounded-xl font-bold text-[11px] uppercase tracking-[0.15em] transition-all shadow-float flex items-center justify-center gap-2">
+                <button type="button" onclick="window.handleMobileStickyAction()" id="checkout-action-btn-mobile" class="w-full bg-luxury-dark text-white hover:bg-[#D9778A] py-4 rounded-xl font-bold text-[11px] uppercase tracking-[0.15em] transition-all shadow-float flex items-center justify-center gap-2">
                     Next <i class="fas fa-arrow-right"></i>
                 </button>
             </div>
@@ -456,6 +457,23 @@
                 <div><p class="text-[9px] font-bold text-gray-400 uppercase tracking-widest mb-1">Logged In As</p><h3 class="text-base font-bold text-luxury-dark" id="profile-meta-email"></h3></div>
                 <button type="button" onclick="window.handleCustomerLogout()" class="border border-red-200 text-red-500 hover:bg-red-50 font-bold text-[10px] uppercase tracking-widest px-5 py-2.5 rounded-full transition-colors shadow-sm"><i class="fas fa-sign-out-alt mr-1"></i> Sign Out</button>
             </div>
+            
+            <!-- Tracking Included Inside Profile -->
+            <div class="bg-luxury-bg border border-luxury-blush p-6 rounded-3xl shadow-sm">
+                <h3 class="font-logo text-xl text-luxury-dark mb-4 flex items-center gap-2"><i class="fas fa-map-marker-alt text-luxury-rose text-sm"></i> Track an Order</h3>
+                <form id="track-order-form" class="space-y-4">
+                    <div class="flex flex-col sm:flex-row gap-3">
+                        <input type="text" id="track-order-id" required placeholder="Order ID (e.g. TH_Rahul_1234)" class="flex-grow px-4 py-3 bg-white border border-luxury-blush rounded-xl outline-none text-[12px] font-medium text-luxury-dark focus:ring-2 focus:ring-luxury-rose/30 transition-all">
+                        <button type="submit" id="btn-track-submit" class="bg-luxury-dark text-white hover:bg-luxury-rose py-3 px-6 rounded-xl font-bold text-[10px] uppercase tracking-widest transition-colors shadow-sm whitespace-nowrap">Track</button>
+                    </div>
+                </form>
+                <div id="track-result-container" class="mt-5 pt-4 border-t border-luxury-blush hidden">
+                    <p class="text-[9px] font-bold text-gray-400 uppercase tracking-widest mb-1">Status</p>
+                    <h3 id="track-result-status" class="font-poppins font-bold text-[#D9778A] text-base tracking-wide mb-1"></h3>
+                    <p id="track-result-desc" class="text-[11px] text-gray-500 font-medium"></p>
+                </div>
+            </div>
+
             <div class="flex flex-col gap-4">
                 <h3 class="font-logo text-xl text-luxury-dark mb-2 flex items-center gap-2"><i class="fas fa-layer-group text-luxury-rose text-sm"></i> Commission History</h3>
                 <div id="customer-orders-pipeline" class="flex flex-col gap-4"></div>
@@ -480,7 +498,7 @@
                 <div><label class="block text-[9px] font-bold text-gray-400 uppercase tracking-widest mb-1.5 pl-1" for="auth-password">Password</label><input type="password" id="auth-password" required minlength="6" class="w-full px-4 py-3 bg-luxury-bg border border-luxury-blush rounded-xl outline-none text-[12px] font-medium text-luxury-dark focus:ring-2 focus:ring-luxury-rose/30 transition-all"></div>
                 <button type="submit" id="btn-auth-submit" class="w-full bg-luxury-dark text-white hover:bg-luxury-rose py-3.5 rounded-xl font-bold text-[10px] uppercase tracking-widest transition-colors shadow-sm">Sign In</button>
             </form>
-            <div class="mt-5 text-center"><button type="button" onclick="window.toggleAuthViewMode()" id="btn-auth-toggle-mode" class="text-[#D9778A] font-bold tracking-wider text-[10px] uppercase hover:underline">New to the Studio? Create Account</button></div>
+            <div class="mt-5 text-center"><button type="button" onclick="window.toggleAuthViewMode()" class="text-[#D9778A] font-bold tracking-wider text-[10px] uppercase hover:underline">New to the Studio? Create Account</button></div>
         </div>
     </div>
 
@@ -491,6 +509,12 @@
             <h2 class="font-logo font-normal text-2xl text-center text-luxury-dark mb-4">Strict Return Policy</h2>
             <div class="text-[12px] text-gray-600 leading-relaxed font-body space-y-4 max-h-[60vh] overflow-y-auto custom-scroll pr-2">
                 <p>Because of the significant personal effort and artistic dedication required, <strong>all sales are final. We strictly prohibit returns, exchanges, or refunds for "change of mind."</strong></p>
+                <p><strong>Transit Damage Exception:</strong> If your item arrives structurally damaged due to courier mishandling:</p>
+                <ol class="list-decimal pl-5 space-y-2">
+                    <li>Record a continuous, unedited unboxing video starting from the sealed package.</li>
+                    <li>Contact us via WhatsApp within <strong>24 hours</strong> of delivery.</li>
+                </ol>
+                <p>Upon verification, our artisan will review the claim and issue a replacement. Cash refunds are not provided.</p>
             </div>
         </div>
     </div>
@@ -501,13 +525,15 @@
             <h2 class="font-logo font-normal text-2xl text-center text-luxury-dark mb-6">Privacy Policy</h2>
             <div class="text-[11px] text-gray-600 leading-relaxed font-body space-y-4 max-h-[65vh] overflow-y-auto custom-scroll pr-2">
                 <p><strong>1. Information Collection:</strong> We collect necessary fulfillment data: your full name, shipping address, email, and phone number.</p>
-                <p><strong>2. Payment Security:</strong> We operate on a Zero-Data Payment architecture. We do not collect banking details. All transactions occur securely within your UPI application.</p>
+                <p><strong>2. Logistics:</strong> Your shipping details are securely transmitted to Shiprocket solely for generating manifests and tracking.</p>
+                <p><strong>3. Payment Security:</strong> We operate on a Zero-Data Payment architecture. We do not collect banking details. All transactions occur securely within your UPI application.</p>
+                <p><strong>4. Data Protection:</strong> We do not sell, rent, or trade your personal information to third-party data brokers.</p>
             </div>
         </div>
     </div>
 
     <!-- Global Toast Notification -->
-    <div id="toast" role="alert" aria-live="assertive" class="fixed bottom-24 md:bottom-10 left-1/2 transform -translate-x-1/2 bg-white/90 backdrop-blur-md text-luxury-dark px-8 py-3.5 rounded-full shadow-float flex items-center gap-3 transition-all duration-500 ease-luxury-ease opacity-0 pointer-events-none w-max border border-white translate-y-10 z-[5000]">
+    <div id="toast" role="alert" aria-live="assertive" class="fixed bottom-24 md:bottom-10 left-1/2 transform -translate-x-1/2 bg-white/90 backdrop-blur-md text-luxury-dark px-8 py-3.5 rounded-full shadow-float flex items-center gap-3 transition-all duration-500 ease-luxury-ease opacity-0 pointer-events-none w-max border border-luxury-rose/30 translate-y-10 z-[5000]">
         <i id="toast-icon" class="fas fa-check text-[#D9778A] text-sm"></i> 
         <span id="toast-msg" class="text-[11px] font-body font-bold tracking-[0.1em] uppercase pt-0.5"></span>
     </div>

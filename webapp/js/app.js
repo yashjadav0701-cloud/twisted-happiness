@@ -1,6 +1,6 @@
 /**
  * Twisted Happiness - Enterprise Storefront Engine
- * Version: 12.5.0 - Fully Stable Safe Build, Auth-Gated Checkout, Strict Stepper Navigation
+ * Version: 13.0.0 - Fully Stable Safe Build, Auth-Gated Checkout, Strict Stepper Navigation
  */
 
 const SUPABASE_URL = "https://gvrfucjtnyqfkdynrmqs.supabase.co"; 
@@ -167,6 +167,9 @@ function bindDOMEvents() {
     document.getElementById('btn-slide-prev')?.addEventListener('click', (e) => { e.stopPropagation(); moveSlide(-1); });
     document.getElementById('btn-slide-next')?.addEventListener('click', (e) => { e.stopPropagation(); moveSlide(1); });
     
+    document.getElementById('track-order-form')?.addEventListener('submit', handleTrackOrder);
+    document.getElementById('customer-auth-form')?.addEventListener('submit', handleAuthFormSubmit);
+    
     setupTouchCarousel(); 
 }
 
@@ -227,7 +230,7 @@ window.toggleAuthViewMode = function() {
     document.getElementById('btn-auth-submit').textContent = authModalMode === "login" ? "Sign In" : "Register Account";
 };
 
-document.getElementById('customer-auth-form')?.addEventListener('submit', async function(e) {
+async function handleAuthFormSubmit(e) {
     e.preventDefault(); 
     const email = document.getElementById('auth-email').value.trim();
     const password = document.getElementById('auth-password').value;
@@ -258,7 +261,7 @@ document.getElementById('customer-auth-form')?.addEventListener('submit', async 
         btn.innerHTML = authModalMode === "login" ? "Sign In" : "Register Account"; 
         btn.disabled = false; 
     }
-});
+}
 
 window.handleGoogleOAuthLogin = async function() { 
     try { 
@@ -449,7 +452,7 @@ function renderProducts(searchQuery = '') {
     if(currentSortMode === 'newest') filtered.reverse(); 
 
     if(filtered.length === 0) {
-        grid.innerHTML = '<div class="col-span-full text-center py-20 text-gray-400 font-medium text-sm w-full"><i class="fas fa-box-open text-4xl block mb-3 opacity-30"></i> No creations found.</div>';
+        grid.innerHTML = '<div class="col-span-full text-center py-20 text-gray-400 font-medium text-sm w-full"><i class="fas fa-box-open text-4xl block mb-3 opacity-30"></i> No creations found matching your search.</div>';
         return;
     }
 
@@ -464,7 +467,7 @@ function renderProducts(searchQuery = '') {
         const card = document.createElement('div'); 
         card.className = `w-full relative cursor-pointer opacity-0 transform translate-y-4 transition-all duration-400 ease-out group scroll-reveal`; 
         card.setAttribute('data-card-id', p.id); 
-        card.addEventListener('click', () => openProductPage(p.id));
+        card.addEventListener('click', () => window.openProductPage(p.id));
         
         card.innerHTML = `
             <div class="w-full relative rounded-2xl overflow-hidden group shadow-sm bg-gradient-to-tr from-luxury-bg to-white border border-luxury-blush aspect-[4/5] mb-2">
@@ -485,7 +488,8 @@ function renderProducts(searchQuery = '') {
         const wishBtn = card.querySelector('.wishlist-btn');
         if (wishBtn) {
             wishBtn.addEventListener('click', (e) => {
-                e.preventDefault(); e.stopPropagation();
+                e.preventDefault();
+                e.stopPropagation();
                 window.th_toggleWishlistProduct(p.id, e);
             });
         }
@@ -496,7 +500,7 @@ function renderProducts(searchQuery = '') {
     setupScrollReveal();
 }
 
-function openProductPage(id) { 
+window.openProductPage = function(id) { 
     const p = products.find(x => x.id == id); 
     if(!p) return;
     
@@ -533,7 +537,6 @@ function openProductPage(id) {
         }); 
     } 
     
-    document.getElementById('modal-wishlist-toggle-btn').onclick = (e) => window.th_toggleWishlistProduct(p.id, e); 
     updateWishlistUIElements(p.id, (localWishlist || []).includes(String(p.id)));
 
     if(document.getElementById('modal-title')) document.getElementById('modal-title').textContent = p.name; 
@@ -576,7 +579,7 @@ function openProductPage(id) {
     window.scrollTo(0, 0); 
     currentModalLevel = 1; 
     safePushState(1); 
-}
+};
 
 window.closeProductPage = function() { 
     document.getElementById('product-view')?.classList.add('hidden'); 
@@ -870,10 +873,10 @@ function updateCheckoutUI() {
     // Mobile specific button handling
     if(mobileBtn) {
         if(checkoutStep === 1) {
-            mobileBtn.innerHTML = `Next <i class="fas fa-arrow-right ml-1"></i>`;
+            mobileBtn.innerHTML = `Next: Delivery <i class="fas fa-arrow-right ml-1"></i>`;
             if(cart.length === 0) { mobileBtn.disabled = true; mobileBtn.classList.add('opacity-50', 'cursor-not-allowed'); } else { mobileBtn.disabled = false; mobileBtn.classList.remove('opacity-50', 'cursor-not-allowed'); }
         } else if (checkoutStep === 2) {
-            mobileBtn.innerHTML = `Next <i class="fas fa-lock ml-1"></i>`;
+            mobileBtn.innerHTML = `Next: Secure Payment <i class="fas fa-lock ml-1"></i>`;
             mobileBtn.disabled = false; mobileBtn.classList.remove('opacity-50', 'cursor-not-allowed');
         }
     }
@@ -915,6 +918,11 @@ window.handleMobileStickyAction = function() { window.handleCheckoutAction(); };
 window.handleCheckoutAction = function() {
     if (checkoutStep === 1) {
         if (cart.length === 0) return window.showToast("Your bag is empty!", "fa-times", "text-red-500");
+        if (!currentSessionUser) {
+            window.showToast("Please Sign In to Checkout", "fa-user-lock", "text-luxury-rose");
+            window.openCustomerAuthModal();
+            return;
+        }
         checkoutStep = 2; updateCheckoutUI(); renderAddressBook(); document.getElementById('checkout-overlay')?.scrollTo({top: 0, behavior: 'smooth'});
     } else if (checkoutStep === 2) {
         const form = document.getElementById('checkout-profile-form');
@@ -1038,11 +1046,6 @@ window.routeCheckoutFromModal = function(id, event) {
 
 window.openCheckoutBase = function() {
     if(cart.length === 0) return window.showToast("Your bag is empty!", "fa-times", "text-red-500");
-    if(!currentSessionUser) {
-        window.showToast("Please Sign In to Checkout", "fa-user-lock", "text-luxury-rose");
-        window.openCustomerAuthModal();
-        return;
-    }
     currentModalLevel = 1; safePushState(1); checkoutStep = 1;
     const overlay = document.getElementById('checkout-overlay'); if(!overlay) return;
 
@@ -1090,15 +1093,15 @@ async function renderCustomerOrdersPipeline() {
         let html = '';
         data.forEach(order => {
             const date = new Date(order.created_at).toLocaleDateString('en-IN', { day: 'numeric', month: 'short' });
-            let txt = "Verifying Payment", cls = "text-yellow-600 bg-yellow-50";
-            if (order.status === 'curating') { txt = "Artisan is Crafting"; cls = "text-luxury-gold bg-luxury-gold/5"; } 
-            else if (order.status === 'ready') { txt = "Ready for Dispatch"; cls = "text-purple-600 bg-purple-50"; } 
-            else if (order.status === 'completed') { txt = "Elegantly Delivered"; cls = "text-green-600 bg-green-50"; }
+            let txt = "Verifying Payment", cls = "text-yellow-600 bg-yellow-50 border-yellow-200";
+            if (order.status === 'curating') { txt = "Artisan is Crafting"; cls = "text-luxury-gold bg-luxury-gold/5 border-luxury-gold/20"; } 
+            else if (order.status === 'ready') { txt = "Ready for Dispatch"; cls = "text-purple-600 bg-purple-50 border-purple-200"; } 
+            else if (order.status === 'completed') { txt = "Elegantly Delivered"; cls = "text-green-600 bg-green-50 border-green-200"; }
             
             const idMatch = (order.customer_reqs || '').match(/Order ID:\s*([^|]+)/);
             const extractedId = idMatch ? idMatch[1].trim() : 'TH_LOG';
 
-            html += `<div class="bg-white border border-luxury-blush p-4 rounded-2xl shadow-sm"><div class="flex justify-between border-b pb-2 mb-2"><div><span class="text-[8px] text-gray-400 uppercase tracking-widest block">Reference</span><h4 class="font-poppins font-bold text-sm">${extractedId}</h4></div><span class="text-[8px] font-bold border px-2 py-0.5 rounded uppercase ${cls}">${txt}</span></div><p class="text-gray-400 text-[10px]">Placed on ${date}</p><p class="font-bold text-luxury-dark text-[12px] mt-1">Invoice Total: ₹${order.total}</p></div>`;
+            html += `<div class="bg-white border border-luxury-blush p-4 rounded-2xl shadow-sm"><div class="flex justify-between items-start border-b border-luxury-blush pb-3 mb-3"><div><span class="text-[8px] text-gray-400 uppercase tracking-widest block mb-0.5">Reference</span><h4 class="font-poppins font-bold text-sm">${extractedId}</h4></div><span class="text-[8px] font-bold border px-2 py-0.5 rounded uppercase ${cls}">${txt}</span></div><p class="text-gray-400 text-[10px]">Placed on ${date}</p><p class="font-bold text-luxury-dark text-[12px] mt-1">Invoice Total: ₹${order.total}</p></div>`;
         });
         container.innerHTML = html;
     } catch(err) { 
@@ -1139,7 +1142,7 @@ async function handleTrackOrder(e) {
             if(status === 'new' || status === 'pending') { resStatus.textContent = "Verifying Payment"; resStatus.className = "font-poppins font-bold text-yellow-600 text-lg tracking-wide mb-2"; resDesc.textContent = "We have received your request and are verifying the transaction with our bank. We will begin crafting shortly!"; } 
             else if (status === 'curating') { resStatus.textContent = "Artisan is Crafting"; resStatus.className = "font-poppins font-bold text-luxury-gold text-lg tracking-wide mb-2"; resDesc.textContent = "Your payment is verified and our artisan is currently pouring love into your handcrafted piece."; } 
             else if (status === 'ready') { resStatus.textContent = "Ready for Dispatch"; resStatus.className = "font-poppins font-bold text-purple-600 text-lg tracking-wide mb-2"; resDesc.textContent = "Your masterpiece is complete, securely packaged, and awaiting courier pickup via Shiprocket."; } 
-            else if (status === 'completed') { resStatus.textContent = "Elegantly Delivered"; resStatus.className = "font-poppins font-bold text-green-600 text-lg tracking-wide mb-2"; resDesc.textContent = "Your order has been successfully delivered. Thank you for curating your space with Twisted Happiness!"; }
+            else if (status === 'completed') { resStatus.textContent = "Elegantly Delivered"; resStatus.className = "font-poppins font-bold text-green-600 text-lg tracking-wide mb-2"; resDesc.textContent = "Your order has been successfully delivered. Thank you for curating your space with Khushiified Art!"; }
         } else { 
             resContainer.classList.remove('hidden'); 
             resStatus.textContent = "Not Found"; 
@@ -1154,26 +1157,68 @@ async function handleTrackOrder(e) {
     btn.disabled = false;
 }
 
-window.showToast = function(msg, icon = 'fa-check', color = 'text-luxury-rose') { 
-    const t = document.getElementById('toast'); 
-    document.getElementById('toast-msg').textContent = msg; 
-    document.getElementById('toast-icon').className = `fas ${icon} ${color} text-sm drop-shadow-sm`; 
-    requestAnimationFrame(() => { 
-        t.classList.remove('opacity-0', 'translate-y-10'); 
-        setTimeout(() => t.classList.add('opacity-0', 'translate-y-10'), 3000); 
-    }); 
-};
+// CACHED UI NAVIGATION
+function openLightboxFromCarousel() { currentLightboxIndex = currentSlideIndex; const lb = document.getElementById('lightbox-modal'); const track = document.getElementById('lightbox-track'); if(!lb || !track) return; track.innerHTML = ''; modalImages.forEach((src) => { track.innerHTML += `<div class="w-full h-full flex-shrink-0 flex items-center justify-center p-2 md:p-8"><img loading="lazy" decoding="async" src="${src}" class="w-full max-h-full object-contain"></div>`; }); track.style.transition = 'none'; track.style.transform = `translateX(-${currentLightboxIndex * 100}%)`; updateLightboxCounter(); currentModalLevel = 2; safePushState(2); lb.classList.remove('hidden'); requestAnimationFrame(() => { lb.classList.remove('opacity-0'); }); setupLightboxTouch(); }
+function forceCloseLightbox() { const lb = document.getElementById('lightbox-modal'); if(!lb) return; requestAnimationFrame(() => { lb.classList.add('opacity-0'); setTimeout(() => { lb.classList.add('hidden'); }, 200); }); }
+function moveLightboxSlide(direction) { if (isLightboxAnimating) return; isLightboxAnimating = true; currentLightboxIndex += direction; if (currentLightboxIndex < 0) currentLightboxIndex = modalImages.length - 1; if (currentLightboxIndex >= modalImages.length) currentLightboxIndex = 0; const track = document.getElementById('lightbox-track'); if(!track) return; requestAnimationFrame(() => { track.style.transition = 'transform 0.4s ease-out'; track.style.transform = `translateX(-${currentLightboxIndex * 100}%)`; }); updateLightboxCounter(); setTimeout(() => { isLightboxAnimating = false; }, 400); }
+function updateLightboxCounter() { const counter = document.getElementById('lightbox-counter'); if(counter) counter.textContent = `${currentLightboxIndex + 1} / ${modalImages.length}`; }
 
-function setupScrollReveal() { 
-    const observer = new IntersectionObserver((entries) => { 
-        entries.forEach(entry => { 
-            if(entry.isIntersecting) { 
-                requestAnimationFrame(() => { 
-                    entry.target.classList.remove('opacity-0', 'translate-y-4'); 
-                    observer.unobserve(entry.target); 
-                }); 
-            } 
-        }); 
-    }, { threshold: 0.05, rootMargin: '50px' }); 
-    document.querySelectorAll('.scroll-reveal').forEach(el => observer.observe(el)); 
+function moveSlide(direction) { if (isAnimating) return; isAnimating = true; currentSlideIndex += direction; if (currentSlideIndex < 0) currentSlideIndex = modalImages.length - 1; if (currentSlideIndex >= modalImages.length) currentSlideIndex = 0; const track = document.getElementById('modal-carousel-track'); if(!track) return; requestAnimationFrame(() => { track.style.transition = 'transform 0.4s ease-out'; track.style.transform = `translateX(-${currentSlideIndex * 100}%)`; }); updateActiveThumb(currentSlideIndex, modalImages.length); setTimeout(() => { isAnimating = false; }, 400); }
+function goToSlide(index) { if (isAnimating || index === currentSlideIndex) return; isAnimating = true; currentSlideIndex = index; const track = document.getElementById('modal-carousel-track'); if(!track) return; requestAnimationFrame(() => { track.style.transition = 'transform 0.4s ease-out'; track.style.transform = `translateX(-${currentSlideIndex * 100}%)`; }); updateActiveThumb(currentSlideIndex, modalImages.length); setTimeout(() => { isAnimating = false; }, 400); }
+function setupTouchCarousel() { let startX = 0, endX = 0; const track = document.getElementById('modal-carousel-track'); if(track) { track.replaceWith(track.cloneNode(true)); const newTrack = document.getElementById('modal-carousel-track'); newTrack.addEventListener('touchstart', (e) => { startX = e.changedTouches[0].screenX; }, {passive: true}); newTrack.addEventListener('touchend', (e) => { endX = e.changedTouches[0].screenX; requestAnimationFrame(() => { if (endX < startX - 30) moveSlide(1); else if (endX > startX + 30) moveSlide(-1); }); }, {passive: true}); } }
+function setupLightboxTouch() { let lbStartX = 0, lbEndX = 0; const track = document.getElementById('lightbox-track'); if(track) { track.replaceWith(track.cloneNode(true)); const newTrack = document.getElementById('lightbox-track'); newTrack.addEventListener('touchstart', (e) => { lbStartX = e.changedTouches[0].screenX; }, {passive: true}); newTrack.addEventListener('touchend', (e) => { lbEndX = e.changedTouches[0].screenX; requestAnimationFrame(() => { if (lbEndX < lbStartX - 30) moveLightboxSlide(1); else if (lbEndX > lbStartX + 30) moveLightboxSlide(-1); }); }, {passive: true}); } }
+function updateActiveThumb(activeIndex, totalImages) { requestAnimationFrame(() => { for(let i = 0; i < totalImages; i++) { const thumb = document.getElementById(`thumb-${i}`); if(thumb) { if(i === activeIndex) { thumb.classList.add('border-luxury-rose', 'scale-105', 'opacity-100'); thumb.classList.remove('border-transparent', 'opacity-60'); } else { thumb.classList.remove('border-luxury-rose', 'scale-105', 'opacity-100'); thumb.classList.add('border-transparent', 'opacity-60'); } } } }); }
+
+function syncSearch(val) { currentSearchQuery = val; if(document.getElementById('searchInputDesk') && document.getElementById('searchInputDesk').value !== val) document.getElementById('searchInputDesk').value = val; if(document.getElementById('searchInputMob') && document.getElementById('searchInputMob').value !== val) document.getElementById('searchInputMob').value = val; clearTimeout(searchTimeout); searchTimeout = setTimeout(() => { requestAnimationFrame(() => renderProducts(val)); }, 250); }
+function setSortMode(val) { currentSortMode = val; if(document.getElementById('sortInputDesk')) document.getElementById('sortInputDesk').value = val; if(document.getElementById('sortInputMob')) document.getElementById('sortInputMob').value = val; renderProducts(currentSearchQuery); }
+function filterMainCategory(cat) { currentMainCategory = cat; activeSubCategories = []; renderFilters(); renderProducts(currentSearchQuery); }
+function filterSubCategory(cat) { activeSubCategories = cat === 'All' ? [] : [cat]; renderFilters(); renderProducts(currentSearchQuery); }
+
+function renderFilters() {
+    const mainContainer = document.getElementById('main-category-filters'); const mainCats = ['All', 'Pipe Cleaner Crafts', 'Canvas Paintings', 'Clay Art Paintings'];
+    if(mainContainer) { mainContainer.innerHTML = ''; mainCats.forEach(cat => { const btn = document.createElement('button'); btn.className = `text-[9px] sm:text-[10px] font-bold uppercase tracking-widest whitespace-nowrap px-4 py-2.5 border-b-[2px] transition-colors ${currentMainCategory === cat ? 'text-luxury-rose border-luxury-rose' : 'text-gray-400 border-transparent hover:text-luxury-dark'}`; btn.textContent = cat; btn.onclick = () => filterMainCategory(cat); mainContainer.appendChild(btn); }); }
+    let subs = []; if(currentMainCategory === 'All') { subs = [...new Set(products.map(p => p.category).filter(c => c))]; } else { subs = [...new Set(products.filter(p => p.mainCategory === currentMainCategory).map(p => p.category).filter(c => c))]; }
+    activeSubCategories = activeSubCategories.filter(cat => subs.includes(cat));
+    const subContainerMob = document.getElementById('sub-category-filters-mob'); if(subContainerMob) { let htmlMob = `<option value="All">All Sub-Categories</option>`; subs.forEach(cat => { const isSelected = activeSubCategories.length === 1 && activeSubCategories[0] === cat; htmlMob += `<option value="${cat}" ${isSelected ? 'selected' : ''}>${cat}</option>`; }); subContainerMob.innerHTML = htmlMob; }
+    const subContainerDesk = document.getElementById('desktop-checkbox-filters');
+    if(subContainerDesk) { let htmlDesk = ''; subs.forEach(cat => { const isChecked = activeSubCategories.includes(cat); htmlDesk += `<label class="flex items-center gap-3 cursor-pointer group w-full p-2 hover:bg-white rounded-lg transition-colors border border-transparent hover:border-luxury-blush"><div class="relative flex items-center justify-center w-[14px] h-[14px] rounded border border-luxury-rose/50 bg-white group-hover:border-luxury-rose transition-colors shrink-0 overflow-hidden shadow-sm"><input type="checkbox" value="${cat}" class="peer sr-only" onchange="window.th_toggleSubCategory('${cat}')" ${isChecked ? 'checked' : ''}><div class="absolute inset-0 bg-luxury-rose scale-0 peer-checked:scale-100 transition-transform duration-300 origin-center"></div><i class="fas fa-check text-[7px] text-white opacity-0 peer-checked:opacity-100 transition-opacity duration-300 absolute z-10"></i></div><span class="text-[10px] font-bold text-luxury-dark tracking-[0.1em] transition-colors truncate uppercase ${isChecked ? 'text-luxury-rose' : ''}">${cat}</span></label>`; }); subContainerDesk.innerHTML = htmlDesk || `<p class="text-[9px] text-gray-400 italic px-2 pt-2">No sub-categories</p>`; }
 }
+
+window.th_toggleSubCategory = function(cat) { const idx = activeSubCategories.indexOf(cat); if(idx > -1) { activeSubCategories.splice(idx, 1); } else { activeSubCategories.push(cat); } renderFilters(); renderProducts(currentSearchQuery); };
+
+window.showToast = function(msg, icon = 'fa-check', color = 'text-luxury-rose') { const t = document.getElementById('toast'); document.getElementById('toast-msg').textContent = msg; document.getElementById('toast-icon').className = `fas ${icon} ${color} text-sm drop-shadow-sm`; requestAnimationFrame(() => { t.classList.remove('opacity-0', 'translate-y-10'); setTimeout(() => t.classList.add('opacity-0', 'translate-y-10'), 3000); }); };
+function setupScrollReveal() { const observer = new IntersectionObserver((entries) => { entries.forEach(entry => { if(entry.isIntersecting) { requestAnimationFrame(() => { entry.target.classList.remove('opacity-0', 'translate-y-4'); observer.unobserve(entry.target); }); } }); }, { threshold: 0.05, rootMargin: '50px' }); document.querySelectorAll('.scroll-reveal').forEach(el => observer.observe(el)); }
+
+function openPolicyModal(modalId, boxId) {
+    currentModalLevel = 2; safePushState(2);
+    const modal = document.getElementById(modalId);
+    const box = document.getElementById(boxId);
+    if(!modal || !box) return;
+    modal.classList.remove('hidden');
+    document.body.classList.add('overflow-hidden');
+    requestAnimationFrame(() => {
+        modal.classList.remove('opacity-0');
+        box.classList.remove('scale-95', 'translate-y-2');
+        box.classList.add('scale-100', 'translate-y-0');
+    });
+}
+
+function closePolicyModal(modalId, boxId) {
+    const modal = document.getElementById(modalId);
+    const box = document.getElementById(boxId);
+    if(!modal || !box) return;
+    requestAnimationFrame(() => {
+        modal.classList.add('opacity-0');
+        box.classList.remove('scale-100', 'translate-y-0');
+        box.classList.add('scale-95', 'translate-y-2');
+        setTimeout(() => {
+            modal.classList.add('hidden');
+            if(document.getElementById('checkout-overlay')?.classList.contains('hidden')){
+                document.body.classList.remove('overflow-hidden');
+            }
+        }, 200);
+    });
+}
+window.openPolicyModal = openPolicyModal;
+window.closePolicyModal = closePolicyModal;
+window.openLightboxFromCarousel = openLightboxFromCarousel;
