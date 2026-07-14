@@ -4,21 +4,16 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
     
-    <!-- SEO & Meta -->
     <title>Twisted Happiness | Fine Art & Handcrafted Gifts</title>
     <meta name="description" content="Discover handcrafted canvas paintings, bespoke clay art, and premium gifts. Curate your perfect space.">
-    <link rel="canonical" href="https://twisted-happiness.vercel.app" />
     
-    <!-- Preconnect to external domains for performance -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    
-    <!-- Styles -->
     <link href="./output.css" rel="stylesheet">
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
     <link href="https://fonts.googleapis.com/css2?family=Marcellus&family=Bitter:ital,wght@0,400;0,500;0,600;1,400&family=Poppins:wght@500;600;700;800&family=Montserrat:wght@300;400;500;600&display=swap" rel="stylesheet">
 
-    <!-- 🛡️ ABSOLUTE FAILSAFE: Guarantees loader removal even if JS is blocked -->
+    <!-- 🛡️ ABSOLUTE FAILSAFE: Guarantees loader removal even if network drops -->
     <script>
         window.addEventListener('DOMContentLoaded', function() {
             setTimeout(function() {
@@ -28,7 +23,7 @@
         });
     </script>
 
-    <!-- Essential Scripts (Deferred to prevent blocking) -->
+    <!-- Scripts are safely deferred in the head -->
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2" defer></script>
     <script src="./js/app.js" defer></script>
 
@@ -64,34 +59,31 @@
         <header class="fixed top-0 left-0 w-full bg-white/95 backdrop-blur-md shadow-sm z-[999] border-b border-luxury-blush/50">
             <div class="w-full flex flex-col bg-transparent">
                 <div class="max-w-[1600px] mx-auto w-full px-4 sm:px-8 py-3 flex items-center justify-between gap-4">
-                    <!-- Logo -->
                     <a href="/" class="flex items-center gap-3 shrink-0">
                         <img src="https://i.ibb.co/0RRrFK9N/TH-logo-1.png" class="w-9 h-9 sm:w-11 sm:h-11 rounded-full object-cover border border-luxury-rose" alt="">
                         <span class="font-logo font-normal text-[20px] sm:text-2xl text-luxury-dark mt-0.5 tracking-wide" id="dynamic-store-name">Twisted Happiness</span>
                     </a>
 
-                    <!-- Desktop Search -->
                     <div class="hidden md:flex relative w-full max-w-lg mx-auto group">
                         <i class="fas fa-search absolute left-4 top-1/2 transform -translate-y-1/2 text-luxury-rose text-xs"></i>
                         <input type="search" id="searchInputDesk" autocomplete="off" spellcheck="false" placeholder="Discover your next piece..." class="w-full pl-9 pr-4 py-2 bg-luxury-bg border border-luxury-blush rounded-full focus:border-luxury-rose outline-none text-[11px] font-medium transition-colors">
                     </div>
 
-                    <!-- User Actions -->
+                    <!-- Restored Stable ID Event Bindings -->
                     <nav class="flex items-center shrink-0 gap-1 sm:gap-3">
-                        <button type="button" onclick="window.openTrackOrderModal()" class="text-luxury-dark hover:text-luxury-rose transition-colors p-2 min-w-[44px] min-h-[44px] flex items-center justify-center flex-col gap-0.5" aria-label="Track Order">
+                        <button type="button" id="btn-open-track" class="text-luxury-dark hover:text-luxury-rose transition-colors p-2 min-w-[44px] min-h-[44px] flex items-center justify-center flex-col gap-0.5" aria-label="Track Order">
                             <i class="fas fa-map-marker-alt text-lg"></i>
                         </button>
-                        <button type="button" onclick="window.handleAccountHeaderClick()" class="text-luxury-dark hover:text-luxury-rose transition-colors p-2 min-w-[44px] min-h-[44px] flex items-center justify-center" id="header-account-btn" aria-label="Customer Account">
+                        <button type="button" id="btn-profile-header" class="text-luxury-dark hover:text-luxury-rose transition-colors p-2 min-w-[44px] min-h-[44px] flex items-center justify-center" aria-label="Customer Account">
                             <i class="far fa-user text-lg"></i>
                         </button>
-                        <button type="button" onclick="window.openCheckoutBase()" class="relative flex items-center justify-center p-2 min-w-[44px] min-h-[44px] text-luxury-dark hover:text-luxury-rose transition-colors" aria-label="Shopping Bag">
+                        <button type="button" id="btn-toggle-cart" class="relative flex items-center justify-center p-2 min-w-[44px] min-h-[44px] text-luxury-dark hover:text-luxury-rose transition-colors" aria-label="Shopping Bag">
                             <i class="fas fa-shopping-bag text-xl"></i> 
                             <span id="cart-count" class="absolute top-1 right-1 font-bold text-[8px] bg-luxury-rose text-white w-[16px] h-[16px] flex items-center justify-center rounded-full border border-white shadow-sm font-poppins">0</span>
                         </button>
                     </nav>
                 </div>
 
-                <!-- Mobile Search -->
                 <div class="md:hidden w-full px-4 pb-2.5 pt-1">
                     <div class="relative w-full group">
                         <i class="fas fa-search absolute left-4 top-1/2 transform -translate-y-1/2 text-luxury-rose text-xs"></i>
@@ -100,7 +92,6 @@
                 </div>
             </div>
 
-            <!-- Promotional Marquee -->
             <div class="w-full h-[28px] sm:h-[32px] bg-luxury-dark overflow-hidden flex items-center shadow-inner border-b border-luxury-rose/20">
                 <div class="animate-marquee whitespace-nowrap font-bitter text-[13px] sm:text-[15px] text-luxury-blush font-semibold tracking-wider pt-0.5">
                     <span class="mx-6">✨ 100% Handcrafted Fine Art & Gifts ✨ Bespoke Canvas & Textured Clay Paintings ✨ Custom Sizing Up To 40x24" ✨ Unlock VIP Discounts Up To 15% Off</span>
@@ -108,7 +99,6 @@
                 </div>
             </div>
             
-            <!-- Category Navigation -->
             <div class="w-full bg-white flex flex-col border-b border-luxury-blush">
                 <nav id="main-category-filters" class="max-w-[1600px] mx-auto w-full flex overflow-x-auto scrollbar-hide px-2 sm:px-4 items-center border-b border-luxury-blush/50 lg:border-none"></nav>
                 
@@ -129,7 +119,6 @@
 
         <!-- Store Grid -->
         <section class="w-full max-w-[1600px] mx-auto flex flex-row relative z-20 mt-4 md:mt-6 px-0 lg:px-4 flex-grow">
-            <!-- Desktop Filters -->
             <aside class="hidden lg:flex flex-col w-[200px] shrink-0 sticky top-[140px] self-start h-[calc(100vh-140px)] px-2 pb-6 overflow-y-auto custom-scroll border-r border-luxury-blush mr-4 z-40">
                 <div class="mb-6 mt-2 px-2"><h2 class="font-logo font-normal text-2xl text-luxury-dark mb-1">Refine</h2></div>
                 <div class="flex flex-col mb-6 px-2">
@@ -162,15 +151,20 @@
                 <div class="flex flex-col items-center text-center">
                     <h4 class="text-[#D9778A] font-bold text-[10px] uppercase tracking-[0.2em] mb-5">Our Policies</h4>
                     <div class="flex flex-col gap-3 items-center">
-                        <button type="button" onclick="window.openPolicyModal('return-policy-modal', 'return-policy-box')" class="text-[#8c7a7a] hover:text-[#D9778A] text-[12px] font-bold">Strict Return Policy</button>
-                        <button type="button" onclick="window.openPolicyModal('privacy-policy-modal', 'privacy-policy-box')" class="text-[#8c7a7a] hover:text-[#D9778A] text-[12px] font-bold">Privacy Policy</button>
+                        <button type="button" id="btn-open-return-policy" class="text-[#8c7a7a] hover:text-[#D9778A] transition-colors text-[12px] font-bold">Strict Return Policy</button>
+                        <button type="button" id="btn-open-privacy-policy" class="text-[#8c7a7a] hover:text-[#D9778A] transition-colors text-[12px] font-bold">Privacy Policy</button>
+                        <span class="text-[#D9778A]/80 text-[10px] italic mt-2 font-medium">100% Handcrafted. All sales final.</span>
                     </div>
                 </div>
                 <div class="flex flex-col items-center md:items-end text-center md:text-right">
                     <h4 class="text-[#D9778A] font-bold text-[10px] uppercase tracking-[0.2em] mb-5">Connect With Us</h4>
                     <div class="flex gap-4 mb-4 justify-center md:justify-end">
-                        <a href="javascript:void(0)" id="footer-whatsapp" target="_blank" class="w-10 h-10 rounded-full bg-white flex items-center justify-center text-[#D9778A] border border-[#f4c6ce] hover:bg-[#D9778A] hover:text-white transition-all"><i class="fab fa-whatsapp text-lg"></i></a>
-                        <a href="javascript:void(0)" id="footer-instagram" target="_blank" class="hidden w-10 h-10 rounded-full bg-white items-center justify-center text-[#D9778A] border border-[#f4c6ce] hover:bg-[#D9778A] hover:text-white transition-all"><i class="fab fa-instagram text-lg"></i></a>
+                        <a href="javascript:void(0)" id="footer-whatsapp" target="_blank" rel="noopener noreferrer" class="w-10 h-10 rounded-full bg-white flex items-center justify-center text-[#D9778A] border border-[#f4c6ce] hover:bg-[#D9778A] hover:text-white hover:scale-110 transition-all shadow-sm">
+                            <i class="fab fa-whatsapp text-lg"></i>
+                        </a>
+                        <a href="javascript:void(0)" id="footer-instagram" target="_blank" rel="noopener noreferrer" class="hidden w-10 h-10 rounded-full bg-white items-center justify-center text-[#D9778A] border border-[#f4c6ce] hover:bg-[#D9778A] hover:text-white hover:scale-110 transition-all shadow-sm">
+                            <i class="fab fa-instagram text-lg"></i>
+                        </a>
                     </div>
                     <p class="font-medium tracking-[0.2em] text-[#a49696] text-[9px] uppercase mt-2">© <span id="current-year">2026</span>. Handcrafted in India.</p>
                 </div>
@@ -186,8 +180,8 @@
     <!-- PRODUCT DETAIL PAGE -->
     <article id="product-view" class="hidden w-full min-h-screen bg-white relative z-[80] pb-24 md:pb-10">
         <header class="sticky top-0 w-full bg-white/95 backdrop-blur-md border-b border-luxury-blush px-4 py-3 flex items-center justify-between shadow-sm z-[999]">
-            <button onclick="window.closeProductPage()" class="flex items-center gap-2 text-luxury-dark font-bold text-[10px] uppercase tracking-widest hover:text-luxury-rose min-h-[44px]"><i class="fas fa-arrow-left text-sm"></i> Gallery</button>
-            <button type="button" onclick="window.openCheckoutBase()" class="relative flex items-center justify-center p-2 min-w-[44px] min-h-[44px] text-luxury-dark hover:text-luxury-rose">
+            <button id="btn-close-product" class="flex items-center gap-2 text-luxury-dark font-bold text-[10px] uppercase tracking-widest hover:text-luxury-rose transition-colors min-h-[44px]"><i class="fas fa-arrow-left text-sm"></i> Gallery</button>
+            <button type="button" id="btn-toggle-cart-product" class="relative flex items-center justify-center p-2 min-w-[44px] min-h-[44px] text-luxury-dark hover:text-luxury-rose transition-colors">
                 <i class="fas fa-shopping-bag text-xl"></i> 
                 <span id="product-page-cart-count" class="absolute top-1 right-1 font-bold text-[8px] bg-luxury-rose text-white w-[16px] h-[16px] flex items-center justify-center rounded-full border border-white shadow-sm font-poppins">0</span>
             </button>
@@ -195,11 +189,11 @@
 
         <div class="w-full max-w-[1100px] mx-auto flex flex-col md:flex-row items-start pt-4 md:pt-10 px-4 sm:px-6 lg:px-8 gap-4 md:gap-12 relative">
             <div class="w-full md:w-[400px] shrink-0 flex flex-col md:sticky md:top-[100px] z-10 mx-auto md:mx-0">
-                <div class="relative w-full aspect-square md:aspect-auto md:h-[450px] bg-[#fdfbfb] border border-luxury-blush rounded-2xl cursor-zoom-in overflow-hidden flex items-center justify-center group">
-                    <button id="btn-slide-prev" class="absolute left-3 top-1/2 -translate-y-1/2 z-20 bg-white/95 shadow-sm text-luxury-dark w-10 h-10 rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"><i class="fas fa-chevron-left text-sm"></i></button>
+                <div class="relative w-full aspect-square md:aspect-auto md:h-[450px] bg-[#fdfbfb] border border-luxury-blush rounded-2xl cursor-zoom-in shadow-sm overflow-hidden flex items-center justify-center group">
+                    <button id="btn-slide-prev" class="absolute left-3 top-1/2 -translate-y-1/2 z-20 bg-white/95 shadow-sm text-luxury-dark w-10 h-10 rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-300"><i class="fas fa-chevron-left text-sm"></i></button>
                     <div id="modal-carousel-track" class="flex w-full h-full relative touch-pan-y items-center"></div>
-                    <button id="btn-slide-next" class="absolute right-3 top-1/2 -translate-y-1/2 z-20 bg-white/95 shadow-sm text-luxury-dark w-10 h-10 rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"><i class="fas fa-chevron-right text-sm"></i></button>
-                    <span class="absolute bottom-3 right-3 bg-white/95 backdrop-blur-sm text-luxury-dark text-[8px] font-bold px-3 py-1.5 rounded-full shadow-sm tracking-widest border border-luxury-blush pointer-events-none"><i class="fas fa-expand-alt mr-1"></i> ZOOM</span>
+                    <button id="btn-slide-next" class="absolute right-3 top-1/2 -translate-y-1/2 z-20 bg-white/95 shadow-sm text-luxury-dark w-10 h-10 rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-300"><i class="fas fa-chevron-right text-sm"></i></button>
+                    <span class="absolute bottom-3 right-3 bg-white/95 backdrop-blur-sm text-luxury-dark text-[8px] font-bold px-3 py-1.5 rounded-full pointer-events-none tracking-widest border border-luxury-blush shadow-sm"><i class="fas fa-expand-alt mr-1"></i> ZOOM</span>
                 </div>
                 <div id="modal-thumbnails" class="flex gap-3 overflow-x-auto scrollbar-hide py-4 mt-1 justify-center md:justify-start w-full"></div>
             </div>
@@ -207,11 +201,11 @@
             <div class="flex-1 w-full min-w-0 flex flex-col pb-4">
                 <div class="flex justify-between items-start w-full">
                     <nav class="flex text-[9px] sm:text-[10px] text-gray-400 mb-2 space-x-1.5 font-sans uppercase tracking-widest whitespace-nowrap overflow-hidden text-ellipsis">
-                        <button class="hover:text-luxury-dark cursor-pointer transition-colors" onclick="window.closeProductPage()">Gallery</button><span>&rsaquo;</span>
-                        <span id="breadcrumb-main-cat" class="truncate"></span><span>&rsaquo;</span>
-                        <span id="breadcrumb-sub-cat" class="font-bold text-luxury-dark truncate"></span>
+                        <button class="hover:text-luxury-dark cursor-pointer transition-colors" id="breadcrumb-back">Gallery</button>
+                        <span>&rsaquo;</span><span id="breadcrumb-main-cat" class="truncate"></span>
+                        <span>&rsaquo;</span><span id="breadcrumb-sub-cat" class="font-bold text-luxury-dark truncate"></span>
                     </nav>
-                    <button type="button" id="modal-wishlist-toggle-btn" class="text-gray-300 hover:text-red-500 text-lg p-2 transition-colors"><i class="fas fa-heart"></i></button>
+                    <button type="button" id="modal-wishlist-toggle-btn" class="text-gray-300 hover:text-red-500 text-lg p-2 transition-colors duration-300"><i class="fas fa-heart"></i></button>
                 </div>
 
                 <span id="modal-main-category" class="text-luxury-rose text-[9px] sm:text-[10px] font-bold uppercase tracking-[0.25em] mb-1 block"></span>
@@ -238,20 +232,20 @@
                 </div>
                 
                 <div class="flex items-center justify-center md:justify-start gap-5 mt-4 md:mt-3 text-[9px] sm:text-[10px] text-gray-500 font-sans font-medium">
-                    <span class="flex items-center gap-1.5"><i class="fas fa-lock"></i> Secure Checkout</span>
-                    <span class="flex items-center gap-1.5"><i class="fas fa-gem"></i> Authentic Handcrafted</span>
+                    <span class="flex items-center gap-1.5"><i class="fas fa-lock text-gray-400"></i> Secure Checkout</span>
+                    <span class="flex items-center gap-1.5"><i class="fas fa-gem text-gray-400"></i> Authentic Handcrafted</span>
                 </div>
                 
                 <div class="divide-y border-t border-b border-luxury-blush w-full mt-6 bg-luxury-bg rounded-xl px-4">
                     <details class="group" open>
-                        <summary class="flex justify-between items-center font-bold text-[10px] sm:text-[11px] uppercase tracking-[0.15em] cursor-pointer list-none py-4 text-luxury-dark hover:text-luxury-rose">
+                        <summary class="flex justify-between items-center font-bold text-[10px] sm:text-[11px] uppercase tracking-[0.15em] cursor-pointer list-none py-4 text-luxury-dark hover:text-luxury-rose transition focus:outline-none min-h-[44px]">
                             <span class="flex items-center gap-2"><i class="fas fa-info-circle text-luxury-rose"></i> The Details</span>
                             <span class="transition-transform duration-300 group-open:rotate-180 text-gray-400"><i class="fas fa-chevron-down"></i></span>
                         </summary>
                         <div class="text-[12px] sm:text-[13px] text-luxury-dark/80 pb-5 animate-fade-in font-medium whitespace-pre-wrap leading-relaxed" id="modal-specs"></div>
                     </details>
                     <details class="group">
-                        <summary class="flex justify-between items-center font-bold text-[10px] sm:text-[11px] uppercase tracking-[0.15em] cursor-pointer list-none py-4 text-luxury-dark hover:text-luxury-rose">
+                        <summary class="flex justify-between items-center font-bold text-[10px] sm:text-[11px] uppercase tracking-[0.15em] cursor-pointer list-none py-4 text-luxury-dark hover:text-luxury-rose transition focus:outline-none min-h-[44px]">
                             <span class="flex items-center gap-2"><i class="fas fa-leaf text-luxury-rose"></i> Care Guide</span>
                             <span class="transition-transform duration-300 group-open:rotate-180 text-gray-400"><i class="fas fa-chevron-down"></i></span>
                         </summary>
@@ -278,7 +272,7 @@
                 <img src="https://i.ibb.co/0RRrFK9N/TH-logo-1.png" class="w-8 h-8 rounded-full border border-luxury-rose object-cover" alt="Logo">
                 <span class="font-logo text-xl text-luxury-dark">Secure Checkout</span>
             </div>
-            <button type="button" onclick="window.closeCheckout()" class="text-luxury-dark text-[10px] font-bold uppercase tracking-widest hover:text-luxury-rose flex items-center gap-2">
+            <button type="button" id="btn-close-checkout" class="text-luxury-dark text-[10px] font-bold uppercase tracking-widest hover:text-luxury-rose flex items-center gap-2 min-h-[44px]">
                 Close <i class="fas fa-times text-sm"></i>
             </button>
         </header>
@@ -290,11 +284,11 @@
                     <div class="absolute left-0 top-1/2 -translate-y-1/2 w-full h-[2px] bg-luxury-blush z-0"></div>
                     <div id="progress-bar-fill" class="absolute left-0 top-1/2 -translate-y-1/2 h-[2px] bg-luxury-rose z-0 transition-all duration-500 w-0"></div>
                     
-                    <button type="button" onclick="window.goToCheckoutStep(1)" class="relative z-10 flex flex-col items-center gap-2 cursor-pointer group outline-none">
+                    <button type="button" id="step-btn-1" class="relative z-10 flex flex-col items-center gap-2 cursor-pointer group outline-none">
                         <div id="step-indicator-1" class="w-8 h-8 rounded-full flex items-center justify-center text-[12px] font-bold transition-colors bg-[#D9778A] text-white shadow-md border-2 border-white group-hover:scale-105">1</div>
                         <span class="text-[9px] font-bold uppercase tracking-widest text-luxury-dark" id="step-label-1">Your Bag</span>
                     </button>
-                    <button type="button" onclick="window.goToCheckoutStep(2)" class="relative z-10 flex flex-col items-center gap-2 cursor-pointer group outline-none">
+                    <button type="button" id="step-btn-2" class="relative z-10 flex flex-col items-center gap-2 cursor-pointer group outline-none">
                         <div id="step-indicator-2" class="w-8 h-8 rounded-full flex items-center justify-center text-[12px] font-bold transition-colors bg-white text-gray-400 border-2 border-luxury-blush group-hover:scale-105">2</div>
                         <span class="text-[9px] font-bold uppercase tracking-widest text-gray-400" id="step-label-2">Delivery</span>
                     </button>
@@ -318,7 +312,7 @@
                             </select>
                         </div>
                         <div id="comm-dimensions-wrapper" class="hidden">
-                            <input type="text" id="comm-dimensions" placeholder="Requested Size e.g. 24x36" class="w-full px-4 py-3 bg-white border border-luxury-gold/30 rounded-xl outline-none text-[11px] font-medium text-luxury-dark focus:ring-2 focus:ring-luxury-rose/30">
+                            <input type="text" id="comm-dimensions" placeholder="Requested Size e.g. 24x36" class="w-full px-4 py-3 bg-white border border-luxury-gold/30 rounded-xl outline-none text-[11px] font-medium text-luxury-dark h-12 focus:ring-2 focus:ring-luxury-rose/30">
                         </div>
                         <div>
                             <textarea id="comm-colors" placeholder="Any specific colors or requests?" class="w-full px-4 py-3 bg-white border border-luxury-blush rounded-xl outline-none text-[11px] font-medium text-luxury-dark h-24 resize-none focus:ring-2 focus:ring-luxury-rose/30"></textarea>
@@ -326,7 +320,7 @@
                     </div>
                     
                     <div class="mt-auto border-t border-luxury-blush pt-5 flex justify-end">
-                         <button type="button" onclick="window.goToCheckoutStep(2)" class="w-full sm:w-auto bg-[#D9778A] text-white hover:bg-luxury-rose py-4 px-8 rounded-xl font-bold text-[11px] uppercase tracking-[0.15em] transition-all shadow-float flex items-center justify-center gap-2">
+                         <button type="button" id="btn-next-to-delivery" class="w-full sm:w-auto bg-[#D9778A] text-white hover:bg-luxury-rose py-4 px-8 rounded-xl font-bold text-[11px] uppercase tracking-[0.15em] transition-all shadow-float flex items-center justify-center gap-2">
                              Next: Delivery <i class="fas fa-arrow-right"></i>
                          </button>
                     </div>
@@ -336,38 +330,38 @@
                 <div id="checkout-step-2" class="w-full bg-white border border-luxury-blush rounded-3xl p-5 md:p-8 shadow-sm hidden flex-col animate-fade-in">
                     <h2 class="font-logo text-2xl text-luxury-dark border-b border-luxury-blush pb-4 mb-6">Delivery Address</h2>
                     <div id="address-book-container" class="flex flex-col gap-4 mb-4"></div>
-                    <button type="button" id="btn-show-add-address" onclick="window.showAddressForm()" class="text-[#D9778A] text-[10px] font-bold uppercase tracking-widest flex items-center gap-2 mb-6 w-max hidden hover:text-luxury-dark"><i class="fas fa-plus"></i> Add New Address</button>
+                    <button type="button" id="btn-show-add-address" class="text-[#D9778A] text-[10px] font-bold uppercase tracking-widest flex items-center gap-2 mb-6 w-max hidden hover:text-luxury-dark transition-colors"><i class="fas fa-plus"></i> Add New Address</button>
 
                     <form id="checkout-profile-form" class="space-y-4 font-sans hidden">
                         <div class="grid grid-cols-2 gap-4">
-                            <div><label class="block text-[9px] font-bold text-gray-400 uppercase tracking-widest mb-1.5 pl-1">First Name *</label><input type="text" id="prof-fname" required class="w-full px-4 py-3 bg-luxury-bg border border-luxury-blush rounded-xl outline-none text-[12px] font-medium text-luxury-dark focus:ring-2 focus:ring-luxury-rose/30"></div>
-                            <div><label class="block text-[9px] font-bold text-gray-400 uppercase tracking-widest mb-1.5 pl-1">Last Name *</label><input type="text" id="prof-lname" required class="w-full px-4 py-3 bg-luxury-bg border border-luxury-blush rounded-xl outline-none text-[12px] font-medium text-luxury-dark focus:ring-2 focus:ring-luxury-rose/30"></div>
+                            <div><label class="block text-[9px] font-bold text-gray-400 uppercase tracking-widest mb-1.5 pl-1">First Name *</label><input type="text" id="prof-fname" required class="w-full px-4 py-3 bg-luxury-bg border border-luxury-blush rounded-xl outline-none text-[12px] font-medium text-luxury-dark focus:ring-2 focus:ring-luxury-rose/30 transition-all"></div>
+                            <div><label class="block text-[9px] font-bold text-gray-400 uppercase tracking-widest mb-1.5 pl-1">Last Name *</label><input type="text" id="prof-lname" required class="w-full px-4 py-3 bg-luxury-bg border border-luxury-blush rounded-xl outline-none text-[12px] font-medium text-luxury-dark focus:ring-2 focus:ring-luxury-rose/30 transition-all"></div>
                         </div>
                         <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                            <div><label class="block text-[9px] font-bold text-gray-400 uppercase tracking-widest mb-1.5 pl-1">Email *</label><input type="email" id="prof-email" required class="w-full px-4 py-3 bg-luxury-bg border border-luxury-blush rounded-xl outline-none text-[12px] font-medium text-luxury-dark focus:ring-2 focus:ring-luxury-rose/30"></div>
+                            <div><label class="block text-[9px] font-bold text-gray-400 uppercase tracking-widest mb-1.5 pl-1">Email *</label><input type="email" id="prof-email" required class="w-full px-4 py-3 bg-luxury-bg border border-luxury-blush rounded-xl outline-none text-[12px] font-medium text-luxury-dark focus:ring-2 focus:ring-luxury-rose/30 transition-all"></div>
                             <div>
                                 <label class="block text-[9px] font-bold text-gray-400 uppercase tracking-widest mb-1.5 pl-1">WhatsApp / Phone *</label>
                                 <div class="w-full bg-luxury-bg border border-luxury-blush rounded-xl overflow-hidden focus-within:ring-2 focus-within:ring-luxury-rose/30 flex items-stretch transition-all">
-                                    <div class="flex items-center justify-center bg-white px-3 py-2.5 border-r border-luxury-blush"><span class="text-[11px] font-bold text-gray-500 whitespace-nowrap mt-0.5">🇮🇳 IN (+91)</span></div>
+                                    <div class="flex items-center justify-center bg-white px-3 py-2.5 border-r border-luxury-blush"><span class="text-[11px] font-bold text-gray-500 whitespace-nowrap mt-0.5" id="prof-country-code-display">🇮🇳 IN (+91)</span></div>
                                     <input type="tel" id="prof-phone" required class="w-full min-w-0 px-4 py-3 bg-transparent outline-none text-[13px] font-semibold tracking-wide text-luxury-dark">
                                 </div>
                             </div>
                         </div>
-                        <div><label class="block text-[9px] font-bold text-gray-400 uppercase tracking-widest mb-1.5 pl-1">Flat / House / Building *</label><input type="text" id="prof-add1" required class="w-full px-4 py-3 bg-luxury-bg border border-luxury-blush rounded-xl outline-none text-[12px] font-medium text-luxury-dark focus:ring-2 focus:ring-luxury-rose/30"></div>
-                        <div><label class="block text-[9px] font-bold text-gray-400 uppercase tracking-widest mb-1.5 pl-1">Area / Street / Sector</label><input type="text" id="prof-add2" class="w-full bg-luxury-bg border border-luxury-blush rounded-xl outline-none text-[12px] font-medium text-luxury-dark focus:ring-2 focus:ring-luxury-rose/30"></div>
+                        <div><label class="block text-[9px] font-bold text-gray-400 uppercase tracking-widest mb-1.5 pl-1">Flat / House / Building *</label><input type="text" id="prof-add1" required class="w-full px-4 py-3 bg-luxury-bg border border-luxury-blush rounded-xl outline-none text-[12px] font-medium text-luxury-dark focus:ring-2 focus:ring-luxury-rose/30 transition-all"></div>
+                        <div><label class="block text-[9px] font-bold text-gray-400 uppercase tracking-widest mb-1.5 pl-1">Area / Street / Sector</label><input type="text" id="prof-add2" class="w-full bg-luxury-bg border border-luxury-blush rounded-xl outline-none text-[12px] font-medium text-luxury-dark focus:ring-2 focus:ring-luxury-rose/30 transition-all"></div>
                         <div class="grid grid-cols-2 md:grid-cols-3 gap-4">
-                            <div class="col-span-2 md:col-span-1"><label class="block text-[9px] font-bold text-gray-400 uppercase tracking-widest mb-1.5 pl-1">Pincode *</label><input type="text" id="prof-pin" required maxlength="6" class="w-full px-4 py-3 bg-luxury-bg border border-luxury-blush rounded-xl outline-none text-[12px] font-medium text-luxury-dark focus:ring-2 focus:ring-luxury-rose/30"></div>
-                            <div><label class="block text-[9px] font-bold text-gray-400 uppercase tracking-widest mb-1.5 pl-1">City *</label><input type="text" id="prof-city" required class="w-full px-4 py-3 bg-luxury-bg border border-luxury-blush rounded-xl outline-none text-[12px] font-medium text-luxury-dark focus:ring-2 focus:ring-luxury-rose/30"></div>
-                            <div><label class="block text-[9px] font-bold text-gray-400 uppercase tracking-widest mb-1.5 pl-1">State *</label><input type="text" id="prof-state" required class="w-full px-4 py-3 bg-luxury-bg border border-luxury-blush rounded-xl outline-none text-[12px] font-medium text-luxury-dark focus:ring-2 focus:ring-luxury-rose/30"></div>
+                            <div class="col-span-2 md:col-span-1"><label class="block text-[9px] font-bold text-gray-400 uppercase tracking-widest mb-1.5 pl-1">Pincode *</label><input type="text" id="prof-pin" required maxlength="6" class="w-full px-4 py-3 bg-luxury-bg border border-luxury-blush rounded-xl outline-none text-[12px] font-medium text-luxury-dark focus:ring-2 focus:ring-luxury-rose/30 transition-all"></div>
+                            <div><label class="block text-[9px] font-bold text-gray-400 uppercase tracking-widest mb-1.5 pl-1">City *</label><input type="text" id="prof-city" required class="w-full px-4 py-3 bg-luxury-bg border border-luxury-blush rounded-xl outline-none text-[12px] font-medium text-luxury-dark focus:ring-2 focus:ring-luxury-rose/30 transition-all"></div>
+                            <div><label class="block text-[9px] font-bold text-gray-400 uppercase tracking-widest mb-1.5 pl-1">State *</label><input type="text" id="prof-state" required class="w-full px-4 py-3 bg-luxury-bg border border-luxury-blush rounded-xl outline-none text-[12px] font-medium text-luxury-dark focus:ring-2 focus:ring-luxury-rose/30 transition-all"></div>
                         </div>
                         <div class="flex gap-3 pt-3 mb-4">
-                            <button type="button" onclick="window.saveAddressFromForm()" class="bg-luxury-dark text-white hover:bg-[#D9778A] px-6 py-3 rounded-xl font-bold text-[10px] uppercase tracking-widest transition-colors shadow-sm">Save Address</button>
-                            <button type="button" id="btn-cancel-address" onclick="window.hideAddressForm()" class="border border-luxury-blush text-gray-500 hover:text-luxury-dark px-6 py-3 rounded-xl font-bold text-[10px] uppercase tracking-widest hidden transition-colors">Cancel</button>
+                            <button type="button" id="btn-save-address" class="bg-luxury-dark text-white hover:bg-[#D9778A] px-6 py-3 rounded-xl font-bold text-[10px] uppercase tracking-widest transition-colors shadow-sm">Save Address</button>
+                            <button type="button" id="btn-cancel-address" class="border border-luxury-blush text-gray-500 hover:text-luxury-dark px-6 py-3 rounded-xl font-bold text-[10px] uppercase tracking-widest hidden transition-colors">Cancel</button>
                         </div>
                     </form>
 
                     <div class="mt-auto border-t border-luxury-blush pt-5 flex justify-end">
-                         <button type="button" onclick="window.handleCheckoutAction()" class="w-full sm:w-auto bg-[#D9778A] text-white hover:bg-luxury-rose py-4 px-8 rounded-xl font-bold text-[11px] uppercase tracking-[0.15em] transition-all shadow-float flex items-center justify-center gap-2">
+                         <button type="button" id="btn-next-to-payment" class="w-full sm:w-auto bg-[#D9778A] text-white hover:bg-luxury-rose py-4 px-8 rounded-xl font-bold text-[11px] uppercase tracking-[0.15em] transition-all shadow-float flex items-center justify-center gap-2">
                              Next: Secure Payment <i class="fas fa-lock text-[10px]"></i>
                          </button>
                     </div>
@@ -394,7 +388,7 @@
                         <p class="text-[8px] text-gray-400 uppercase tracking-widest max-w-xs mx-auto mt-2">Only click verify after your banking app confirms the transaction is successful.</p>
                         
                         <div class="w-full border-t border-luxury-blush pt-5 mt-4">
-                            <button type="button" id="btn-confirm-payment" onclick="window.confirmPaymentAndOrder()" class="w-full bg-green-600 text-white hover:bg-green-700 py-4 rounded-xl font-bold text-[10px] uppercase flex items-center justify-center gap-2 tracking-[0.15em] shadow-md transition-colors">
+                            <button type="button" id="btn-confirm-payment" class="w-full bg-green-600 text-white hover:bg-green-700 py-4 rounded-xl font-bold text-[10px] uppercase flex items-center justify-center gap-2 tracking-[0.15em] shadow-md transition-colors">
                                 I Have Completed Payment <i class="fas fa-check-circle"></i>
                             </button>
                         </div>
@@ -408,7 +402,7 @@
                             <span class="block text-[9px] font-bold text-[#D9778A] uppercase tracking-widest mb-1.5">Order Reference</span>
                             <span id="success-ref-note" class="font-poppins font-black text-luxury-dark text-xl tracking-wider"></span>
                         </div>
-                        <button type="button" onclick="window.closeCheckout()" class="w-full max-w-sm border-2 border-luxury-rose text-luxury-dark hover:bg-luxury-rose hover:text-white py-4 rounded-full font-bold text-[10px] uppercase tracking-[0.15em] transition-colors shadow-sm">Return to Gallery</button>
+                        <button type="button" id="btn-return-gallery" class="w-full max-w-sm border-2 border-luxury-rose text-luxury-dark hover:bg-luxury-rose hover:text-white py-4 rounded-full font-bold text-[10px] uppercase tracking-[0.15em] transition-colors shadow-sm">Return to Gallery</button>
                     </div>
                 </div>
                 <div class="h-20 lg:hidden block w-full"></div>
@@ -423,7 +417,7 @@
                         <label class="block text-[9px] font-bold text-gray-400 uppercase tracking-widest mb-1.5">Apply Studio Coupon</label>
                         <div class="flex gap-2">
                             <input type="text" id="checkout-promo-input" placeholder="e.g. WELCOME10" class="flex-grow bg-luxury-bg border border-luxury-blush rounded-xl px-3 py-2 uppercase font-poppins font-bold text-[12px] tracking-wider outline-none">
-                            <button type="button" onclick="window.th_applyCouponCode()" class="bg-luxury-dark text-white hover:bg-luxury-rose px-4 py-2 rounded-xl text-[10px] font-bold uppercase tracking-widest transition-colors">Apply</button>
+                            <button type="button" id="btn-apply-coupon" class="bg-luxury-dark text-white hover:bg-luxury-rose px-4 py-2 rounded-xl text-[10px] font-bold uppercase tracking-widest transition-colors">Apply</button>
                         </div>
                         <span id="checkout-promo-feedback" class="text-[9px] font-bold uppercase tracking-wide mt-1.5 hidden"></span>
                     </div>
@@ -441,7 +435,7 @@
                     <div class="bg-green-50 text-green-700 text-[11px] font-bold px-3 py-2.5 rounded-lg text-center mb-2 border border-green-100 shadow-inner">You will save ₹<span id="qo-total-savings">0</span> on this order!</div>
 
                     <div class="fixed bottom-0 left-0 w-full p-4 bg-white/95 backdrop-blur-md border-t border-luxury-blush z-[100] lg:relative lg:bg-transparent lg:border-none lg:p-0 lg:z-auto">
-                        <button type="button" id="checkout-action-btn-mobile" onclick="window.handleMobileStickyAction()" class="w-full bg-luxury-dark text-white hover:bg-[#D9778A] py-4 rounded-xl font-bold text-[11px] uppercase tracking-[0.15em] transition-all shadow-float flex items-center justify-center gap-2">
+                        <button type="button" id="checkout-action-btn-mobile" class="w-full bg-luxury-dark text-white hover:bg-[#D9778A] py-4 rounded-xl font-bold text-[11px] uppercase tracking-[0.15em] transition-all shadow-float flex items-center justify-center gap-2">
                             Next <i class="fas fa-arrow-right"></i>
                         </button>
                     </div>
@@ -457,13 +451,13 @@
                 <img src="https://i.ibb.co/0RRrFK9N/TH-logo-1.png" class="w-8 h-8 rounded-full border border-luxury-rose object-cover" alt="">
                 <span class="font-logo text-xl text-luxury-dark">Your Account Studio</span>
             </div>
-            <button type="button" onclick="window.closeCustomerProfile()" class="text-luxury-dark text-[10px] font-bold uppercase tracking-widest hover:text-luxury-rose flex items-center gap-2">Close <i class="fas fa-times text-sm"></i></button>
+            <button type="button" id="btn-close-profile" class="text-luxury-dark text-[10px] font-bold uppercase tracking-widest hover:text-luxury-rose flex items-center gap-2">Close <i class="fas fa-times text-sm"></i></button>
         </header>
 
         <div class="max-w-[800px] mx-auto w-full px-4 py-6 md:py-10 flex flex-col gap-6 font-sans">
             <div class="bg-white border border-luxury-blush p-6 rounded-3xl shadow-sm flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
                 <div><p class="text-[9px] font-bold text-gray-400 uppercase tracking-widest mb-1">Logged In As</p><h3 class="text-base font-bold text-luxury-dark" id="profile-meta-email"></h3></div>
-                <button type="button" onclick="window.handleCustomerLogout()" class="border border-red-200 text-red-500 hover:bg-red-50 font-bold text-[10px] uppercase tracking-widest px-5 py-2.5 rounded-full transition-colors shadow-sm">Sign Out</button>
+                <button type="button" id="btn-logout-profile" class="border border-red-200 text-red-500 hover:bg-red-50 font-bold text-[10px] uppercase tracking-widest px-5 py-2.5 rounded-full transition-colors shadow-sm">Sign Out</button>
             </div>
             <div class="flex flex-col gap-4">
                 <h3 class="font-logo text-xl text-luxury-dark mb-2 flex items-center gap-2"><i class="fas fa-layer-group text-luxury-rose text-sm"></i> Commission Pipeline History</h3>
@@ -475,13 +469,13 @@
     <!-- AUTHENTICATION MODAL -->
     <div id="customer-auth-modal" role="dialog" aria-modal="true" class="hidden transition-opacity duration-200 opacity-0 fixed inset-0 bg-luxury-dark/60 p-4 flex items-center justify-center z-[4500]">
         <div class="transform scale-95 translate-y-2 transition-all duration-300 bg-white rounded-3xl w-full max-w-sm p-6 sm:p-8 shadow-2xl relative border border-luxury-blush" id="customer-auth-box">
-            <button type="button" onclick="window.closeCustomerAuthModal()" class="absolute top-4 right-4 text-gray-400 w-8 h-8 bg-luxury-bg rounded-full flex items-center justify-center border border-luxury-blush hover:text-luxury-dark"><i class="fas fa-times text-xs"></i></button>
+            <button type="button" id="btn-close-auth-modal" class="absolute top-4 right-4 text-gray-400 w-8 h-8 bg-luxury-bg rounded-full flex items-center justify-center border border-luxury-blush hover:text-luxury-dark"><i class="fas fa-times text-xs"></i></button>
             <div class="w-12 h-12 bg-luxury-bg rounded-full flex items-center justify-center mx-auto mb-4 border border-luxury-blush"><i class="fas fa-fingerprint text-[#D9778A] text-xl"></i></div>
             <h2 id="auth-panel-heading" class="font-logo font-normal text-2xl text-center text-luxury-dark mb-1">Patron Access</h2>
             <p id="auth-panel-sub" class="text-center text-[9px] font-bold text-gray-400 uppercase tracking-widest mb-6">Unlock personal history & tracking</p>
             
             <form id="customer-auth-form" class="space-y-4">
-                <button type="button" onclick="window.handleGoogleOAuthLogin()" class="w-full flex items-center justify-center gap-3 bg-white border border-luxury-blush text-luxury-dark font-bold text-[11px] uppercase tracking-wider py-3.5 px-4 rounded-xl shadow-sm hover:bg-luxury-bg transition-colors">
+                <button type="button" id="btn-google-auth" class="w-full flex items-center justify-center gap-3 bg-white border border-luxury-blush text-luxury-dark font-bold text-[11px] uppercase tracking-wider py-3.5 px-4 rounded-xl shadow-sm hover:bg-luxury-bg transition-colors">
                     <img src="https://www.svgrepo.com/show/475656/google-color.svg" class="w-4 h-4" alt=""> Continue with Google
                 </button>
                 <div class="flex items-center my-4"><div class="flex-grow h-[1px] bg-luxury-blush"></div><span class="px-3 text-[9px] font-bold text-gray-400 uppercase tracking-widest">Or Email</span><div class="flex-grow h-[1px] bg-luxury-blush"></div></div>
@@ -489,14 +483,14 @@
                 <div><label class="block text-[9px] font-bold text-gray-400 uppercase tracking-widest mb-1.5 pl-1" for="auth-password">Password</label><input type="password" id="auth-password" required minlength="6" class="w-full px-4 py-3 bg-luxury-bg border border-luxury-blush rounded-xl outline-none text-[12px] font-medium text-luxury-dark focus:ring-2 focus:ring-luxury-rose/30 transition-all"></div>
                 <button type="submit" id="btn-auth-submit" class="w-full bg-luxury-dark text-white hover:bg-luxury-rose py-3.5 rounded-xl font-bold text-[10px] uppercase tracking-widest transition-colors shadow-sm">Sign In</button>
             </form>
-            <div class="mt-5 text-center"><button type="button" id="btn-auth-toggle-mode" onclick="window.toggleAuthViewMode()" class="text-[#D9778A] font-bold tracking-wider text-[10px] uppercase hover:underline">New to the Studio? Create Account</button></div>
+            <div class="mt-5 text-center"><button type="button" id="btn-auth-toggle-mode" class="text-[#D9778A] font-bold tracking-wider text-[10px] uppercase hover:underline">New to the Studio? Create Account</button></div>
         </div>
     </div>
 
     <!-- TRACK ORDER MODAL -->
     <div id="track-order-modal" role="dialog" aria-modal="true" class="hidden transition-opacity duration-200 opacity-0 fixed inset-0 bg-luxury-dark/70 p-4 flex items-center justify-center z-[4000]">
         <div class="transform scale-95 translate-y-2 transition-all duration-300 bg-white rounded-3xl w-full max-w-sm p-6 sm:p-8 shadow-2xl relative border border-luxury-blush" id="track-order-box">
-            <button type="button" onclick="window.closeTrackOrderModal()" class="absolute top-4 right-4 text-gray-400 w-8 h-8 bg-luxury-bg rounded-full flex items-center justify-center border border-luxury-blush hover:text-luxury-dark"><i class="fas fa-times text-xs"></i></button>
+            <button type="button" id="btn-close-track-modal" class="absolute top-4 right-4 text-gray-400 w-8 h-8 bg-luxury-bg rounded-full flex items-center justify-center border border-luxury-blush hover:text-luxury-dark"><i class="fas fa-times text-xs"></i></button>
             <div class="w-12 h-12 bg-luxury-bg rounded-full flex items-center justify-center mx-auto mb-4 border border-luxury-blush"><i class="fas fa-map-marker-alt text-luxury-rose text-xl"></i></div>
             <h2 class="font-logo font-normal text-2xl text-center text-luxury-dark mb-4">Track Order</h2>
             <form id="track-order-form" class="space-y-4">
@@ -519,7 +513,7 @@
     <!-- POLICIES -->
     <div id="return-policy-modal" role="dialog" aria-modal="true" class="hidden transition-opacity duration-200 opacity-0 fixed inset-0 bg-luxury-dark/70 p-4 flex items-center justify-center z-[4000]">
         <div class="transform scale-95 translate-y-2 transition-all duration-300 bg-white rounded-3xl w-full max-w-md p-6 sm:p-8 shadow-2xl relative border border-luxury-rose" id="return-policy-box">
-            <button type="button" onclick="window.closePolicyModal('return-policy-modal', 'return-policy-box')" class="absolute top-4 right-4 text-gray-400 w-8 h-8 bg-luxury-bg rounded-full flex items-center justify-center border border-luxury-blush hover:text-luxury-dark"><i class="fas fa-times text-xs"></i></button>
+            <button type="button" id="btn-close-return-modal" class="absolute top-4 right-4 text-gray-400 w-8 h-8 bg-luxury-bg rounded-full flex items-center justify-center border border-luxury-blush hover:text-luxury-dark"><i class="fas fa-times text-xs"></i></button>
             <h2 class="font-logo font-normal text-2xl text-center text-luxury-dark mb-4">Strict Return Policy</h2>
             <div class="text-[12px] text-gray-600 leading-relaxed font-body space-y-4 max-h-[60vh] overflow-y-auto custom-scroll pr-2">
                 <p>Because of the significant personal effort and artistic dedication required, <strong>all sales are final. We strictly prohibit returns, exchanges, or refunds for "change of mind."</strong></p>
@@ -535,7 +529,7 @@
 
     <div id="privacy-policy-modal" role="dialog" aria-modal="true" class="hidden transition-opacity duration-200 opacity-0 fixed inset-0 bg-luxury-dark/70 p-4 flex items-center justify-center z-[4000]">
         <div class="transform scale-95 translate-y-2 transition-all duration-300 bg-white rounded-3xl w-full max-w-lg p-6 sm:p-8 shadow-2xl relative border border-luxury-blush" id="privacy-policy-box">
-            <button type="button" onclick="window.closePolicyModal('privacy-policy-modal', 'privacy-policy-box')" class="absolute top-4 right-4 text-gray-400 w-8 h-8 bg-luxury-bg rounded-full flex items-center justify-center border border-luxury-blush hover:text-luxury-dark"><i class="fas fa-times text-xs"></i></button>
+            <button type="button" id="btn-close-privacy-modal" class="absolute top-4 right-4 text-gray-400 w-8 h-8 bg-luxury-bg rounded-full flex items-center justify-center border border-luxury-blush hover:text-luxury-dark"><i class="fas fa-times text-xs"></i></button>
             <h2 class="font-logo font-normal text-2xl text-center text-luxury-dark mb-6">Privacy Policy</h2>
             <div class="text-[11px] text-gray-600 leading-relaxed font-body space-y-4 max-h-[65vh] overflow-y-auto custom-scroll pr-2">
                 <p><strong>1. Information Collection:</strong> We collect necessary fulfillment data: your full name, shipping address, email, and phone number.</p>
@@ -546,8 +540,21 @@
         </div>
     </div>
 
+    <!-- Lightbox -->
+    <div id="lightbox-modal" role="dialog" aria-modal="true" class="hidden transition-opacity duration-200 ease-out opacity-0 fixed inset-0 flex flex-col items-center justify-center bg-luxury-dark/90 z-[5000]">
+        <div class="absolute top-0 left-0 w-full p-4 sm:p-6 flex justify-between items-center bg-gradient-to-b from-white/95 to-transparent z-[5010]">
+            <span id="lightbox-counter" class="text-luxury-dark font-poppins font-semibold tracking-widest text-[10px] bg-white px-4 py-2 rounded-full border border-luxury-blush">1 / 1</span>
+            <button id="btn-close-lightbox" class="text-luxury-dark text-xl w-11 h-11 flex items-center justify-center bg-white rounded-full border border-luxury-blush"><i class="fas fa-times"></i></button>
+        </div>
+        <button id="btn-lightbox-prev" class="absolute left-4 top-1/2 -translate-y-1/2 text-luxury-dark text-lg hidden md:flex bg-white w-12 h-12 rounded-full items-center justify-center border border-luxury-blush z-[5010]"><i class="fas fa-chevron-left"></i></button>
+        <button id="btn-lightbox-next" class="absolute right-4 top-1/2 -translate-y-1/2 text-luxury-dark text-lg hidden md:flex bg-white w-12 h-12 rounded-full items-center justify-center border border-luxury-blush z-[5010]"><i class="fas fa-chevron-right"></i></button>
+        <div id="lightbox-wrapper" class="relative w-full max-w-lg mx-auto aspect-[9/16] overflow-hidden">
+            <div id="lightbox-track" class="flex w-full h-full relative cursor-grab active:cursor-grabbing touch-pan-y"></div>
+        </div>
+    </div>
+
     <!-- Global Toast Notification -->
-    <div id="toast" role="alert" aria-live="assertive" class="fixed bottom-24 md:bottom-10 left-1/2 transform -translate-x-1/2 bg-white/90 backdrop-blur-md text-luxury-dark px-8 py-3.5 rounded-full shadow-float flex items-center gap-3 transition-all duration-500 ease-luxury-ease opacity-0 pointer-events-none w-max border border-white translate-y-10 z-[5000]">
+    <div id="toast" role="alert" aria-live="assertive" class="fixed bottom-24 md:bottom-10 left-1/2 transform -translate-x-1/2 bg-white/90 backdrop-blur-md text-luxury-dark px-8 py-3.5 rounded-full shadow-float flex items-center gap-3 transition-all duration-500 ease-luxury-ease opacity-0 pointer-events-none w-max border border-white translate-y-10 z-[6000]">
         <i id="toast-icon" class="fas fa-check text-[#D9778A] text-sm"></i> 
         <span id="toast-msg" class="text-[11px] font-body font-bold tracking-[0.1em] uppercase pt-0.5"></span>
     </div>
