@@ -1,6 +1,6 @@
 /**
  * Twisted Happiness - Studio Admin Engine
- * Version: 11.5.0 - Bulletproof Startup Engine & Safe Tracking
+ * Version: 12.5.0 - Fully Stable Safe Build
  */
 
 const SUPABASE_URL = "https://gvrfucjtnyqfkdynrmqs.supabase.co"; 
@@ -9,7 +9,6 @@ let _supabase;
 
 const countryCodeMapping = { "+91": "🇮🇳 IN (+91)", "+1": "🇺🇸 US (+1)", "+44": "🇬🇧 UK (+44)" };
 
-// 🛡️ DEFENSIVE CACHE PARSER
 function safeJSONParse(key, fallback) { 
     try { 
         const item = localStorage.getItem(key); 
@@ -19,7 +18,7 @@ function safeJSONParse(key, fallback) {
     } catch (e) { localStorage.removeItem(key); return fallback; } 
 }
 
-let settings = safeJSONParse('th_settings', { storeName: "Twisted Happiness", instagram: "", whatsapp: "9909310501", upiId: "khushisj315@oksbi", countryCode: "+91" });
+let settings = safeJSONParse('th_settings', { storeName: "Khushiified Art", instagram: "https://www.instagram.com/khushiified_art?igsh=aW1vZ2N4cTl2OWo=", whatsapp: "9909310501", upiId: "khushisj315@oksbi", countryCode: "+91" });
 let products = []; let allOrders = []; let selectedFilesData = []; let editModeId = null; let mainImageIndex = 0;
 
 // 🚀 BULLETPROOF INITIALIZATION
@@ -36,7 +35,6 @@ function initApp() {
 
 if (document.readyState === 'loading') { document.addEventListener('DOMContentLoaded', initApp); } 
 else { initApp(); }
-
 
 function populateCountryCodes() {
     const select = document.getElementById('admin-country-code'); if (!select) return;
@@ -65,8 +63,8 @@ function unlockDashboard() {
         document.getElementById('admin-dashboard').classList.remove('opacity-0');
         document.getElementById('admin-wa').value = settings.whatsapp || ''; document.getElementById('admin-country-code').value = settings.countryCode || '+91'; 
         if(document.getElementById('admin-upi-id')) document.getElementById('admin-upi-id').value = settings.upiId || 'khushisj315@oksbi';
-        if(document.getElementById('admin-store-name')) document.getElementById('admin-store-name').value = settings.storeName || '';
-        if(document.getElementById('admin-ig')) document.getElementById('admin-ig').value = settings.instagram || '';
+        if(document.getElementById('admin-store-name')) document.getElementById('admin-store-name').value = settings.storeName || 'Khushiified Art';
+        if(document.getElementById('admin-ig')) document.getElementById('admin-ig').value = settings.instagram || 'https://www.instagram.com/khushiified_art?igsh=aW1vZ2N4cTl2OWo=';
         fetchDatabase(); fetchOrders(); showToast('Studio Unlocked', 'fa-unlock'); 
     });
 }
@@ -252,7 +250,6 @@ async function fetchOrders() {
     } catch (err) { console.error("Error fetching orders", err); }
 }
 
-// 🛡️ Safe Extraction Regex
 function extractCustomerData(reqsString) { 
     const nameMatch = reqsString.match(/Patron:\s*([^|]+)/); 
     const phoneMatch = reqsString.match(/Phone:\s*([^|]+)/); 
@@ -316,7 +313,7 @@ async function startCrafting(id) {
         const customerData = extractCustomerData(order.customer_reqs);
         if (customerData.phone) {
             let cleanPhone = customerData.phone.replace(/\D/g, ''); 
-            const acceptMsg = `✨ Dear ${customerData.name},\n\nWe have successfully received your payment! 🎉\n\nYour exquisite commission from *${settings.storeName || 'Twisted Happiness'}* has been embraced. Our artisan has officially begun handcrafting your masterpiece.\n\nIt will take approximately *${customerData.prepTime}* to perfectly curate and prepare for dispatch.\n\nThank you for trusting us to curate your space! 🕊️`;
+            const acceptMsg = `✨ Dear ${customerData.name},\n\nWe have successfully received your payment! 🎉\n\nYour exquisite commission from *${settings.storeName || 'Khushiified Art'}* has been embraced. Our artisan has officially begun handcrafting your masterpiece.\n\nIt will take approximately *${customerData.prepTime}* to perfectly curate and prepare for dispatch.\n\nThank you for trusting us to curate your space! 🕊️`;
             window.open(`https://wa.me/${cleanPhone}?text=${encodeURIComponent(acceptMsg)}`, '_blank');
         }
     } catch(e) { showToast("Error processing order", "fa-times", "text-red-500"); console.error(e); }
@@ -334,7 +331,7 @@ async function rejectOrder(id) {
         const customerData = extractCustomerData(order.customer_reqs);
         if (customerData.phone) {
             let cleanPhone = customerData.phone.replace(/\D/g, ''); 
-            const denyMsg = `✨ Dear ${customerData.name},\n\nWe are reaching out regarding your recent order attempt at *${settings.storeName || 'Twisted Happiness'}*.\n\nUnfortunately, we were unable to verify your UPI payment. As a result, your order reservation has been cancelled.\n\nIf the amount was deducted from your account, it will automatically be refunded by your bank within 2-3 business days.\n\nIf you would like to secure your handcrafted piece, please reply to this message and we will assist you! 🕊️`;
+            const denyMsg = `✨ Dear ${customerData.name},\n\nWe are reaching out regarding your recent order attempt at *${settings.storeName || 'Khushiified Art'}*.\n\nUnfortunately, we were unable to verify your UPI payment. As a result, your order reservation has been cancelled.\n\nIf the amount was deducted from your account, it will automatically be refunded by your bank within 2-3 business days.\n\nIf you would like to secure your handcrafted piece, please reply to this message and we will assist you! 🕊️`;
             window.open(`https://wa.me/${cleanPhone}?text=${encodeURIComponent(denyMsg)}`, '_blank');
         }
     } catch(e) { showToast("Error", "fa-times", "text-red-500"); } 

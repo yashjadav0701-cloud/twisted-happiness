@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     
-    <title>Twisted Happiness | Studio Admin</title>
+    <title>Khushiified Art | Studio Admin</title>
     <meta name="robots" content="noindex, nofollow">
     
     <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -13,7 +13,6 @@
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
     <link href="https://fonts.googleapis.com/css2?family=Marcellus&family=Bitter:wght@400;600&family=Poppins:wght@500;600;700&family=Montserrat:wght@400;500;600;700&display=swap" rel="stylesheet">
 
-    <!-- Essential Scripts (Deferred to prevent blocking) -->
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2" defer></script>
     <script src="./js/admin.js" defer></script>
 
@@ -25,7 +24,6 @@
 </head>
 <body class="bg-luxury-bg text-luxury-dark font-sans selection:bg-luxury-blush min-h-screen flex flex-col items-center">
 
-    <!-- LOGIN GATE -->
     <main id="login-view" class="flex-grow flex items-center justify-center w-full p-4 transition-opacity duration-300">
         <div class="bg-white p-8 sm:p-10 rounded-3xl shadow-xl w-full max-w-xs text-center border border-luxury-blush">
             <i class="fas fa-lock text-luxury-rose text-3xl mb-4 block"></i>
@@ -44,13 +42,11 @@
         </div>
     </main>
 
-    <!-- SECURE ADMIN DASHBOARD -->
     <div id="admin-dashboard" class="hidden w-full max-w-[1200px] mx-auto p-4 sm:p-6 opacity-0 transition-opacity duration-500">
-        
         <header class="flex flex-col sm:flex-row justify-between items-center bg-white p-4 sm:p-5 shadow-sm mb-6 border border-luxury-blush rounded-2xl gap-3">
             <div class="flex items-center gap-3">
                 <img src="https://i.ibb.co/0RRrFK9N/TH-logo-1.png" class="w-10 h-10 rounded-full object-cover border-2 border-luxury-rose" alt="Logo">
-                <h1 class="font-logo font-normal text-xl text-luxury-dark">Twisted Happiness <span class="text-gray-400 font-sans font-bold text-[8px] uppercase tracking-[0.2em] ml-1">Studio</span></h1>
+                <h1 class="font-logo font-normal text-xl text-luxury-dark">Khushiified Art <span class="text-gray-400 font-sans font-bold text-[8px] uppercase tracking-[0.2em] ml-1">Studio</span></h1>
             </div>
             <nav class="flex gap-2">
                 <button type="button" id="tab-inventory" class="text-white bg-luxury-dark font-bold text-[9px] uppercase tracking-[0.1em] px-4 py-2.5 rounded-full border border-luxury-dark shadow-sm transition-colors">Inventory</button>
@@ -139,7 +135,6 @@
         </section>
     </div>
 
-    <!-- Global Toast Notification -->
     <div id="toast" role="alert" aria-live="assertive" class="fixed bottom-8 left-1/2 transform -translate-x-1/2 bg-luxury-dark text-luxury-bg px-6 py-3 rounded-full shadow-xl flex items-center gap-2.5 transition-all duration-300 opacity-0 pointer-events-none w-max border border-luxury-rose/30 translate-y-10 z-[2000]">
         <i id="toast-icon" class="fas fa-check text-luxury-rose text-sm"></i> 
         <span id="toast-msg" class="text-[10px] font-bold tracking-[0.1em] uppercase pt-0.5"></span>
