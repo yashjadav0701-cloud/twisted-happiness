@@ -1,43 +1,22 @@
 /**
  * Twisted Happiness - Studio Admin Engine
- * Version: 14.0.0 - 100% Complete & Uncompressed Build
+ * Version: 15.5.0 - Fully Stable, Uncompressed & Globally Bound
  */
 
 const SUPABASE_URL = "https://gvrfucjtnyqfkdynrmqs.supabase.co"; 
 const SUPABASE_ANON_KEY = "sb_publishable_8jru2BqvTdE9bcwNOLIHAA_dx6aUCM0";
 let _supabase;
 
-const countryCodeMapping = { 
-    "+91": "🇮🇳 IN (+91)", 
-    "+1": "🇺🇸 US (+1)", 
-    "+44": "🇬🇧 UK (+44)" 
-};
+const countryCodeMapping = { "+91": "🇮🇳 IN (+91)", "+1": "🇺🇸 US (+1)", "+44": "🇬🇧 UK (+44)" };
 
 // 🛡️ DEFENSIVE CACHE PARSER
 function safeJSONParse(key, fallback) { 
-    try { 
-        const item = localStorage.getItem(key); 
-        const parsed = item ? JSON.parse(item) : fallback; 
-        if (Array.isArray(fallback) && !Array.isArray(parsed)) return fallback;
-        return parsed;
-    } catch (e) { 
-        localStorage.removeItem(key); 
-        return fallback; 
-    } 
+    try { const item = localStorage.getItem(key); return item ? JSON.parse(item) : fallback; } 
+    catch (e) { localStorage.removeItem(key); return fallback; } 
 }
 
-// 📦 GLOBAL STATE (Forced Update to Twisted Happiness)
-let settings = safeJSONParse('th_settings', null);
-if (!settings || settings.storeName === "Khushiified Art" || !settings.upiId) {
-    settings = { 
-        storeName: "Twisted Happiness", 
-        instagram: "https://www.instagram.com/khushiified_art?igsh=aW1vZ2N4cTl2OWo=", 
-        whatsapp: "9909310501", 
-        upiId: "khushisj315@oksbi", 
-        countryCode: "+91" 
-    };
-    localStorage.setItem('th_settings', JSON.stringify(settings));
-}
+// 📦 GLOBAL STATE
+let settings = safeJSONParse('th_settings', { storeName: "Twisted Happiness", instagram: "https://www.instagram.com/khushiified_art?igsh=aW1vZ2N4cTl2OWo=", whatsapp: "9909310501", upiId: "khushisj315@oksbi", countryCode: "+91" });
 
 let products = []; 
 let allOrders = []; 
@@ -45,42 +24,27 @@ let selectedFilesData = [];
 let editModeId = null; 
 let mainImageIndex = 0;
 
-// 🚀 BULLETPROOF INITIALIZATION
+// 🚀 INITIALIZATION
 function initApp() {
     try { 
         _supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY); 
         populateCountryCodes();
         bindAdminEvents();
         checkSession();
-    } catch (e) { 
-        console.error("Supabase Init Error:", e); 
-    }
+    } catch (e) { console.error("Supabase Init Error:", e); }
 }
-
-if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', initApp);
-} else {
-    initApp();
-}
+document.addEventListener('DOMContentLoaded', initApp);
 
 function populateCountryCodes() {
-    const select = document.getElementById('admin-country-code'); 
-    if (!select) return;
+    const select = document.getElementById('admin-country-code'); if (!select) return;
     for (const [code, label] of Object.entries(countryCodeMapping)) {
-        const option = document.createElement('option'); 
-        option.value = code; 
-        option.textContent = label; 
-        select.appendChild(option);
+        const option = document.createElement('option'); option.value = code; option.textContent = label; select.appendChild(option);
     }
 }
 
 async function checkSession() {
     const { data: { session } } = await _supabase.auth.getSession();
-    if (session) {
-        unlockDashboard(); 
-    } else {
-        document.getElementById('login-view').classList.remove('hidden');
-    }
+    if (session) unlockDashboard(); else document.getElementById('login-view').classList.remove('hidden');
 }
 
 async function attemptLogin(e) { 
@@ -90,41 +54,43 @@ async function attemptLogin(e) {
     const btn = document.getElementById('login-btn'); 
     
     if(!email || !pass) return; 
-    btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Verifying...'; 
-    btn.disabled = true; 
+    btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Verifying...'; btn.disabled = true; 
     
     try { 
         const { data, error } = await _supabase.auth.signInWithPassword({ email: email, password: pass }); 
-        if (error) throw error; 
-        if (data.session) unlockDashboard(); 
-    } catch (err) { 
-        alert("Access Denied: Check your credentials."); 
-        btn.innerHTML = 'Enter Studio'; 
-        btn.disabled = false; 
-    }
+        if (error) throw error; if (data.session) unlockDashboard(); 
+    } catch (err) { alert("Access Denied: Check your credentials."); btn.innerHTML = 'Enter Studio'; btn.disabled = false; }
 }
 
-async function logoutAdmin() { 
-    await _supabase.auth.signOut(); 
-    window.location.href = '/'; 
-}
+async function logoutAdmin() { await _supabase.auth.signOut(); window.location.href = '/'; }
 
 function unlockDashboard() {
     document.getElementById('login-view').classList.add('hidden'); 
     document.getElementById('admin-dashboard').classList.remove('hidden');
     requestAnimationFrame(() => {
         document.getElementById('admin-dashboard').classList.remove('opacity-0');
-        
-        document.getElementById('admin-wa').value = settings.whatsapp || ''; 
-        document.getElementById('admin-country-code').value = settings.countryCode || '+91'; 
-        if(document.getElementById('admin-upi-id')) document.getElementById('admin-upi-id').value = settings.upiId || 'khushisj315@oksbi';
-        if(document.getElementById('admin-store-name')) document.getElementById('admin-store-name').value = settings.storeName || 'Twisted Happiness';
-        if(document.getElementById('admin-ig')) document.getElementById('admin-ig').value = settings.instagram || 'https://www.instagram.com/khushiified_art?igsh=aW1vZ2N4cTl2OWo=';
-        
+        fetchRuntimeSettings(); // Fetch live config from cloud
         fetchDatabase(); 
         fetchOrders(); 
         showToast('Studio Unlocked', 'fa-unlock'); 
     });
+}
+
+async function fetchRuntimeSettings() {
+    try {
+        const { data } = await _supabase.from('store_config').select('*').limit(1);
+        if(data && data.length > 0) {
+            const cloud = data[0];
+            settings = { storeName: cloud.store_name, instagram: cloud.instagram_url, whatsapp: cloud.whatsapp_num, upiId: cloud.upi_id, countryCode: cloud.country_code || "+91" };
+            localStorage.setItem('th_settings', JSON.stringify(settings));
+        }
+    } catch(e) {}
+    
+    document.getElementById('admin-wa').value = settings.whatsapp || ''; 
+    document.getElementById('admin-country-code').value = settings.countryCode || '+91'; 
+    if(document.getElementById('admin-upi-id')) document.getElementById('admin-upi-id').value = settings.upiId || 'khushisj315@oksbi';
+    if(document.getElementById('admin-store-name')) document.getElementById('admin-store-name').value = settings.storeName || 'Twisted Happiness';
+    if(document.getElementById('admin-ig')) document.getElementById('admin-ig').value = settings.instagram || 'https://www.instagram.com/khushiified_art?igsh=aW1vZ2N4cTl2OWo=';
 }
 
 function bindAdminEvents() {
@@ -141,68 +107,53 @@ function bindAdminEvents() {
     document.getElementById('cancel-edit-btn')?.addEventListener('click', cancelEdit);
 }
 
-function saveSettings(e) { 
+async function saveSettings(e) { 
     e.preventDefault(); 
-    settings.whatsapp = document.getElementById('admin-wa').value; 
-    settings.countryCode = document.getElementById('admin-country-code').value; 
-    if(document.getElementById('admin-upi-id')) settings.upiId = document.getElementById('admin-upi-id').value.trim(); 
-    if(document.getElementById('admin-store-name')) settings.storeName = document.getElementById('admin-store-name').value.trim();
-    if(document.getElementById('admin-ig')) settings.instagram = document.getElementById('admin-ig').value.trim();
+    const n = document.getElementById('admin-store-name').value.trim();
+    const i = document.getElementById('admin-ig').value.trim();
+    const w = document.getElementById('admin-wa').value.trim();
+    const c = document.getElementById('admin-country-code').value;
+    const u = document.getElementById('admin-upi-id').value.trim();
     
-    localStorage.setItem('th_settings', JSON.stringify(settings)); 
-    showToast('Settings Saved', 'fa-check'); 
+    const payload = { id: 1, store_name: n, instagram_url: i, whatsapp_num: w, country_code: c, upi_id: u };
+    
+    try {
+        const { error } = await _supabase.from('store_config').upsert([payload]);
+        if (error) throw error;
+        settings = { storeName: n, instagram: i, whatsapp: w, countryCode: c, upiId: u };
+        localStorage.setItem('th_settings', JSON.stringify(settings)); 
+        showToast('Settings Saved & Synced to Cloud', 'fa-check'); 
+    } catch(err) {
+        showToast('Failed to sync settings', 'fa-times', 'text-red-500');
+    }
 }
 
-// 🚨 INVENTORY DATABASE FETCHING 🚨
+// 🚨 INVENTORY ENGINE
 async function fetchDatabase() { 
     try { 
         const { data, error } = await _supabase.from('creations').select('*').order('created_at', { ascending: false }); 
         if (error) throw error;
         
         products = (data || []).map(row => {
-            let parsedImages = []; 
-            try { parsedImages = JSON.parse(row.image_url) || []; } catch(e) {}
+            let parsedImages = []; try { parsedImages = JSON.parse(row.image_url) || []; } catch(e) {}
             return {
-                id: row.id, 
-                name: row.name || 'Untitled Art', 
-                category: row.category || '', 
-                mainCategory: row.main_category || 'Pipe Cleaner Crafts', 
-                price: row.price || 0, 
-                prepTime: row.prep_time || '3-5', 
-                specs: row.specs || '', 
-                dimensions: row.dimensions || '', 
-                isCustomizable: row.is_customizable || false,
-                image1: parsedImages.length > 0 ? parsedImages[0].data : '', 
-                image2: parsedImages.length > 1 ? parsedImages[1].data : '', 
-                image3: parsedImages.length > 2 ? parsedImages[2].data : '', 
-                image4: parsedImages.length > 3 ? parsedImages[3].data : '', 
-                image5: parsedImages.length > 4 ? parsedImages[4].data : ''
+                id: row.id, name: row.name || 'Untitled Art', category: row.category || '', mainCategory: row.main_category || 'Pipe Cleaner Crafts', price: row.price || 0, prepTime: row.prep_time || '3-5', specs: row.specs || '', dimensions: row.dimensions || '', isCustomizable: row.is_customizable || false,
+                image1: parsedImages.length > 0 ? parsedImages[0].data : '', image2: parsedImages.length > 1 ? parsedImages[1].data : '', image3: parsedImages.length > 2 ? parsedImages[2].data : '', image4: parsedImages.length > 3 ? parsedImages[3].data : '', image5: parsedImages.length > 4 ? parsedImages[4].data : ''
             };
         });
         
-        renderAdminProducts(); 
-        renderAdminCategories();
-    } catch (error) { 
-        console.error("Admin DB Fetch Error:", error); 
-    } 
+        renderAdminProducts(); renderAdminCategories();
+    } catch (error) { console.error("Admin DB Fetch Error:", error); } 
 }
 
 function renderAdminProducts() { 
-    const list = document.getElementById('admin-product-list'); 
-    list.innerHTML = ''; 
-    
-    if(products.length === 0) { 
-        list.innerHTML = '<div class="text-center text-gray-400 py-10 text-[10px] uppercase tracking-[0.2em] font-medium"><i class="fas fa-box-open text-2xl block mb-2 opacity-30"></i> No creations in gallery.</div>'; 
-        return; 
-    } 
+    const list = document.getElementById('admin-product-list'); list.innerHTML = ''; 
+    if(products.length === 0) { list.innerHTML = '<div class="text-center text-gray-400 py-10 text-[10px] uppercase tracking-[0.2em] font-medium"><i class="fas fa-box-open text-2xl block mb-2 opacity-30"></i> No creations in gallery.</div>'; return; } 
     
     const fragment = document.createDocumentFragment();
     [...products].forEach(p => { 
-        const cleanPrice = Number(String(p.price || 0).replace(/[^0-9.,]/g, '')); 
-        const adminImg = (typeof p.image1 === 'string' && p.image1.trim() !== '') ? p.image1 : 'https://placehold.co/100/F8E9EA/423133';
-        
-        const item = document.createElement('div'); 
-        item.className = "flex justify-between bg-white p-4 hover:bg-luxury-bg transition-colors duration-400";
+        const cleanPrice = Number(String(p.price || 0).replace(/[^0-9.,]/g, '')); const adminImg = (typeof p.image1 === 'string' && p.image1.trim() !== '') ? p.image1 : 'https://placehold.co/100/F8E9EA/423133';
+        const item = document.createElement('div'); item.className = "flex justify-between bg-white p-4 hover:bg-luxury-bg transition-colors duration-400";
         item.innerHTML = `
             <div class="flex gap-3 items-center">
                 <img loading="lazy" decoding="async" src="${adminImg}" alt="${p.name}" class="w-12 h-12 object-cover bg-luxury-bg border border-luxury-blush rounded-lg">
@@ -221,36 +172,14 @@ function renderAdminProducts() {
 }
 
 function togglePaintingFields() {
-    const val = document.getElementById('p-main-category').value;
-    const container = document.getElementById('painting-fields-container');
-    
-    if(val === 'Canvas Paintings' || val === 'Clay Art Paintings') { 
-        container.classList.remove('hidden'); 
-    } else { 
-        container.classList.add('hidden'); 
-        document.getElementById('p-dimensions').value = ''; 
-        document.getElementById('p-customizable').checked = false; 
-    }
-    
-    document.getElementById('p-category').value = ''; 
-    renderAdminCategories(); 
+    const val = document.getElementById('p-main-category').value, container = document.getElementById('painting-fields-container');
+    if(val === 'Canvas Paintings' || val === 'Clay Art Paintings') { container.classList.remove('hidden'); } else { container.classList.add('hidden'); document.getElementById('p-dimensions').value = ''; document.getElementById('p-customizable').checked = false; }
+    document.getElementById('p-category').value = ''; renderAdminCategories(); 
 }
 
 function renderAdminCategories() {
-    const datalist = document.getElementById('category-list');
-    const mainCat = document.getElementById('p-main-category').value;
-    
-    if(datalist) { 
-        const relevantProducts = products.filter(p => p.mainCategory === mainCat); 
-        const allSubs = [...new Set(relevantProducts.map(p => p.category).filter(c => c))]; 
-        
-        datalist.innerHTML = ''; 
-        allSubs.forEach(cat => { 
-            const option = document.createElement('option'); 
-            option.value = cat; 
-            datalist.appendChild(option); 
-        }); 
-    }
+    const datalist = document.getElementById('category-list'), mainCat = document.getElementById('p-main-category').value;
+    if(datalist) { const relevantProducts = products.filter(p => p.mainCategory === mainCat); const allSubs = [...new Set(relevantProducts.map(p => p.category).filter(c => c))]; datalist.innerHTML = ''; allSubs.forEach(cat => { const option = document.createElement('option'); option.value = cat; datalist.appendChild(option); }); }
 }
 
 function compressImageToBlob(file, maxSize = 1600) { 
@@ -259,12 +188,9 @@ function compressImageToBlob(file, maxSize = 1600) {
         reader.onload = (e) => { 
             const img = new Image(); img.src = e.target.result; 
             img.onload = () => { 
-                const canvas = document.createElement('canvas'); 
-                let w = img.width, h = img.height; 
-                if (w > h && w > maxSize) { h *= maxSize / w; w = maxSize; } 
-                else if (h > maxSize) { w *= maxSize / h; h = maxSize; } 
-                canvas.width = w; canvas.height = h; 
-                canvas.getContext('2d').drawImage(img, 0, 0, w, h); 
+                const canvas = document.createElement('canvas'); let w = img.width, h = img.height; 
+                if (w > h && w > maxSize) { h *= maxSize / w; w = maxSize; } else if (h > maxSize) { w *= maxSize / h; h = maxSize; } 
+                canvas.width = w; canvas.height = h; canvas.getContext('2d').drawImage(img, 0, 0, w, h); 
                 canvas.toBlob((blob) => { resolve(blob); }, 'image/webp', 0.85); 
             }; 
         }; 
@@ -272,41 +198,23 @@ function compressImageToBlob(file, maxSize = 1600) {
 }
 
 async function handleFileSelection(e) { 
-    const files = e.target.files; 
-    if (files.length === 0) return; 
-    if (selectedFilesData.length + files.length > 5) { 
-        alert("Maximum 5 images allowed."); e.target.value = ""; return; 
-    } 
+    const files = e.target.files; if (files.length === 0) return; 
+    if (selectedFilesData.length + files.length > 5) { alert("Maximum 5 images allowed."); e.target.value = ""; return; } 
     
-    const btn = document.getElementById('btn-save-product'); 
-    btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Processing...'; 
-    btn.disabled = true; 
+    const btn = document.getElementById('btn-save-product'); btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Processing...'; btn.disabled = true; 
     
     for (let i = 0; i < files.length; i++) { 
-        const file = files[i]; 
-        const blob = await compressImageToBlob(file); 
-        const tempUrl = URL.createObjectURL(blob); 
+        const file = files[i]; const blob = await compressImageToBlob(file); const tempUrl = URL.createObjectURL(blob); 
         selectedFilesData.push({ name: file.name, blob: blob, data: tempUrl, isNew: true }); 
     } 
     
-    renderImagePreviews(); 
-    btn.innerHTML = editModeId ? 'Update Product' : 'Publish to Collection'; 
-    btn.disabled = false; 
-    e.target.value = ""; 
+    renderImagePreviews(); btn.innerHTML = editModeId ? 'Update Product' : 'Publish to Collection'; btn.disabled = false; e.target.value = ""; 
 }
 
 function renderImagePreviews() {
-    const pContainer = document.getElementById('image-preview-container');
-    const helpText = document.getElementById('image-help-text'); 
-    pContainer.innerHTML = '';
-    
-    if (selectedFilesData.length === 0) { 
-        pContainer.classList.add('hidden'); helpText.classList.add('hidden'); return; 
-    }
-    
-    pContainer.classList.remove('hidden'); 
-    helpText.classList.remove('hidden');
-    
+    const pContainer = document.getElementById('image-preview-container'), helpText = document.getElementById('image-help-text'); pContainer.innerHTML = '';
+    if (selectedFilesData.length === 0) { pContainer.classList.add('hidden'); helpText.classList.add('hidden'); return; }
+    pContainer.classList.remove('hidden'); helpText.classList.remove('hidden');
     if(mainImageIndex >= selectedFilesData.length) mainImageIndex = 0;
     
     selectedFilesData.forEach((fileObj, i) => { 
@@ -319,35 +227,17 @@ function renderImagePreviews() {
     });
 }
 
-window.th_setMainImage = function(index) { 
-    if (index === 0) return; 
-    const selectedImage = selectedFilesData.splice(index, 1)[0]; 
-    selectedFilesData.unshift(selectedImage); 
-    mainImageIndex = 0; 
-    renderImagePreviews(); 
-};
-
-window.th_removeSelectedImage = function(index, event) { 
-    event.stopPropagation(); 
-    selectedFilesData.splice(index, 1); 
-    mainImageIndex = 0; 
-    renderImagePreviews(); 
-};
+window.th_setMainImage = function(index) { if (index === 0) return; const selectedImage = selectedFilesData.splice(index, 1)[0]; selectedFilesData.unshift(selectedImage); mainImageIndex = 0; renderImagePreviews(); };
+window.th_removeSelectedImage = function(index, event) { event.stopPropagation(); selectedFilesData.splice(index, 1); mainImageIndex = 0; renderImagePreviews(); };
 
 async function saveProduct(e) { 
     e.preventDefault();
-    const btn = document.getElementById('btn-save-product');
-    const name = document.getElementById('p-name').value; 
+    const btn = document.getElementById('btn-save-product'), name = document.getElementById('p-name').value; 
     
     if(!editModeId && selectedFilesData.length === 0) return alert("Provide at least one image."); 
+    btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Uploading...'; btn.disabled = true; 
     
-    btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Uploading...'; 
-    btn.disabled = true; 
-    
-    if (mainImageIndex !== 0 && selectedFilesData.length > 1) { 
-        const mainImg = selectedFilesData.splice(mainImageIndex, 1)[0]; 
-        selectedFilesData.unshift(mainImg); 
-    }
+    if (mainImageIndex !== 0 && selectedFilesData.length > 1) { const mainImg = selectedFilesData.splice(mainImageIndex, 1)[0]; selectedFilesData.unshift(mainImg); }
 
     let uploadedUrls = [];
     for(let i=0; i<selectedFilesData.length; i++) {
@@ -356,97 +246,38 @@ async function saveProduct(e) {
             const fileName = `${Date.now()}_${Math.random().toString(36).substring(7)}.webp`;
             const { error } = await _supabase.storage.from('art-images').upload(fileName, item.blob, { contentType: 'image/webp' });
             if(error) { alert("Upload failed!"); btn.innerHTML = 'Publish to Collection'; btn.disabled = false; return; }
-            const { data: publicUrlData } = _supabase.storage.from('art-images').getPublicUrl(fileName); 
-            uploadedUrls.push({ data: publicUrlData.publicUrl });
-        } else { 
-            uploadedUrls.push({ data: item.data }); 
-        }
+            const { data: publicUrlData } = _supabase.storage.from('art-images').getPublicUrl(fileName); uploadedUrls.push({ data: publicUrlData.publicUrl });
+        } else { uploadedUrls.push({ data: item.data }); }
     }
 
-    const cleanNumericPrice = parseFloat(document.getElementById('p-price').value) || 0;
-    const mainCat = document.getElementById('p-main-category').value;
-    
-    const payload = { 
-        name: name, 
-        main_category: mainCat, 
-        category: document.getElementById('p-category').value || 'General', 
-        price: cleanNumericPrice, 
-        prep_time: document.getElementById('p-prep').value || '3-5', 
-        specs: document.getElementById('p-specs').value || '', 
-        dimensions: (mainCat !== 'Pipe Cleaner Crafts') ? document.getElementById('p-dimensions').value : '', 
-        is_customizable: (mainCat !== 'Pipe Cleaner Crafts') ? document.getElementById('p-customizable').checked : false, 
-        image_url: uploadedUrls.length > 0 ? JSON.stringify(uploadedUrls) : undefined 
-    };
+    const cleanNumericPrice = parseFloat(document.getElementById('p-price').value) || 0, mainCat = document.getElementById('p-main-category').value;
+    const payload = { name: name, main_category: mainCat, category: document.getElementById('p-category').value || 'General', price: cleanNumericPrice, prep_time: document.getElementById('p-prep').value || '3-5', specs: document.getElementById('p-specs').value || '', dimensions: (mainCat !== 'Pipe Cleaner Crafts') ? document.getElementById('p-dimensions').value : '', is_customizable: (mainCat !== 'Pipe Cleaner Crafts') ? document.getElementById('p-customizable').checked : false, image_url: uploadedUrls.length > 0 ? JSON.stringify(uploadedUrls) : undefined };
 
     let err;
-    if (editModeId) { 
-        if (uploadedUrls.length === 0) delete payload.image_url; 
-        const { error } = await _supabase.from('creations').update(payload).eq('id', editModeId); 
-        err = error; 
-    } else { 
-        const { error } = await _supabase.from('creations').insert([payload]); 
-        err = error; 
-    }
+    if (editModeId) { if (uploadedUrls.length === 0) delete payload.image_url; const { error } = await _supabase.from('creations').update(payload).eq('id', editModeId); err = error; } 
+    else { const { error } = await _supabase.from('creations').insert([payload]); err = error; }
 
-    if(!err) { 
-        showToast("Added to Collection!", "fa-check"); 
-        cancelEdit(); 
-        fetchDatabase(); 
-    } else { 
-        showToast("Error saving", "fa-times", "text-red-500"); 
-        console.error(err); 
-    }
-    btn.innerHTML = editModeId ? 'Update Product' : 'Publish to Collection'; 
-    btn.disabled = false; 
+    if(!err) { showToast("Added to Collection!", "fa-check"); cancelEdit(); fetchDatabase(); } else { showToast("Error saving", "fa-times", "text-red-500"); console.error(err); }
+    btn.innerHTML = editModeId ? 'Update Product' : 'Publish to Collection'; btn.disabled = false; 
 }
 
 window.th_triggerEdit = function(id) { 
-    const p = products.find(x => x.id === id); if(!p) return; 
-    editModeId = p.id; 
-    
+    const p = products.find(x => x.id === id); if(!p) return; editModeId = p.id; 
     document.getElementById('p-main-category').value = p.mainCategory || 'Pipe Cleaner Crafts'; togglePaintingFields();
-    document.getElementById('p-name').value = p.name; 
-    document.getElementById('p-category').value = p.category; 
-    document.getElementById('p-price').value = p.price; 
-    document.getElementById('p-prep').value = p.prepTime || ''; 
-    document.getElementById('p-specs').value = p.specs; 
-    document.getElementById('p-dimensions').value = p.dimensions || ''; 
-    document.getElementById('p-customizable').checked = p.isCustomizable || false; 
-    document.getElementById('p-image-file').value = ''; 
-    
+    document.getElementById('p-name').value = p.name; document.getElementById('p-category').value = p.category; document.getElementById('p-price').value = p.price; document.getElementById('p-prep').value = p.prepTime || ''; document.getElementById('p-specs').value = p.specs; document.getElementById('p-dimensions').value = p.dimensions || ''; document.getElementById('p-customizable').checked = p.isCustomizable || false; document.getElementById('p-image-file').value = ''; 
     selectedFilesData = [];
-    if(p.image1) selectedFilesData.push({name: 'img1', data: p.image1, isNew: false}); 
-    if(p.image2) selectedFilesData.push({name: 'img2', data: p.image2, isNew: false});
-    if(p.image3) selectedFilesData.push({name: 'img3', data: p.image3, isNew: false}); 
-    if(p.image4) selectedFilesData.push({name: 'img4', data: p.image4, isNew: false}); 
-    if(p.image5) selectedFilesData.push({name: 'img5', data: p.image5, isNew: false});
-    
-    mainImageIndex = 0; 
-    renderImagePreviews();
-    
-    document.getElementById('form-title').innerHTML = `Editing: <span class="text-luxury-rose">${p.name}</span>`; 
-    document.getElementById('cancel-edit-btn').classList.remove('hidden'); 
-    document.getElementById('btn-save-product').innerHTML = 'Update Product'; 
-    window.scrollTo({top: 0, behavior: 'smooth'}); 
+    if(p.image1) selectedFilesData.push({name: 'img1', data: p.image1, isNew: false}); if(p.image2) selectedFilesData.push({name: 'img2', data: p.image2, isNew: false}); if(p.image3) selectedFilesData.push({name: 'img3', data: p.image3, isNew: false}); if(p.image4) selectedFilesData.push({name: 'img4', data: p.image4, isNew: false}); if(p.image5) selectedFilesData.push({name: 'img5', data: p.image5, isNew: false});
+    mainImageIndex = 0; renderImagePreviews();
+    document.getElementById('form-title').innerHTML = `Editing: <span class="text-luxury-rose">${p.name}</span>`; document.getElementById('cancel-edit-btn').classList.remove('hidden'); document.getElementById('btn-save-product').innerHTML = 'Update Product'; window.scrollTo({top: 0, behavior: 'smooth'}); 
 };
 
 function cancelEdit() { 
-    editModeId = null; 
-    mainImageIndex = 0; 
-    document.getElementById('inventory-form').reset(); 
-    document.getElementById('p-main-category').value = 'Pipe Cleaner Crafts'; togglePaintingFields();
-    selectedFilesData = []; 
-    renderImagePreviews(); 
-    document.getElementById('form-title').textContent = 'Add New Art Piece'; 
-    document.getElementById('cancel-edit-btn').classList.add('hidden'); 
-    document.getElementById('btn-save-product').innerHTML = 'Publish to Collection'; 
+    editModeId = null; mainImageIndex = 0; document.getElementById('inventory-form').reset(); document.getElementById('p-main-category').value = 'Pipe Cleaner Crafts'; togglePaintingFields();
+    selectedFilesData = []; renderImagePreviews(); document.getElementById('form-title').textContent = 'Add New Art Piece'; document.getElementById('cancel-edit-btn').classList.add('hidden'); document.getElementById('btn-save-product').innerHTML = 'Publish to Collection'; 
 }
 
 window.th_triggerDelete = async function(id) { 
-    const p = products.find(x => x.id === id); 
-    if(!confirm(`Remove "${p.name}"?`)) return; 
-    
-    showToast("Removing...", "fa-spinner fa-spin"); 
+    const p = products.find(x => x.id === id); if(!confirm(`Remove "${p.name}"?`)) return; showToast("Removing...", "fa-spinner fa-spin"); 
     const { error } = await _supabase.from('creations').delete().eq('id', id);
     if(!error) { showToast("Piece Removed", "fa-trash"); fetchDatabase(); } else { showToast("Error removing piece", "fa-times", "text-red-500"); }
 };
@@ -455,12 +286,12 @@ window.th_triggerDelete = async function(id) {
 function switchAdminTab(tab) {
     const invBtn = document.getElementById('tab-inventory'), ordBtn = document.getElementById('tab-orders'), invSec = document.getElementById('admin-inventory-section'), ordSec = document.getElementById('admin-orders-section');
     if(tab === 'inventory') {
-        invBtn.className = "text-white bg-luxury-dark font-bold text-[9px] uppercase tracking-[0.1em] px-4 py-2.5 rounded-full shadow-sm";
-        ordBtn.className = "text-gray-500 bg-luxury-bg hover:text-luxury-dark font-bold text-[9px] uppercase tracking-[0.1em] px-4 py-2.5 rounded-full shadow-sm relative";
+        invBtn.className = "text-white bg-luxury-dark font-bold text-[9px] uppercase tracking-[0.1em] px-4 py-2.5 rounded-full shadow-sm transition-colors";
+        ordBtn.className = "text-gray-500 bg-luxury-bg hover:text-luxury-dark font-bold text-[9px] uppercase tracking-[0.1em] px-4 py-2.5 rounded-full shadow-sm relative transition-colors";
         invSec.classList.remove('hidden'); ordSec.classList.add('hidden');
     } else {
-        ordBtn.className = "text-white bg-luxury-dark font-bold text-[9px] uppercase tracking-[0.1em] px-4 py-2.5 rounded-full shadow-sm relative";
-        invBtn.className = "text-gray-500 bg-luxury-bg hover:text-luxury-dark font-bold text-[9px] uppercase tracking-[0.1em] px-4 py-2.5 rounded-full shadow-sm";
+        ordBtn.className = "text-white bg-luxury-dark font-bold text-[9px] uppercase tracking-[0.1em] px-4 py-2.5 rounded-full shadow-sm relative transition-colors";
+        invBtn.className = "text-gray-500 bg-luxury-bg hover:text-luxury-dark font-bold text-[9px] uppercase tracking-[0.1em] px-4 py-2.5 rounded-full shadow-sm transition-colors";
         ordSec.classList.remove('hidden'); invSec.classList.add('hidden'); switchOrderTab('active'); fetchOrders();
     }
 }
@@ -468,12 +299,12 @@ function switchAdminTab(tab) {
 function switchOrderTab(tab) {
     const activeBtn = document.getElementById('subtab-active'), completedBtn = document.getElementById('subtab-completed'), activeSec = document.getElementById('admin-active-orders'), completedSec = document.getElementById('admin-completed-orders'), title = document.getElementById('order-section-title');
     if(tab === 'active') {
-        activeBtn.className = "text-white bg-luxury-dark font-bold text-[9px] uppercase tracking-[0.1em] px-6 py-3 rounded-full shadow-sm";
-        completedBtn.className = "text-gray-500 bg-luxury-bg hover:text-luxury-dark font-bold text-[9px] uppercase tracking-[0.1em] px-6 py-3 rounded-full shadow-sm";
+        activeBtn.className = "text-white bg-luxury-dark font-bold text-[9px] uppercase tracking-[0.1em] px-6 py-3 rounded-full shadow-sm transition-colors";
+        completedBtn.className = "text-gray-500 bg-luxury-bg hover:text-luxury-dark font-bold text-[9px] uppercase tracking-[0.1em] px-6 py-3 rounded-full shadow-sm transition-colors";
         activeSec.classList.remove('hidden'); completedSec.classList.add('hidden'); title.textContent = "Concierge Desk: Active Workspace";
     } else {
-        completedBtn.className = "text-white bg-luxury-rose font-bold text-[9px] uppercase tracking-[0.1em] px-6 py-3 rounded-full shadow-sm";
-        activeBtn.className = "text-gray-500 bg-luxury-bg hover:text-luxury-dark font-bold text-[9px] uppercase tracking-[0.1em] px-6 py-3 rounded-full shadow-sm";
+        completedBtn.className = "text-white bg-luxury-rose font-bold text-[9px] uppercase tracking-[0.1em] px-6 py-3 rounded-full shadow-sm transition-colors";
+        activeBtn.className = "text-gray-500 bg-luxury-bg hover:text-luxury-dark font-bold text-[9px] uppercase tracking-[0.1em] px-6 py-3 rounded-full shadow-sm transition-colors";
         completedSec.classList.remove('hidden'); activeSec.classList.add('hidden'); title.textContent = "The Archives: Elegantly Delivered";
     }
 }
@@ -481,11 +312,8 @@ function switchOrderTab(tab) {
 // 🚨 ORDER MANAGEMENT ENGINE
 async function fetchOrders() {
     try {
-        const { data, error } = await _supabase.from('orders').select('*').order('created_at', { ascending: false }); 
-        if (error) throw error; 
-        allOrders = data;
-        const pendingCount = allOrders.filter(o => o.status === 'new' || o.status === 'pending').length; 
-        const badge = document.getElementById('admin-order-badge');
+        const { data, error } = await _supabase.from('orders').select('*').order('created_at', { ascending: false }); if (error) throw error; allOrders = data;
+        const pendingCount = allOrders.filter(o => o.status === 'new' || o.status === 'pending').length; const badge = document.getElementById('admin-order-badge');
         if (pendingCount > 0) { badge.textContent = pendingCount; badge.classList.remove('hidden'); } else { badge.classList.add('hidden'); }
         requestAnimationFrame(() => { renderActiveOrders(); renderCompletedOrders(); });
     } catch (err) { console.error("Error fetching orders", err); }
@@ -493,28 +321,15 @@ async function fetchOrders() {
 
 function extractCustomerData(reqsString) { 
     const safeStr = reqsString || "";
-    const nameMatch = safeStr.match(/Patron:\s*([^|]+)/); 
-    const phoneMatch = safeStr.match(/Phone:\s*([^|]+)/); 
-    const prepMatch = safeStr.match(/Est.\s*Prep:\s*([^|]+)/); 
-    const idMatch = safeStr.match(/Order ID:\s*([^|]+)/); 
-    return { 
-        name: nameMatch ? nameMatch[1].trim() : "Esteemed Patron", 
-        phone: phoneMatch ? phoneMatch[1].trim() : "", 
-        prepTime: prepMatch ? prepMatch[1].trim() : "a few days",
-        orderId: idMatch ? idMatch[1].trim() : "TH_LEGACY"
-    }; 
+    const nameMatch = safeStr.match(/Patron:\s*([^|]+)/); const phoneMatch = safeStr.match(/Phone:\s*([^|]+)/); const prepMatch = safeStr.match(/Est.\s*Prep:\s*([^|]+)/); const idMatch = safeStr.match(/ID:\s*([^|]+)/); 
+    return { name: nameMatch ? nameMatch[1].trim() : "Esteemed Patron", phone: phoneMatch ? phoneMatch[1].trim() : "", prepTime: prepMatch ? prepMatch[1].trim() : "a few days", orderId: idMatch ? idMatch[1].trim() : "TH_LEGACY" }; 
 }
 
 function buildOrderItemsVisual(orderDetailsData) {
     let items = [], html = "";
     try { 
-        items = JSON.parse(orderDetailsData); 
-        html = `<div class="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-3">`;
-        items.forEach(i => { 
-            const img = i.image || 'https://placehold.co/100/F8E9EA/423133'; 
-            html += `<div class="flex items-center gap-3 bg-white p-2 rounded-lg border border-luxury-blush shadow-sm"><img src="${img}" class="w-12 h-12 object-cover rounded-md border border-luxury-blush bg-luxury-bg"><div><p class="text-[11px] font-bitter font-semibold text-luxury-dark line-clamp-1">${i.name}</p><p class="text-[9px] font-poppins font-bold text-luxury-rose">${i.qty}x <span class="text-gray-400 font-medium">₹${i.price}</span></p></div></div>`; 
-        }); 
-        html += `</div>`;
+        items = JSON.parse(orderDetailsData); html = `<div class="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-3">`;
+        items.forEach(i => { const img = i.image || 'https://placehold.co/100/F8E9EA/423133'; html += `<div class="flex items-center gap-3 bg-white p-2 rounded-lg border border-luxury-blush shadow-sm"><img src="${img}" class="w-12 h-12 object-cover rounded-md border border-luxury-blush bg-luxury-bg"><div><p class="text-[11px] font-bitter font-semibold text-luxury-dark line-clamp-1">${i.name}</p><p class="text-[9px] font-poppins font-bold text-luxury-rose">${i.qty}x <span class="text-gray-400 font-medium">₹${i.price}</span></p></div></div>`; }); html += `</div>`;
     } catch { html = `<p class="font-bitter text-luxury-dark text-[13px] whitespace-pre-wrap font-semibold mb-2 leading-relaxed">${(orderDetailsData || '').trim()}</p>`; }
     return html;
 }

@@ -1,6 +1,6 @@
 /**
- * Khushiified Art - Enterprise Storefront Engine
- * Version: 15.0.0 - Fully Complete & Stable Build
+ * Twisted Happiness - Core Storefront Engine
+ * Version: 15.5.0 - 100% Complete, Stable, & Globally Bound
  */
 
 const SUPABASE_URL = "https://gvrfucjtnyqfkdynrmqs.supabase.co"; 
@@ -15,125 +15,63 @@ const DISCOUNT_TIERS = [
     { threshold: 299,  type: 'flat',    value: 30, label: '₹30 OFF VIP' }
 ];
 
-// 🛡️ DEFENSIVE CACHE PARSER
+// ==========================================
+// 🛡️ CACHE & STATE MANAGEMENT
+// ==========================================
 function safeJSONParse(key, fallback) { 
-    try { 
-        const item = localStorage.getItem(key); 
-        const parsed = item ? JSON.parse(item) : fallback; 
-        if (Array.isArray(fallback) && !Array.isArray(parsed)) return fallback;
-        return parsed;
-    } catch (e) { 
-        localStorage.removeItem(key); 
-        return fallback; 
-    } 
+    try { const item = localStorage.getItem(key); return item ? JSON.parse(item) : fallback; } 
+    catch (e) { localStorage.removeItem(key); return fallback; } 
 }
 
-// 📦 GLOBAL STATE
-let settings = safeJSONParse('th_settings', null);
-if (!settings || settings.storeName !== "Khushiified Art") {
-    settings = { 
-        storeName: "Khushiified Art", 
-        instagram: "https://www.instagram.com/khushiified_art?igsh=aW1vZ2N4cTl2OWo=", 
-        whatsapp: "9909310501", 
-        upiId: "khushisj315@oksbi", 
-        countryCode: "+91" 
-    };
-    localStorage.setItem('th_settings', JSON.stringify(settings));
-}
-
+let settings = safeJSONParse('th_settings', { storeName: "Twisted Happiness", instagram: "https://www.instagram.com/khushiified_art?igsh=aW1vZ2N4cTl2OWo=", whatsapp: "9909310501", upiId: "khushisj315@oksbi", countryCode: "+91" });
 let cart = safeJSONParse('th_cart', []); 
 let localWishlist = safeJSONParse('th_wishlist', []);
 let savedAddresses = safeJSONParse('th_saved_addresses', []);
 
-let products = []; 
-let currentMainCategory = 'All'; 
-let activeSubCategories = []; 
-let currentSortMode = 'newest'; 
-let currentSearchQuery = ''; 
-let searchTimeout = null; 
-let modalImages = []; 
-let currentSlideIndex = 0; 
-let isAnimating = false; 
-let currentLightboxIndex = 0; 
-let isLightboxAnimating = false; 
-let currentModalLevel = 0; 
-let statePushed = false;
+let products = []; let currentMainCategory = 'All'; let activeSubCategories = []; let currentSortMode = 'newest'; let currentSearchQuery = ''; 
+let searchTimeout = null; let modalImages = []; let currentSlideIndex = 0; let isAnimating = false; let currentLightboxIndex = 0; let isLightboxAnimating = false; let currentModalLevel = 0; let statePushed = false;
+let checkoutStep = 1; let pendingOrderPayload = null; let currentOrderReference = null; let currentDeliveryFee = 0; let activeCouponValue = 0; let activeCouponCode = "";
+let selectedAddressIndex = savedAddresses.length > 0 ? 0 : -1; let editingAddressIndex = null; let currentSessionUser = null; let authModalMode = "login"; 
 
-// Checkout State
-let checkoutStep = 1; 
-let pendingOrderPayload = null; 
-let currentOrderReference = null; 
-let currentDeliveryFee = 0; 
-let activeCouponValue = 0; 
-let activeCouponCode = "";
-
-// Auth & Address State
-let selectedAddressIndex = savedAddresses.length > 0 ? 0 : -1; 
-let editingAddressIndex = null; 
-let currentSessionUser = null; 
-let authModalMode = "login"; 
-
-// 🚀 INITIALIZATION
+// ==========================================
+// 🚀 INITIALIZATION & SETTINGS
+// ==========================================
 function initApp() {
     try { 
         _supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY); 
         setupAuthSessionListener(); 
-        fetchDatabase(); 
-    } catch (e) { 
-        console.error("Supabase Init Error:", e); 
-        dismissPreloader(); 
-    }
-    applyDynamicSettings(); 
-    bindDOMEvents(); 
-    updateCartCount(); 
-    setupSocialLinks();
+        fetchRuntimeSettings();
+    } catch (e) { console.error("Supabase Init Error:", e); dismissPreloader(); }
 }
+document.addEventListener('DOMContentLoaded', initApp);
 
-if (document.readyState === 'loading') { document.addEventListener('DOMContentLoaded', initApp); } else { initApp(); }
-
-// 🚨 LOADERS & SETTINGS
-function dismissPreloader() {
-    const preloader = document.getElementById('luxury-page-preloader');
-    if (preloader && !preloader.classList.contains('hidden')) {
-        preloader.style.opacity = '0';
-        preloader.style.pointerEvents = 'none';
-        setTimeout(() => preloader.remove(), 700);
-    }
-}
-
-function showInteractionLoader(text = "Please wait...") {
-    const loader = document.getElementById('interaction-loader');
-    if(!loader) return;
-    document.getElementById('interaction-loader-text').textContent = text;
-    loader.classList.remove('hidden'); loader.classList.add('flex');
-    requestAnimationFrame(() => loader.classList.remove('opacity-0'));
-}
-
-function hideInteractionLoader() {
-    const loader = document.getElementById('interaction-loader');
-    if(!loader) return;
-    loader.classList.add('opacity-0');
-    setTimeout(() => { loader.classList.add('hidden'); loader.classList.remove('flex'); }, 300);
+async function fetchRuntimeSettings() {
+    try {
+        const { data } = await _supabase.from('store_config').select('*').limit(1);
+        if(data && data.length > 0) {
+            const cloud = data[0];
+            settings = { storeName: cloud.store_name, instagram: cloud.instagram_url, whatsapp: cloud.whatsapp_num, upiId: cloud.upi_id, countryCode: cloud.country_code || "+91" };
+            localStorage.setItem('th_settings', JSON.stringify(settings));
+        }
+    } catch(e) { console.warn("Local storage fallback active"); }
+    applyDynamicSettings(); bindDOMEvents(); injectSkeletons(); fetchDatabase(); setupSocialLinks();
 }
 
 function applyDynamicSettings() {
-    const name = settings.storeName || "Khushiified Art";
+    const name = settings.storeName || "Twisted Happiness";
     document.title = `${name} | Fine Art & Handcrafted Gifts`;
-    if(document.getElementById('dynamic-store-name')) document.getElementById('dynamic-store-name').textContent = name;
-    if(document.getElementById('footer-dynamic-name')) document.getElementById('footer-dynamic-name').textContent = name;
-    if(document.getElementById('preloader-brand')) document.getElementById('preloader-brand').textContent = name;
+    ['dynamic-store-name', 'footer-dynamic-name', 'preloader-brand'].forEach(id => {
+        if(document.getElementById(id)) document.getElementById(id).textContent = name;
+    });
     if(document.getElementById('current-year')) document.getElementById('current-year').textContent = new Date().getFullYear();
 }
 
-function isMobileDevice() { return /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent); }
-
 function setupSocialLinks() {
-    const phone = (settings.whatsapp || "9909310501").replace(/\D/g, '');
-    const code = (settings.countryCode || "91").replace(/\D/g, '');
-    const waLink = document.getElementById('footer-whatsapp');
-    const floatLink = document.getElementById('floating-wa-btn');
-    if(waLink) waLink.href = `https://wa.me/${code}${phone}?text=Hello!%20I%20am%20exploring%20your%20beautiful%20collection.`;
-    if(floatLink) floatLink.href = `https://wa.me/${code}${phone}?text=Hello!%20I%20am%20exploring%20your%20beautiful%20collection.`;
+    const phone = (settings.whatsapp || "9909310501").replace(/\D/g, ''), code = (settings.countryCode || "91").replace(/\D/g, '');
+    const msg = "Hello!%20I%20am%20exploring%20your%20beautiful%20collection.";
+    const waLink = document.getElementById('footer-whatsapp'), floatLink = document.getElementById('floating-wa-btn');
+    if(waLink) waLink.href = `https://wa.me/${code}${phone}?text=${msg}`;
+    if(floatLink) floatLink.href = `https://wa.me/${code}${phone}?text=${msg}`;
     
     const igLink = document.getElementById('footer-instagram');
     if(igLink) {
@@ -145,7 +83,37 @@ function setupSocialLinks() {
     }
 }
 
-// 🚨 DOM EVENTS
+// ==========================================
+// 🚨 UI LOADERS & UTILITIES
+// ==========================================
+function dismissPreloader() { const p = document.getElementById('luxury-page-preloader'); if(p && !p.classList.contains('hidden')){ p.style.opacity = '0'; p.style.pointerEvents = 'none'; setTimeout(() => p.remove(), 700); } }
+function showInteractionLoader(txt = "Please wait...") { const l = document.getElementById('interaction-loader'); if(!l) return; document.getElementById('interaction-loader-text').textContent = txt; l.classList.remove('hidden'); l.classList.add('flex'); requestAnimationFrame(() => l.classList.remove('opacity-0')); }
+function hideInteractionLoader() { const l = document.getElementById('interaction-loader'); if(!l) return; l.classList.add('opacity-0'); setTimeout(() => { l.classList.add('hidden'); l.classList.remove('flex'); }, 300); }
+function isMobileDevice() { return /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent); }
+
+window.showToast = function(msg, icon = 'fa-check', color = 'text-luxury-rose') { 
+    const t = document.getElementById('toast'); if(!t) return;
+    document.getElementById('toast-msg').textContent = msg; 
+    document.getElementById('toast-icon').className = `fas ${icon} ${color} text-sm drop-shadow-sm`; 
+    requestAnimationFrame(() => { t.classList.remove('opacity-0', 'translate-y-10'); setTimeout(() => t.classList.add('opacity-0', 'translate-y-10'), 3000); }); 
+};
+
+window.safePushState = function(level) { try { history.pushState({ level: level }, ""); statePushed = true; } catch(e) { statePushed = false; } };
+
+function setupScrollReveal() { 
+    const observer = new IntersectionObserver((entries) => { entries.forEach(entry => { if(entry.isIntersecting) { requestAnimationFrame(() => { entry.target.classList.remove('opacity-0', 'translate-y-4'); observer.unobserve(entry.target); }); } }); }, { threshold: 0.05, rootMargin: '50px' }); 
+    document.querySelectorAll('.scroll-reveal').forEach(el => observer.observe(el)); 
+}
+
+function injectSkeletons() {
+    const loadingGrid = document.getElementById('product-grid'); if(!loadingGrid) return; let skeletonHTML = '';
+    for(let i=0; i<12; i++) { const delay = (i % 6) * 0.05; skeletonHTML += `<div class="w-full relative opacity-100 transform translate-y-0" style="animation: fadeInUp 0.4s ease-out forwards; animation-delay: ${delay}s;"><div class="w-full bg-luxury-blush/30 rounded-2xl aspect-[4/5] mb-3"></div><div class="px-1"><div class="h-3 rounded-full bg-luxury-blush/60 w-3/4 mb-2.5"></div><div class="h-4 rounded-full bg-luxury-blush/60 w-1/3"></div></div></div>`; }
+    loadingGrid.innerHTML = skeletonHTML;
+}
+
+// ==========================================
+// 🚨 DOM EVENT BINDING
+// ==========================================
 function bindDOMEvents() {
     document.addEventListener('keydown', (e) => { if (e.ctrlKey && e.shiftKey && e.key.toLowerCase() === 'k') { e.preventDefault(); window.location.href = '/khushiified'; } });
     document.getElementById('prof-pin')?.addEventListener('input', () => { if (document.getElementById('checkout-overlay') && !document.getElementById('checkout-overlay').classList.contains('hidden')) updateCheckoutUI(); });
@@ -154,17 +122,15 @@ function bindDOMEvents() {
     document.getElementById('sortInputMob')?.addEventListener('change', (e) => setSortMode(e.target.value));
     document.getElementById('sortInputDesk')?.addEventListener('change', (e) => setSortMode(e.target.value));
     document.getElementById('sub-category-filters-mob')?.addEventListener('change', (e) => filterSubCategory(e.target.value));
-    
     document.getElementById('track-order-form')?.addEventListener('submit', handleTrackOrder);
     document.getElementById('track-order-form-guest')?.addEventListener('submit', handleTrackOrderGuest);
     document.getElementById('customer-auth-form')?.addEventListener('submit', handleAuthFormSubmit);
-    
     setupTouchCarousel(); setupLightboxTouch();
 }
 
-window.safePushState = function(level) { try { history.pushState({ level: level }, ""); statePushed = true; } catch(e) { statePushed = false; } };
-
-// 🚨 AUTHENTICATION
+// ==========================================
+// 🚨 AUTHENTICATION & PROFILE
+// ==========================================
 function setupAuthSessionListener() {
     _supabase.auth.onAuthStateChange((event, session) => {
         currentSessionUser = session ? session.user : null;
@@ -175,212 +141,123 @@ function setupAuthSessionListener() {
     });
 }
 
-window.handleAccountHeaderClick = function() { 
-    if (currentSessionUser) window.openCustomerProfile(); else window.openCustomerAuthModal(); 
-};
-
-window.openCustomerAuthModal = function() { 
-    authModalMode = "login"; 
-    document.getElementById('auth-panel-heading').textContent = "Welcome Back"; 
-    document.getElementById('btn-auth-submit').textContent = "Sign In"; 
-    document.getElementById('customer-auth-form').reset(); 
-    window.openPolicyModal('customer-auth-modal', 'customer-auth-box'); 
-};
-
+window.handleAccountHeaderClick = function() { if (currentSessionUser) window.openCustomerProfile(); else window.openCustomerAuthModal(); };
+window.openCustomerAuthModal = function() { authModalMode = "login"; document.getElementById('auth-panel-heading').textContent = "Welcome Back"; document.getElementById('btn-auth-submit').textContent = "Sign In"; document.getElementById('customer-auth-form').reset(); window.openPolicyModal('customer-auth-modal', 'customer-auth-box'); };
 window.closeCustomerAuthModal = function() { window.closePolicyModal('customer-auth-modal', 'customer-auth-box'); };
-
-window.toggleAuthViewMode = function() {
-    authModalMode = (authModalMode === "login") ? "signup" : "login";
-    document.getElementById('auth-panel-heading').textContent = authModalMode === "login" ? "Welcome Back" : "Create Account";
-    document.getElementById('btn-auth-submit').textContent = authModalMode === "login" ? "Sign In" : "Register Account";
-};
+window.toggleAuthViewMode = function() { authModalMode = (authModalMode === "login") ? "signup" : "login"; document.getElementById('auth-panel-heading').textContent = authModalMode === "login" ? "Welcome Back" : "Create Account"; document.getElementById('btn-auth-submit').textContent = authModalMode === "login" ? "Sign In" : "Register Account"; };
 
 async function handleAuthFormSubmit(e) {
-    e.preventDefault(); const email = document.getElementById('auth-email').value.trim(), password = document.getElementById('auth-password').value, btn = document.getElementById('btn-auth-submit');
-    btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Processing...'; btn.disabled = true;
+    e.preventDefault(); const em = document.getElementById('auth-email').value.trim(), pw = document.getElementById('auth-password').value, b = document.getElementById('btn-auth-submit');
+    b.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Processing...'; b.disabled = true;
     try {
-        if (authModalMode === "login") {
-            const { error } = await _supabase.auth.signInWithPassword({ email, password }); if (error) throw error; 
-            window.showToast("Welcome Back!", "fa-user-check");
-        } else {
-            const { error } = await _supabase.auth.signUp({ email, password }); if (error) throw error; 
-            window.showToast("Registration Successful!", "fa-check-circle");
-        }
-        window.closeCustomerAuthModal();
-        if(cart.length > 0) setTimeout(() => { window.openCheckoutBase(); }, 500);
-    } catch(err) { alert(err.message); } finally { btn.innerHTML = authModalMode === "login" ? "Sign In" : "Register Account"; btn.disabled = false; }
+        if (authModalMode === "login") { const { error } = await _supabase.auth.signInWithPassword({ email: em, password: pw }); if (error) throw error; window.showToast("Welcome Back!", "fa-user-check"); } 
+        else { const { error } = await _supabase.auth.signUp({ email: em, password: pw }); if (error) throw error; window.showToast("Registration Successful!", "fa-check-circle"); }
+        window.closeCustomerAuthModal(); if(cart.length > 0) setTimeout(() => { window.openCheckoutBase(); }, 500);
+    } catch(err) { alert(err.message); } finally { b.innerHTML = authModalMode === "login" ? "Sign In" : "Register Account"; b.disabled = false; }
 }
 
-window.handleGoogleOAuthLogin = async function() { 
-    try { const { error } = await _supabase.auth.signInWithOAuth({ provider: 'google', options: { redirectTo: window.location.origin } }); if (error) throw error; } catch (err) { alert(err.message); } 
-};
+window.handleGoogleOAuthLogin = async function() { try { const { error } = await _supabase.auth.signInWithOAuth({ provider: 'google', options: { redirectTo: window.location.origin } }); if (error) throw error; } catch (err) { alert(err.message); } };
 
 window.openCustomerProfile = async function() { 
     if(!currentSessionUser) return; currentModalLevel = 1; window.safePushState(1); 
-    const overlay = document.getElementById('customer-profile-overlay'); 
-    document.getElementById('profile-meta-email').textContent = currentSessionUser.email; 
+    const o = document.getElementById('customer-profile-overlay'); document.getElementById('profile-meta-email').textContent = currentSessionUser.email; 
     document.getElementById('track-order-id').value = ''; document.getElementById('track-result-container').classList.add('hidden');
-    overlay.classList.remove('hidden'); document.body.classList.add('overflow-hidden'); renderCustomerOrdersPipeline(); 
-    requestAnimationFrame(() => { overlay.classList.remove('opacity-0'); overlay.classList.add('opacity-100'); }); 
+    o.classList.remove('hidden'); document.body.classList.add('overflow-hidden'); renderCustomerOrdersPipeline(); 
+    requestAnimationFrame(() => { o.classList.remove('opacity-0'); o.classList.add('opacity-100'); }); 
 };
 
-window.closeCustomerProfile = function() { 
-    const overlay = document.getElementById('customer-profile-overlay'); 
-    requestAnimationFrame(() => { overlay.classList.remove('opacity-100'); overlay.classList.add('opacity-0'); setTimeout(() => { overlay.classList.add('hidden'); document.body.classList.remove('overflow-hidden'); }, 300); }); 
-};
+window.closeCustomerProfile = function() { const o = document.getElementById('customer-profile-overlay'); requestAnimationFrame(() => { o.classList.remove('opacity-100'); o.classList.add('opacity-0'); setTimeout(() => { o.classList.add('hidden'); document.body.classList.remove('overflow-hidden'); }, 300); }); };
+window.handleCustomerLogout = async function() { showInteractionLoader("Signing Out..."); await _supabase.auth.signOut(); savedAddresses = []; selectedAddressIndex = -1; window.closeCustomerProfile(); hideInteractionLoader(); window.showToast("Signed Out Safely", "fa-sign-out-alt"); };
 
-window.handleCustomerLogout = async function() { 
-    showInteractionLoader("Signing Out..."); await _supabase.auth.signOut(); savedAddresses = []; selectedAddressIndex = -1; window.closeCustomerProfile(); hideInteractionLoader(); window.showToast("Signed Out Safely", "fa-sign-out-alt"); 
-};
+// ==========================================
+// 🚨 WISHLIST LOGIC
+// ==========================================
+async function syncCloudWishlist() { if (!currentSessionUser) return; try { const { data } = await _supabase.from('wishlist').select('product_id').eq('user_id', currentSessionUser.id); if (data) localWishlist = data.map(w => w.product_id); localStorage.setItem('th_wishlist', JSON.stringify(localWishlist)); } catch(e) {} }
 
-// 🚨 WISHLIST 🚨
-async function syncCloudWishlist() {
-    if (!currentSessionUser) return;
-    try { const { data } = await _supabase.from('wishlist').select('product_id').eq('user_id', currentSessionUser.id); if (data) localWishlist = data.map(w => w.product_id); localStorage.setItem('th_wishlist', JSON.stringify(localWishlist)); } catch(e) {}
-}
-
-window.th_toggleWishlistProduct = async function(productId, event) {
-    if(event) { event.preventDefault(); event.stopPropagation(); }
-    const index = localWishlist.indexOf(String(productId)); const isAdding = index === -1;
-    if (isAdding) localWishlist.push(String(productId)); else localWishlist.splice(index, 1);
+window.th_toggleWishlistProduct = async function(pid, e) {
+    if(e) { e.preventDefault(); e.stopPropagation(); }
+    const idx = localWishlist.indexOf(String(pid)), isA = idx === -1;
+    if (isA) localWishlist.push(String(pid)); else localWishlist.splice(idx, 1);
     localStorage.setItem('th_wishlist', JSON.stringify(localWishlist));
-
-    if (currentSessionUser) {
-        try {
-            if (isAdding) await _supabase.from('wishlist').insert([{ user_id: currentSessionUser.id, product_id: String(productId) }]); 
-            else await _supabase.from('wishlist').delete().eq('user_id', currentSessionUser.id).eq('product_id', String(productId)); 
-        } catch(e) {}
-    }
-    window.showToast(isAdding ? "Added to Wishlist" : "Removed from Wishlist", "fa-heart", isAdding ? "text-red-500" : "text-gray-300"); updateWishlistUIElements(productId, isAdding);
+    if (currentSessionUser) { try { if (isA) await _supabase.from('wishlist').insert([{ user_id: currentSessionUser.id, product_id: String(pid) }]); else await _supabase.from('wishlist').delete().eq('user_id', currentSessionUser.id).eq('product_id', String(pid)); } catch(er) {} }
+    window.showToast(isA ? "Added to Wishlist" : "Removed from Wishlist", "fa-heart", isA ? "text-red-500" : "text-gray-300"); updateWishlistUIElements(pid, isA);
 };
 
-function updateWishlistUIElements(id, isAdded) {
-    const btn = document.getElementById('modal-wishlist-toggle-btn');
-    if (btn && document.getElementById('product-view').getAttribute('data-current-id') == id) btn.innerHTML = `<i class="${isAdded ? 'fas fa-heart text-red-500' : 'far fa-heart text-gray-300'}"></i>`;
-    const cards = document.querySelectorAll(`[data-card-id="${id}"] .wish-icon`); cards.forEach(c => { c.className = isAdded ? "fas fa-heart text-red-500 wish-icon" : "far fa-heart text-gray-300 wish-icon"; });
+function updateWishlistUIElements(id, isA) {
+    const btn = document.getElementById('modal-wishlist-toggle-btn'); if (btn && document.getElementById('product-view').getAttribute('data-current-id') == id) btn.innerHTML = `<i class="${isA ? 'fas fa-heart text-red-500' : 'far fa-heart text-gray-300'}"></i>`;
+    document.querySelectorAll(`[data-card-id="${id}"] .wish-icon`).forEach(c => { c.className = isA ? "fas fa-heart text-red-500 wish-icon" : "far fa-heart text-gray-300 wish-icon"; });
 }
 
-// 🚨 CALCULATIONS
-function getDiscountPercent(idStr) { let hash = 0; for (let i = 0; i < idStr.length; i++) { hash = idStr.charCodeAt(i) + ((hash << 5) - hash); } return (Math.abs(hash) % 31) + 10; }
-function calculateCartDiscount(subtotal) { let discount = 0; let currentTier = null; let nextTier = null; for (let i = 0; i < DISCOUNT_TIERS.length; i++) { if (subtotal >= DISCOUNT_TIERS[i].threshold) { currentTier = DISCOUNT_TIERS[i]; nextTier = i > 0 ? DISCOUNT_TIERS[i - 1] : null; break; } } if (!currentTier && subtotal > 0) nextTier = DISCOUNT_TIERS[DISCOUNT_TIERS.length - 1]; if (currentTier) { if (currentTier.type === 'percent') discount = Math.round(subtotal * (currentTier.value / 100)); else discount = currentTier.value; } let amountNeeded = nextTier ? nextTier.threshold - subtotal : 0; return { discount, currentTier, nextTier, amountNeeded }; }
-function calculateTotalPrepTime(items) { let absoluteMinDays = 999; items.forEach(item => { const pt = item.prepTime || '3'; const matches = pt.match(/\d+/g); if(matches && matches.length >= 1) { let minForProduct = parseInt(matches[0]); if (minForProduct < absoluteMinDays) absoluteMinDays = minForProduct; } else { if (3 < absoluteMinDays) absoluteMinDays = 3; } }); if (absoluteMinDays === 999) absoluteMinDays = 3; const totalQuantity = items.reduce((sum, item) => sum + parseInt(item.qty || 1), 0); return `${absoluteMinDays * totalQuantity} Days`; }
-function updateCartCount() { requestAnimationFrame(() => { const count = cart.reduce((sum, item) => sum + parseInt(item.qty || 1), 0); document.querySelectorAll('#cart-count, #product-page-cart-count').forEach(el => { if(el) el.textContent = count; }); }); }
-
-function calculateEDDBracket(prepTimeStr) {
-    const matches = (prepTimeStr || '3').match(/\d+/g); let minDays = matches && matches.length > 0 ? parseInt(matches[0]) : 3; let maxDays = matches && matches.length > 1 ? parseInt(matches[1]) : minDays + 2;
-    const today = new Date(); const minDate = new Date(); minDate.setDate(today.getDate() + minDays + 2); const maxDate = new Date(); maxDate.setDate(today.getDate() + maxDays + 4);
-    const options = { day: 'numeric', month: 'short' }; return `Estimated Delivery: ${minDate.toLocaleDateString('en-IN', options)} — ${maxDate.toLocaleDateString('en-IN', options)}`;
-}
+// ==========================================
+// 🚨 MATH & CALCULATORS
+// ==========================================
+function getDiscountPercent(idStr) { let h = 0; for (let i = 0; i < idStr.length; i++) h = idStr.charCodeAt(i) + ((h << 5) - h); return (Math.abs(h) % 31) + 10; }
+function calculateCartDiscount(sub) { let d = 0, cTier = null, nTier = null; for (let i = 0; i < DISCOUNT_TIERS.length; i++) { if (sub >= DISCOUNT_TIERS[i].threshold) { cTier = DISCOUNT_TIERS[i]; nTier = i > 0 ? DISCOUNT_TIERS[i - 1] : null; break; } } if (!cTier && sub > 0) nTier = DISCOUNT_TIERS[DISCOUNT_TIERS.length - 1]; if (cTier) { if (cTier.type === 'percent') d = Math.round(sub * (cTier.value / 100)); else d = cTier.value; } return { discount: d, currentTier: cTier, nextTier: nTier, amountNeeded: nTier ? nTier.threshold - sub : 0 }; }
+function calculateTotalPrepTime(items) { let minD = 999; items.forEach(i => { const pt = i.prepTime || '3'; const m = pt.match(/\d+/g); if(m && m.length >= 1) { let mp = parseInt(m[0]); if (mp < minD) minD = mp; } else { if (3 < minD) minD = 3; } }); if (minD === 999) minD = 3; const tq = items.reduce((s, i) => s + parseInt(i.qty || 1), 0); return `${minD * tq} Days`; }
+function updateCartCount() { requestAnimationFrame(() => { const c = cart.reduce((s, i) => s + parseInt(i.qty || 1), 0); document.querySelectorAll('#cart-count, #product-page-cart-count').forEach(el => { if(el) el.textContent = c; }); }); }
+function calculateEDDBracket(pt) { const m = (pt || '3').match(/\d+/g); let minD = m && m.length > 0 ? parseInt(m[0]) : 3, maxD = m && m.length > 1 ? parseInt(m[1]) : minD + 2; const td = new Date(), minDt = new Date(), maxDt = new Date(); minDt.setDate(td.getDate() + minD + 2); maxDt.setDate(td.getDate() + maxD + 4); const opt = { day: 'numeric', month: 'short' }; return `Estimated Delivery: ${minDt.toLocaleDateString('en-IN', opt)} — ${maxDt.toLocaleDateString('en-IN', opt)}`; }
 
 window.applyCouponCode = function() {
-    const input = document.getElementById('checkout-promo-input'); const feedback = document.getElementById('checkout-promo-feedback'); if(!input || !feedback) return;
-    const code = input.value.trim().toUpperCase();
-    if (code === "WELCOME10") { activeCouponValue = 10; activeCouponCode = "WELCOME10"; feedback.textContent = "WELCOME10 applied! Extra 10% OFF."; feedback.className = "text-[9px] font-bold uppercase tracking-wide mt-1.5 text-green-600 block"; } 
-    else if (code === "ARTISAN30") { activeCouponValue = 30; activeCouponCode = "ARTISAN30"; feedback.textContent = "ARTISAN30 applied! Extra 30% OFF."; feedback.className = "text-[9px] font-bold uppercase tracking-wide mt-1.5 text-green-600 block"; } 
-    else { activeCouponValue = 0; activeCouponCode = ""; feedback.textContent = "Invalid Coupon Code."; feedback.className = "text-[9px] font-bold uppercase tracking-wide mt-1.5 text-red-500 block"; }
+    const i = document.getElementById('checkout-promo-input'), f = document.getElementById('checkout-promo-feedback'); if(!i || !f) return; const c = i.value.trim().toUpperCase();
+    if (c === "WELCOME10") { activeCouponValue = 10; activeCouponCode = "WELCOME10"; f.textContent = "WELCOME10 applied! Extra 10% OFF."; f.className = "text-[9px] font-bold uppercase tracking-wide mt-1.5 text-green-600 block"; } 
+    else if (c === "ARTISAN30") { activeCouponValue = 30; activeCouponCode = "ARTISAN30"; f.textContent = "ARTISAN30 applied! Extra 30% OFF."; f.className = "text-[9px] font-bold uppercase tracking-wide mt-1.5 text-green-600 block"; } 
+    else { activeCouponValue = 0; activeCouponCode = ""; f.textContent = "Invalid Coupon Code."; f.className = "text-[9px] font-bold uppercase tracking-wide mt-1.5 text-red-500 block"; }
     updateCheckoutUI();
 };
 
+// ==========================================
 // 🚨 DATABASE FETCHING
-async function fetchDatabase() { 
-    try { 
-        const { data, error } = await _supabase.from('creations').select('*').order('created_at', { ascending: false }); if (error) throw error;
-        products = (data || []).map(row => {
-            let parsedImages = []; try { parsedImages = JSON.parse(row.image_url) || []; } catch(e) {}
-            return {
-                id: row.id, name: row.name || 'Untitled Art', category: row.category || '', mainCategory: row.main_category || 'Pipe Cleaner Crafts', price: row.price || 0, prepTime: row.prep_time || '3-5', specs: row.specs || '', dimensions: row.dimensions || '', isCustomizable: row.is_customizable || false,
-                image1: parsedImages.length > 0 ? parsedImages[0].data : '', image2: parsedImages.length > 1 ? parsedImages[1].data : '', image3: parsedImages.length > 2 ? parsedImages[2].data : '', image4: parsedImages.length > 3 ? parsedImages[3].data : '', image5: parsedImages.length > 4 ? parsedImages[4].data : ''
-            };
+// ==========================================
+function fetchDatabase() { 
+    _supabase.from('creations').select('*').order('created_at', { ascending: false }).then(({data, error}) => {
+        if(error) { dismissPreloader(); return; }
+        products = (data || []).map(r => { let pi = []; try { pi = JSON.parse(r.image_url) || []; } catch(e) {}
+            return { id: r.id, name: r.name || 'Untitled Art', category: r.category || '', mainCategory: r.main_category || 'Pipe Cleaner Crafts', price: r.price || 0, prepTime: r.prep_time || '3-5', specs: r.specs || '', dimensions: r.dimensions || '', isCustomizable: r.is_customizable || false, image1: pi.length > 0 ? pi[0].data : '', image2: pi.length > 1 ? pi[1].data : '', image3: pi.length > 2 ? pi[2].data : '', image4: pi.length > 3 ? pi[3].data : '', image5: pi.length > 4 ? pi[4].data : '' };
         });
         requestAnimationFrame(() => { renderFilters(); renderProducts(); setTimeout(dismissPreloader, 400); });
-    } catch (error) { console.error("Database Fetch Error:", error); dismissPreloader(); } 
+    });
 }
 
-function renderProducts(searchQuery = '') { 
-    const grid = document.getElementById('product-grid'); if(!grid) return; grid.innerHTML = ''; 
-    let filtered = products.filter(p => p.name.toLowerCase().includes(searchQuery.toLowerCase()));
-    if(currentMainCategory !== 'All') filtered = filtered.filter(p => p.mainCategory === currentMainCategory);
-    if(activeSubCategories.length > 0) filtered = filtered.filter(p => activeSubCategories.includes(p.category));
-    
-    if(currentSortMode === 'low') filtered.sort((a,b) => parseFloat(a.price) - parseFloat(b.price)); 
-    if(currentSortMode === 'high') filtered.sort((a,b) => parseFloat(b.price) - parseFloat(a.price)); 
-    if(currentSortMode === 'newest') filtered.reverse(); 
+function renderProducts(sq = '') { 
+    const g = document.getElementById('product-grid'); if(!g) return; g.innerHTML = ''; 
+    let f = products.filter(p => p.name.toLowerCase().includes(sq.toLowerCase()));
+    if(currentMainCategory !== 'All') f = f.filter(p => p.mainCategory === currentMainCategory);
+    if(activeSubCategories.length > 0) f = f.filter(p => activeSubCategories.includes(p.category));
+    if(currentSortMode === 'low') f.sort((a,b) => parseFloat(a.price) - parseFloat(b.price)); 
+    if(currentSortMode === 'high') f.sort((a,b) => parseFloat(b.price) - parseFloat(a.price)); 
+    if(currentSortMode === 'newest') f.reverse(); 
 
-    if(filtered.length === 0) { grid.innerHTML = '<div class="col-span-full text-center py-20 text-gray-400 font-medium text-sm w-full"><i class="fas fa-box-open text-4xl block mb-3 opacity-30"></i> No creations found.</div>'; return; }
-
-    const fragment = document.createDocumentFragment();
-    filtered.forEach((p) => { fragment.appendChild(generateProductCardHTML(p)); }); grid.appendChild(fragment); setupScrollReveal();
+    if(f.length === 0) { g.innerHTML = '<div class="col-span-full text-center py-20 text-gray-400 font-medium text-sm w-full"><i class="fas fa-box-open text-4xl block mb-3 opacity-30"></i> No creations found matching your search.</div>'; return; }
+    const frag = document.createDocumentFragment();
+    f.forEach((p) => { frag.appendChild(generateProductCardHTML(p)); }); g.appendChild(frag); setupScrollReveal();
 }
 
 function generateProductCardHTML(p) {
-    const cleanPrice = Number(String(p.price || 0).replace(/[^0-9.,]/g, '')); const discountPercent = getDiscountPercent(String(p.id)); const originalPrice = Math.round(cleanPrice * (1 + (discountPercent / 100)));
-    const mainImg = (typeof p.image1 === 'string' && p.image1.trim() !== '') ? p.image1 : 'https://placehold.co/400x500/F8E9EA/423133';
-    const isHearted = localWishlist.includes(String(p.id));
-    
-    const card = document.createElement('div'); card.className = `w-full relative cursor-pointer opacity-0 transform translate-y-4 transition-all duration-400 ease-out group scroll-reveal`; card.setAttribute('data-card-id', p.id); card.addEventListener('click', () => window.openProductPage(p.id));
-    
-    card.innerHTML = `
-        <div class="w-full relative rounded-2xl overflow-hidden group shadow-sm bg-gradient-to-tr from-luxury-bg to-white border border-luxury-blush aspect-[4/5] mb-2">
-            <span class="absolute top-2.5 left-2.5 z-10 bg-white/95 text-luxury-dark text-[7px] sm:text-[8px] font-bold px-2.5 py-1 rounded-md uppercase tracking-[0.15em] border border-luxury-blush shadow-sm">${p.category || 'Art'}</span>
-            <button type="button" class="wishlist-btn absolute top-2.5 right-2.5 bg-white/95 w-7 h-7 flex items-center justify-center rounded-full border border-luxury-blush z-20 shadow-sm transition-transform active:scale-95">
-                <i class="${isHearted ? 'fas fa-heart text-red-500' : 'far fa-heart text-gray-300'} wish-icon"></i>
-            </button>
-            <img loading="lazy" decoding="async" src="${mainImg}" alt="${p.name}" class="absolute inset-0 w-full h-full object-cover">
-        </div>
-        <div class="px-1 flex flex-col justify-start text-left w-full">
-            <h3 class="font-bitter font-semibold text-[11px] sm:text-[12px] text-luxury-dark leading-snug w-full transition-colors group-hover:text-luxury-rose mb-0.5 line-clamp-2">${p.name}</h3>
-            <div class="flex items-center md:items-baseline gap-1.5 flex-wrap w-full">
-                <span class="font-poppins font-extrabold text-luxury-dark text-[14px] sm:text-[15px] tracking-tight leading-none">₹${cleanPrice}</span>
-                <span class="font-poppins text-gray-400 text-[9px] font-medium line-through leading-none">₹${originalPrice}</span>
-            </div>
-        </div>`;
-        
-    const wishBtn = card.querySelector('.wishlist-btn');
-    if (wishBtn) { wishBtn.addEventListener('click', (e) => { e.preventDefault(); e.stopPropagation(); window.th_toggleWishlistProduct(p.id, e); }); }
-    return card;
+    const cp = Number(String(p.price || 0).replace(/[^0-9.,]/g, '')), dp = getDiscountPercent(String(p.id)), op = Math.round(cp * (1 + (dp / 100))), img = (typeof p.image1 === 'string' && p.image1.trim() !== '') ? p.image1 : 'https://placehold.co/400x500/F8E9EA/423133', isH = localWishlist.includes(String(p.id));
+    const c = document.createElement('div'); c.className = `w-full relative cursor-pointer opacity-0 transform translate-y-4 transition-all duration-400 ease-out group scroll-reveal`; c.setAttribute('data-card-id', p.id); c.addEventListener('click', () => window.openProductPage(p.id));
+    c.innerHTML = `<div class="w-full relative rounded-2xl overflow-hidden group shadow-sm bg-gradient-to-tr from-luxury-bg to-white border border-luxury-blush aspect-[4/5] mb-2"><span class="absolute top-2.5 left-2.5 z-10 bg-white/95 text-luxury-dark text-[7px] sm:text-[8px] font-bold px-2.5 py-1 rounded-md uppercase tracking-[0.15em] border border-luxury-blush shadow-sm">${p.category || 'Art'}</span><button type="button" class="wishlist-btn absolute top-2.5 right-2.5 bg-white/95 w-7 h-7 flex items-center justify-center rounded-full border border-luxury-blush z-20 shadow-sm transition-transform active:scale-95"><i class="${isH ? 'fas fa-heart text-red-500' : 'far fa-heart text-gray-300'} wish-icon"></i></button><img loading="lazy" decoding="async" src="${img}" alt="${p.name}" class="absolute inset-0 w-full h-full object-cover"></div><div class="px-1 flex flex-col justify-start text-left w-full"><h3 class="font-bitter font-semibold text-[11px] sm:text-[12px] text-luxury-dark leading-snug w-full transition-colors group-hover:text-luxury-rose mb-0.5 line-clamp-2">${p.name}</h3><div class="flex items-center md:items-baseline gap-1.5 flex-wrap w-full"><span class="font-poppins font-extrabold text-luxury-dark text-[14px] sm:text-[15px] tracking-tight leading-none">₹${cp}</span><span class="font-poppins text-gray-400 text-[9px] font-medium line-through leading-none">₹${op}</span></div></div>`;
+    const wb = c.querySelector('.wishlist-btn'); if (wb) wb.addEventListener('click', (e) => { e.preventDefault(); e.stopPropagation(); window.th_toggleWishlistProduct(p.id, e); }); return c;
 }
 
+// ==========================================
+// 🚨 PRODUCT PAGE MODAL
+// ==========================================
 window.openProductPage = function(id) { 
-    const p = products.find(x => x.id == id); if(!p) return;
-    document.getElementById('product-view').setAttribute('data-current-id', p.id);
-    const cleanPrice = Number(String(p.price || 0).replace(/[^0-9.,]/g, '')); const discountPercent = getDiscountPercent(String(p.id)); const originalPrice = Math.round(cleanPrice * (1 + (discountPercent / 100)));
-    
+    const p = products.find(x => x.id == id); if(!p) return; document.getElementById('product-view').setAttribute('data-current-id', p.id);
+    const cp = Number(String(p.price || 0).replace(/[^0-9.,]/g, '')), dp = getDiscountPercent(String(p.id)), op = Math.round(cp * (1 + (dp / 100)));
     modalImages = [p.image1, p.image2, p.image3, p.image4, p.image5].filter(img => typeof img === 'string' && img.trim() !== ''); if (modalImages.length === 0) modalImages.push('https://placehold.co/400x500/F8E9EA/423133');
-    const track = document.getElementById('modal-carousel-track'); const thumbContainer = document.getElementById('modal-thumbnails'); 
-    track.style.transition = 'none'; let html = '';
-    modalImages.forEach(imgSrc => { html += `<div class="w-full h-full flex-shrink-0 flex items-center justify-center relative bg-transparent" onclick="window.openLightboxFromCarousel()"><img loading="lazy" decoding="async" src="${imgSrc}" class="w-full max-h-full object-contain"></div>`; }); track.innerHTML = html; currentSlideIndex = 0; track.style.transform = `translateX(0)`;
     
-    thumbContainer.innerHTML = ''; 
-    if (modalImages.length > 1) { 
-        modalImages.forEach((imgSrc, index) => { 
-            const thumb = document.createElement('img'); thumb.src = imgSrc; thumb.className = `w-12 h-12 object-cover rounded-md border-2 transition-all cursor-pointer ${index === 0 ? 'border-luxury-rose scale-105 opacity-100' : 'border-transparent opacity-60 hover:opacity-100'}`; thumb.id = `thumb-${index}`; thumb.addEventListener('click', () => window.goToSlide(index)); thumbContainer.appendChild(thumb); 
-        }); 
-    } 
+    const tr = document.getElementById('modal-carousel-track'), th = document.getElementById('modal-thumbnails'); tr.style.transition = 'none'; let html = '';
+    modalImages.forEach(src => { html += `<div class="w-full h-full flex-shrink-0 flex items-center justify-center relative bg-transparent" onclick="window.openLightboxFromCarousel()"><img loading="lazy" src="${src}" class="w-full max-h-full object-contain"></div>`; }); tr.innerHTML = html; currentSlideIndex = 0; tr.style.transform = `translateX(0)`;
+    
+    th.innerHTML = ''; if (modalImages.length > 1) { modalImages.forEach((src, idx) => { const tm = document.createElement('img'); tm.src = src; tm.className = `w-12 h-12 object-cover rounded-md border-2 transition-all cursor-pointer ${idx === 0 ? 'border-luxury-rose scale-105 opacity-100' : 'border-transparent opacity-60 hover:opacity-100'}`; tm.id = `thumb-${idx}`; tm.addEventListener('click', () => window.goToSlide(idx)); th.appendChild(tm); }); } 
     
     document.getElementById('modal-wishlist-toggle-btn').onclick = (e) => window.th_toggleWishlistProduct(p.id, e); updateWishlistUIElements(p.id, (localWishlist || []).includes(String(p.id)));
 
-    if(document.getElementById('modal-title')) document.getElementById('modal-title').textContent = p.name; 
-    if(document.getElementById('modal-main-category')) document.getElementById('modal-main-category').textContent = p.mainCategory; 
-    if(document.getElementById('modal-sub-category')) document.getElementById('modal-sub-category').textContent = p.category || 'Fine Art Medium'; 
-    if(document.getElementById('breadcrumb-main-cat')) document.getElementById('breadcrumb-main-cat').textContent = p.mainCategory;
-    if(document.getElementById('breadcrumb-sub-cat')) document.getElementById('breadcrumb-sub-cat').textContent = p.name.substring(0, 20) + (p.name.length > 20 ? '...' : '');
-    if(document.getElementById('modal-price')) document.getElementById('modal-price').textContent = cleanPrice; 
-    if(document.getElementById('modal-original-price')) document.getElementById('modal-original-price').textContent = "₹" + originalPrice; 
-    if(document.getElementById('modal-discount-tag')) document.getElementById('modal-discount-tag').textContent = `${discountPercent}% OFF`; 
-    if(document.getElementById('modal-specs')) document.getElementById('modal-specs').innerHTML = p.specs || 'No details provided.'; 
-    if(document.getElementById('modal-prep-time')) document.getElementById('modal-prep-time').textContent = `${p.prepTime || '3-5'} Days`;
-    if(document.getElementById('modal-edd-delivery-tag')) document.getElementById('modal-edd-delivery-tag').textContent = calculateEDDBracket(p.prepTime || '3-5');
+    if(document.getElementById('modal-title')) document.getElementById('modal-title').textContent = p.name; if(document.getElementById('modal-main-category')) document.getElementById('modal-main-category').textContent = p.mainCategory; if(document.getElementById('modal-sub-category')) document.getElementById('modal-sub-category').textContent = p.category || 'Fine Art Medium'; if(document.getElementById('breadcrumb-main-cat')) document.getElementById('breadcrumb-main-cat').textContent = p.mainCategory; if(document.getElementById('breadcrumb-sub-cat')) document.getElementById('breadcrumb-sub-cat').textContent = p.name.substring(0, 20) + (p.name.length > 20 ? '...' : ''); if(document.getElementById('modal-price')) document.getElementById('modal-price').textContent = cp; if(document.getElementById('modal-original-price')) document.getElementById('modal-original-price').textContent = "₹" + op; if(document.getElementById('modal-discount-tag')) document.getElementById('modal-discount-tag').textContent = `${dp}% OFF`; if(document.getElementById('modal-specs')) document.getElementById('modal-specs').innerHTML = p.specs || 'No details provided.'; if(document.getElementById('modal-edd-delivery-tag')) document.getElementById('modal-edd-delivery-tag').textContent = calculateEDDBracket(p.prepTime || '3-5');
 
-    const careGuide = document.getElementById('modal-care-guide');
-    if (careGuide) {
-        if (p.mainCategory === 'Canvas Paintings') { careGuide.innerHTML = `<li>Keep away from prolonged direct sunlight.</li><li>Avoid areas with extreme humidity.</li><li>Dust gently with a clean, dry microfiber cloth.</li>`; } 
-        else if (p.mainCategory === 'Clay Art Paintings') { careGuide.innerHTML = `<li><strong>Highly fragile.</strong> Handle edges with care.</li><li>Keep strictly away from moisture.</li><li>Dust very lightly using a soft brush.</li>`; } 
-        else { careGuide.innerHTML = `<li>Keep away from direct, harsh sunlight.</li><li>Lightly dust with a soft, dry brush.</li><li>Do not expose to moisture.</li>`; }
-    }
-
-    const badgesContainer = document.getElementById('art-badges-container'), dimBadge = document.getElementById('modal-dimensions-badge'), custBadge = document.getElementById('modal-custom-badge');
-    if(badgesContainer) badgesContainer.classList.add('hidden'); if(dimBadge) dimBadge.classList.add('hidden'); if(custBadge) custBadge.classList.add('hidden');
-    if(p.mainCategory === 'Canvas Paintings' || p.mainCategory === 'Clay Art Paintings') { badgesContainer?.classList.remove('hidden'); if(p.dimensions && dimBadge) { document.getElementById('modal-dimensions-text').textContent = p.dimensions; dimBadge.classList.remove('hidden'); } if(p.isCustomizable) custBadge?.classList.remove('hidden'); }
+    const cg = document.getElementById('modal-care-guide'); if (cg) { if (p.mainCategory === 'Canvas Paintings') cg.innerHTML = `<li>Keep away from prolonged direct sunlight.</li><li>Avoid areas with extreme humidity.</li><li>Dust gently with a clean, dry microfiber cloth.</li>`; else if (p.mainCategory === 'Clay Art Paintings') cg.innerHTML = `<li><strong>Highly fragile.</strong> Handle edges with care.</li><li>Keep strictly away from moisture.</li><li>Dust very lightly using a soft brush.</li>`; else cg.innerHTML = `<li>Keep away from direct, harsh sunlight.</li><li>Lightly dust with a soft, dry brush.</li><li>Do not expose to moisture.</li>`; }
+    const bc = document.getElementById('art-badges-container'), db = document.getElementById('modal-dimensions-badge'), cb = document.getElementById('modal-custom-badge'); if(bc) bc.classList.add('hidden'); if(db) db.classList.add('hidden'); if(cb) cb.classList.add('hidden'); if(p.mainCategory === 'Canvas Paintings' || p.mainCategory === 'Clay Art Paintings') { bc?.classList.remove('hidden'); if(p.dimensions && db) { document.getElementById('modal-dimensions-text').textContent = p.dimensions; db.classList.remove('hidden'); } if(p.isCustomizable) cb?.classList.remove('hidden'); }
     
     renderRelatedProducts(p.id, p.mainCategory, p.category); updateProductButtons(p.id);
     document.getElementById('customer-view')?.classList.add('hidden'); document.getElementById('product-view')?.classList.remove('hidden'); window.scrollTo(0, 0); currentModalLevel = 1; window.safePushState(1); 
@@ -389,334 +266,202 @@ window.openProductPage = function(id) {
 window.closeProductPage = function() { document.getElementById('product-view')?.classList.add('hidden'); document.getElementById('customer-view')?.classList.remove('hidden'); window.scrollTo(0, 0); };
 
 function updateProductButtons(id) {
-    const actionContainer = document.getElementById('modal-action-buttons'); if(!actionContainer) return;
-    const cartItem = cart.find(item => item.id == id); const qty = cartItem ? parseInt(cartItem.qty || 1) : 0;
-    if(qty > 0) { actionContainer.innerHTML = `<div class="flex items-center justify-between w-full h-full bg-white border border-luxury-rose rounded-full px-2 sm:px-4 py-3 shadow-sm min-h-[44px]"><button type="button" onclick="window.th_updateCartQty('${id}', -1, event)" class="w-8 h-8 rounded-full bg-luxury-bg hover:bg-luxury-blush border border-luxury-blush flex items-center justify-center shrink-0"><i class="fas fa-minus text-xs"></i></button><span class="text-base sm:text-lg font-bold text-luxury-rose font-poppins min-w-[20px] text-center">${qty}</span><button type="button" onclick="window.th_updateCartQty('${id}', 1, event)" class="w-8 h-8 rounded-full bg-luxury-bg hover:bg-luxury-blush border border-luxury-blush flex items-center justify-center shrink-0"><i class="fas fa-plus text-xs"></i></button></div><button type="button" onclick="window.openCheckoutBase()" class="w-full bg-luxury-dark text-white hover:bg-[#D9778A] font-bold px-2 py-3.5 sm:px-4 rounded-full flex items-center justify-center gap-2 text-[11px] sm:text-[12px] uppercase tracking-wider shadow-md active:scale-[0.98] transition-colors min-h-[44px]"><i class="fas fa-bolt text-luxury-gold"></i> Checkout</button>`; } 
-    else { actionContainer.innerHTML = `<button type="button" onclick="window.th_updateCartQty('${id}', 1, event)" class="w-full bg-white border border-luxury-dark text-luxury-dark hover:bg-luxury-bg font-bold px-2 py-3.5 sm:px-4 rounded-full flex items-center justify-center gap-2 text-[11px] sm:text-[12px] uppercase tracking-wider transition-colors shadow-sm active:scale-[0.98] min-h-[44px]"><i class="fas fa-shopping-bag"></i> Add to Bag</button><button type="button" onclick="window.routeCheckoutFromModal('${id}', event)" class="w-full bg-luxury-dark text-white hover:bg-[#D9778A] font-bold px-2 py-3.5 sm:px-4 rounded-full flex items-center justify-center gap-2 text-[11px] sm:text-[12px] uppercase tracking-wider shadow-md active:scale-[0.98] transition-colors min-h-[44px]"><i class="fas fa-bolt text-luxury-gold"></i> Buy Now</button>`; }
+    const ac = document.getElementById('modal-action-buttons'); if(!ac) return; const ci = cart.find(i => i.id == id); const q = ci ? parseInt(ci.qty || 1) : 0;
+    if(q > 0) ac.innerHTML = `<div class="flex items-center justify-between w-full h-full bg-white border border-luxury-rose rounded-full px-2 sm:px-4 py-3 shadow-sm min-h-[44px]"><button type="button" onclick="window.th_updateCartQty('${id}', -1, event)" class="w-8 h-8 rounded-full bg-luxury-bg hover:bg-luxury-blush border border-luxury-blush flex items-center justify-center shrink-0"><i class="fas fa-minus text-xs"></i></button><span class="text-base sm:text-lg font-bold text-luxury-rose font-poppins min-w-[20px] text-center">${q}</span><button type="button" onclick="window.th_updateCartQty('${id}', 1, event)" class="w-8 h-8 rounded-full bg-luxury-bg hover:bg-luxury-blush border border-luxury-blush flex items-center justify-center shrink-0"><i class="fas fa-plus text-xs"></i></button></div><button type="button" onclick="window.openCheckoutBase()" class="w-full bg-luxury-dark text-white hover:bg-[#D9778A] font-bold px-2 py-3.5 sm:px-4 rounded-full flex items-center justify-center gap-2 text-[11px] sm:text-[12px] uppercase tracking-wider shadow-md active:scale-[0.98] transition-colors min-h-[44px]"><i class="fas fa-bolt text-luxury-gold"></i> Checkout</button>`; 
+    else ac.innerHTML = `<button type="button" onclick="window.th_updateCartQty('${id}', 1, event)" class="w-full bg-white border border-luxury-dark text-luxury-dark hover:bg-luxury-bg font-bold px-2 py-3.5 sm:px-4 rounded-full flex items-center justify-center gap-2 text-[11px] sm:text-[12px] uppercase tracking-wider transition-colors shadow-sm active:scale-[0.98] min-h-[44px]"><i class="fas fa-shopping-bag"></i> Add to Bag</button><button type="button" onclick="window.routeCheckoutFromModal('${id}', event)" class="w-full bg-luxury-dark text-white hover:bg-[#D9778A] font-bold px-2 py-3.5 sm:px-4 rounded-full flex items-center justify-center gap-2 text-[11px] sm:text-[12px] uppercase tracking-wider shadow-md active:scale-[0.98] transition-colors min-h-[44px]"><i class="fas fa-bolt text-luxury-gold"></i> Buy Now</button>`; 
 }
 
-function renderRelatedProducts(currentId, mainCategory, subCategory) {
-    const grid = document.getElementById('related-products-grid'); const section = document.getElementById('related-products-section'); if(!grid || !section) return; grid.innerHTML = '';
-    let related = products.filter(p => p.id != currentId); let sameSubCat = related.filter(p => p.category === subCategory); let sameMainCat = related.filter(p => p.mainCategory === mainCategory && p.category !== subCategory);
-    let finalRelated = [...sameSubCat, ...sameMainCat].slice(0, 14); if (finalRelated.length === 0) { section.classList.add('hidden'); return; } else { section.classList.remove('hidden'); }
-    const fragment = document.createDocumentFragment(); finalRelated.forEach(p => { fragment.appendChild(generateProductCardHTML(p)); }); grid.appendChild(fragment); setupScrollReveal();
+function renderRelatedProducts(cid, mc, sc) {
+    const g = document.getElementById('related-products-grid'), s = document.getElementById('related-products-section'); if(!g || !s) return; g.innerHTML = '';
+    let r = products.filter(p => p.id != cid), ssc = r.filter(p => p.category === sc), smc = r.filter(p => p.mainCategory === mc && p.category !== sc);
+    let fr = [...ssc, ...smc].slice(0, 14); if (fr.length === 0) { s.classList.add('hidden'); return; } else s.classList.remove('hidden');
+    const f = document.createDocumentFragment(); fr.forEach(p => { f.appendChild(generateProductCardHTML(p)); }); g.appendChild(f); setupScrollReveal();
 }
 
 // ==========================================
 // 🚨 CART & CHECKOUT ENGINE
 // ==========================================
-window.th_updateCartQty = function(id, delta, event) {
-    if(event) { event.preventDefault(); event.stopPropagation(); } 
-    let existing = cart.find(x => x.id == id);
-    if(existing) { existing.qty = parseInt(existing.qty || 1) + delta; if(existing.qty <= 0) { cart = cart.filter(x => x.id != id); window.showToast("Removed from Bag", "fa-times"); } else { if(delta > 0) window.showToast("Quantity Increased", "fa-plus"); } } 
-    else if(delta > 0) { const p = products.find(x => x.id == id); if(p) { cart.push({ id: p.id, name: p.name, price: p.price, prepTime: p.prepTime, image: p.image1, isCustomizable: p.isCustomizable, mainCategory: p.mainCategory, qty: 1 }); window.showToast("Added to Bag", "fa-check"); } }
+window.th_updateCartQty = function(id, d, e) {
+    if(e) { e.preventDefault(); e.stopPropagation(); } let ex = cart.find(x => x.id == id);
+    if(ex) { ex.qty = parseInt(ex.qty || 1) + d; if(ex.qty <= 0) { cart = cart.filter(x => x.id != id); window.showToast("Removed from Bag", "fa-times"); } else { if(d > 0) window.showToast("Quantity Increased", "fa-plus"); } } 
+    else if(d > 0) { const p = products.find(x => x.id == id); if(p) { cart.push({ id: p.id, name: p.name, price: p.price, prepTime: p.prepTime, image: p.image1, isCustomizable: p.isCustomizable, mainCategory: p.mainCategory, qty: 1 }); window.showToast("Added to Bag", "fa-check"); } }
     localStorage.setItem('th_cart', JSON.stringify(cart)); updateCartCount();
-    const prodView = document.getElementById('product-view'); if(prodView && !prodView.classList.contains('hidden')) { updateProductButtons(id); }
+    const pv = document.getElementById('product-view'); if(pv && !pv.classList.contains('hidden')) updateProductButtons(id);
     if(document.getElementById('checkout-overlay') && !document.getElementById('checkout-overlay').classList.contains('hidden')){ if (cart.length === 0) { window.closeCheckout(); return window.showToast("Bag is empty!", "fa-times"); } renderCheckoutItems(); updateCheckoutUI(); }
 };
 
 window.openCheckoutBase = function() {
     if(cart.length === 0) return window.showToast("Your bag is empty!", "fa-times", "text-red-500");
     if(!currentSessionUser) { window.showToast("Please Sign In to Checkout", "fa-user-lock", "text-luxury-rose"); window.openCustomerAuthModal(); return; }
-    currentModalLevel = 1; window.safePushState(1); checkoutStep = 1;
-    const overlay = document.getElementById('checkout-overlay'); if(!overlay) return;
-    overlay.classList.remove('hidden'); document.body.classList.add('overflow-hidden'); document.getElementById('payment-success-view')?.classList.add('hidden'); document.getElementById('payment-success-view')?.classList.remove('flex'); document.getElementById('payment-gateway-view')?.classList.remove('hidden'); document.getElementById('payment-gateway-view')?.classList.add('flex');
-    renderCheckoutItems(); syncCloudAddresses(); requestAnimationFrame(() => { overlay.classList.remove('opacity-0'); overlay.classList.add('opacity-100'); overlay.scrollTo(0, 0); });
+    currentModalLevel = 1; window.safePushState(1); checkoutStep = 1; const o = document.getElementById('checkout-overlay'); if(!o) return;
+    o.classList.remove('hidden'); document.body.classList.add('overflow-hidden'); document.getElementById('payment-success-view')?.classList.add('hidden'); document.getElementById('payment-success-view')?.classList.remove('flex'); document.getElementById('payment-gateway-view')?.classList.remove('hidden'); document.getElementById('payment-gateway-view')?.classList.add('flex');
+    renderCheckoutItems(); syncCloudAddresses(); requestAnimationFrame(() => { o.classList.remove('opacity-0'); o.classList.add('opacity-100'); o.scrollTo(0, 0); });
 };
 
 window.closeCheckout = function() {
-    const overlay = document.getElementById('checkout-overlay'); if(!overlay) return;
-    requestAnimationFrame(() => { overlay.classList.remove('opacity-100'); overlay.classList.add('opacity-0'); setTimeout(() => { overlay.classList.add('hidden'); if(document.getElementById('return-policy-modal')?.classList.contains('hidden') && document.getElementById('privacy-policy-modal')?.classList.contains('hidden')){ document.body.classList.remove('overflow-hidden'); } pendingOrderPayload = null; renderProducts(currentSearchQuery); }, 300); });
+    const o = document.getElementById('checkout-overlay'); if(!o) return;
+    requestAnimationFrame(() => { o.classList.remove('opacity-100'); o.classList.add('opacity-0'); setTimeout(() => { o.classList.add('hidden'); if(document.getElementById('return-policy-modal')?.classList.contains('hidden') && document.getElementById('privacy-policy-modal')?.classList.contains('hidden')){ document.body.classList.remove('overflow-hidden'); } pendingOrderPayload = null; renderProducts(currentSearchQuery); }, 300); });
 };
 
-window.routeCheckoutFromModal = function(id, event) { 
-    if(event) { event.preventDefault(); event.stopPropagation(); } const p = products.find(x => x.id == id); if(!p) return; let existing = cart.find(x => x.id == id);
-    if(!existing) { cart.push({ id: p.id, name: p.name, price: p.price, prepTime: p.prepTime, image: p.image1, isCustomizable: p.isCustomizable, mainCategory: p.mainCategory, qty: 1 }); localStorage.setItem('th_cart', JSON.stringify(cart)); updateCartCount(); }
+window.routeCheckoutFromModal = function(id, e) { 
+    if(e) { e.preventDefault(); e.stopPropagation(); } const p = products.find(x => x.id == id); if(!p) return; let ex = cart.find(x => x.id == id);
+    if(!ex) { cart.push({ id: p.id, name: p.name, price: p.price, prepTime: p.prepTime, image: p.image1, isCustomizable: p.isCustomizable, mainCategory: p.mainCategory, qty: 1 }); localStorage.setItem('th_cart', JSON.stringify(cart)); updateCartCount(); }
     window.openCheckoutBase(); 
 };
 
 function renderCheckoutItems() {
-    const container = document.getElementById('checkout-items-list'); if(!container) return; 
-    if (cart.length === 0) { container.innerHTML = '<div class="text-center py-10 text-gray-400 font-medium text-sm"><i class="fas fa-shopping-bag text-4xl block mb-3 opacity-30"></i> Your bag is completely empty.</div>'; return; }
-    let itemsHTML = '';
-    cart.forEach(item => {
-        const cleanPrice = Number(String(item.price || 0).replace(/[^0-9.,]/g, '')); const discountPercent = getDiscountPercent(String(item.id)); const originalPrice = Math.round(cleanPrice * (1 + (discountPercent / 100))); const itemImg = (typeof item.image1 === 'string' && item.image1.trim() !== '') ? item.image1 : (typeof item.image === 'string' ? item.image : 'https://placehold.co/150/F8E9EA/423133'); const qty = parseInt(item.qty || 1);
-        itemsHTML += `<div class="flex flex-col sm:flex-row gap-4 border border-luxury-blush bg-white p-4 rounded-2xl shadow-sm"><img src="${itemImg}" class="w-20 h-24 sm:w-24 sm:h-28 object-cover rounded-xl border border-luxury-blush shrink-0 bg-luxury-bg"><div class="flex flex-col justify-between w-full"><div><h4 class="font-bitter text-[14px] sm:text-[15px] font-semibold text-luxury-dark mb-1 leading-snug">${item.name}</h4><p class="text-[10px] uppercase tracking-widest font-bold text-gray-400 mb-3">${item.mainCategory || item.category || 'Handcrafted Art'}</p><div class="flex items-baseline gap-2 mb-4"><span class="font-poppins text-luxury-dark font-bold text-[16px] sm:text-[18px]">₹${cleanPrice}</span><span class="font-poppins text-gray-400 text-[11px] line-through">₹${originalPrice}</span><span class="text-green-600 font-bold text-[10px] ml-1">${discountPercent}% Off</span></div></div><div class="flex items-center gap-3"><div class="flex items-center bg-white border border-luxury-blush rounded-full h-[36px] overflow-hidden shadow-sm"><button type="button" onclick="window.th_updateCartQty('${item.id}', -1, event)" class="w-10 h-full flex items-center justify-center text-luxury-dark hover:bg-luxury-blush transition-colors"><i class="fas fa-minus text-[10px]"></i></button><div class="w-10 h-full flex items-center justify-center border-l border-r border-luxury-blush text-[12px] font-bold text-luxury-rose bg-luxury-bg">${qty}</div><button type="button" onclick="window.th_updateCartQty('${item.id}', 1, event)" class="w-10 h-full flex items-center justify-center text-luxury-dark hover:bg-luxury-blush transition-colors"><i class="fas fa-plus text-[10px]"></i></button></div></div></div></div>`;
+    const c = document.getElementById('checkout-items-list'); if(!c) return; if (cart.length === 0) { c.innerHTML = '<div class="text-center py-10 text-gray-400 font-medium text-sm"><i class="fas fa-shopping-bag text-4xl block mb-3 opacity-30"></i> Your bag is completely empty.</div>'; return; }
+    let h = ''; cart.forEach(i => { const cp = Number((i.price || 0).toString().replace(/[^0-9.,]/g, '')), dp = getDiscountPercent(String(i.id)), op = Math.round(cp * (1 + (dp / 100))), img = (typeof i.image1 === 'string' && i.image1.trim() !== '') ? i.image1 : (typeof i.image === 'string' ? i.image : 'https://placehold.co/150/F8E9EA/423133'), q = parseInt(i.qty || 1);
+        h += `<div class="flex flex-col sm:flex-row gap-4 border border-luxury-blush bg-white p-4 rounded-2xl shadow-sm"><img src="${img}" class="w-20 h-24 sm:w-24 sm:h-28 object-cover rounded-xl border border-luxury-blush shrink-0 bg-luxury-bg"><div class="flex flex-col justify-between w-full"><div><h4 class="font-bitter text-[14px] sm:text-[15px] font-semibold text-luxury-dark mb-1 leading-snug">${i.name}</h4><p class="text-[10px] uppercase tracking-widest font-bold text-gray-400 mb-3">${i.mainCategory || i.category || 'Handcrafted Art'}</p><div class="flex items-baseline gap-2 mb-4"><span class="font-poppins text-luxury-dark font-bold text-[16px] sm:text-[18px]">₹${cp}</span><span class="font-poppins text-gray-400 text-[11px] line-through">₹${op}</span><span class="text-green-600 font-bold text-[10px] ml-1">${dp}% Off</span></div></div><div class="flex items-center gap-3"><div class="flex items-center bg-white border border-luxury-blush rounded-full h-[36px] overflow-hidden shadow-sm"><button type="button" onclick="window.th_updateCartQty('${i.id}', -1, event)" class="w-10 h-full flex items-center justify-center text-luxury-dark hover:bg-luxury-blush transition-colors"><i class="fas fa-minus text-[10px]"></i></button><div class="w-10 h-full flex items-center justify-center border-l border-r border-luxury-blush text-[12px] font-bold text-luxury-rose bg-luxury-bg">${q}</div><button type="button" onclick="window.th_updateCartQty('${i.id}', 1, event)" class="w-10 h-full flex items-center justify-center text-luxury-dark hover:bg-luxury-blush transition-colors"><i class="fas fa-plus text-[10px]"></i></button></div></div></div></div>`;
     });
-    let hasCustomizable = cart.some(item => item.isCustomizable); const dimWrapper = document.getElementById('comm-dimensions-wrapper'); if (hasCustomizable) dimWrapper?.classList.remove('hidden'); else dimWrapper?.classList.add('hidden'); container.innerHTML = itemsHTML;
+    const dw = document.getElementById('comm-dimensions-wrapper'); if (cart.some(i => i.isCustomizable)) dw?.classList.remove('hidden'); else dw?.classList.add('hidden'); c.innerHTML = h;
 }
 
+// ==========================================
 // 🚨 ADDRESS BOOK
+// ==========================================
 async function syncCloudAddresses() {
-    if (currentSessionUser) { 
-        try { const { data } = await _supabase.from('addresses').select('*').order('created_at', { ascending: true }); savedAddresses = data || []; selectedAddressIndex = savedAddresses.length > 0 ? 0 : -1; } catch (err) {} 
-    } else { savedAddresses = safeJSONParse('th_saved_addresses', []); selectedAddressIndex = savedAddresses.length > 0 ? 0 : -1; }
-    renderAddressBook();
+    if (currentSessionUser) { try { const { data } = await _supabase.from('addresses').select('*').order('created_at', { ascending: true }); savedAddresses = data || []; selectedAddressIndex = savedAddresses.length > 0 ? 0 : -1; } catch (e) {} } 
+    else { savedAddresses = safeJSONParse('th_saved_addresses', []); selectedAddressIndex = savedAddresses.length > 0 ? 0 : -1; } renderAddressBook();
 }
 
 function renderAddressBook() {
-    const container = document.getElementById('address-book-container'), form = document.getElementById('checkout-profile-form'), btnAdd = document.getElementById('btn-show-add-address'); if (!container || !form) return;
-    if (savedAddresses.length === 0) { container.innerHTML = ''; container.classList.add('hidden'); form.classList.remove('hidden'); if(btnAdd) btnAdd.classList.add('hidden'); clearAddressForm(); editingAddressIndex = null; } 
-    else {
-        container.classList.remove('hidden'); let html = '';
-        savedAddresses.forEach((addr, i) => { const isSelected = i === selectedAddressIndex; html += `<div class="border ${isSelected ? 'border-[#D9778A] bg-[#FFF0F2]' : 'border-luxury-blush bg-white'} rounded-xl p-4 flex gap-4 cursor-pointer transition-colors relative shadow-sm" onclick="window.selectAddress(${i})"><div class="pt-1 shrink-0"><div class="w-4 h-4 rounded-full border-2 ${isSelected ? 'border-[#D9778A] flex items-center justify-center bg-white' : 'border-gray-300 bg-white'}">${isSelected ? '<div class="w-2 h-2 rounded-full bg-[#D9778A]"></div>' : ''}</div></div><div class="flex-grow pr-8"><p class="font-bold text-luxury-dark text-[12px] uppercase tracking-wider mb-1">${addr.first_name} ${addr.last_name || ''}</p><p class="text-gray-500 text-[11px] leading-relaxed mb-2">${addr.address_1}${addr.address_2 ? ', ' + addr.address_2 : ''}<br>${addr.city}, ${addr.state} - <span class="font-bold text-luxury-dark">${addr.pincode}</span></p><p class="text-luxury-dark font-medium text-[11px]"><i class="fas fa-phone-alt text-luxury-rose/70 mr-1.5 text-[9px]"></i> ${addr.phone}</p></div><button type="button" onclick="window.editAddress(${i}, event)" class="absolute top-4 right-4 text-[9px] text-gray-400 hover:text-luxury-rose uppercase font-bold tracking-widest bg-white w-8 h-8 rounded-full border border-luxury-blush flex items-center justify-center transition-colors"><i class="fas fa-pen"></i></button></div>`; });
-        container.innerHTML = html; form.classList.add('hidden'); if(btnAdd) btnAdd.classList.remove('hidden');
-    }
-    updateCheckoutUI(); 
+    const c = document.getElementById('address-book-container'), f = document.getElementById('checkout-profile-form'), ba = document.getElementById('btn-show-add-address'); if (!c || !f) return;
+    if (savedAddresses.length === 0) { c.innerHTML = ''; c.classList.add('hidden'); f.classList.remove('hidden'); if(ba) ba.classList.add('hidden'); clearAddressForm(); editingAddressIndex = null; } 
+    else { c.classList.remove('hidden'); let h = ''; savedAddresses.forEach((a, i) => { const s = i === selectedAddressIndex; h += `<div class="border ${s ? 'border-[#D9778A] bg-[#FFF0F2]' : 'border-luxury-blush bg-white'} rounded-xl p-4 flex gap-4 cursor-pointer transition-colors relative shadow-sm" onclick="window.selectAddress(${i})"><div class="pt-1 shrink-0"><div class="w-4 h-4 rounded-full border-2 ${s ? 'border-[#D9778A] flex items-center justify-center bg-white' : 'border-gray-300 bg-white'}">${s ? '<div class="w-2 h-2 rounded-full bg-[#D9778A]"></div>' : ''}</div></div><div class="flex-grow pr-8"><p class="font-bold text-luxury-dark text-[12px] uppercase tracking-wider mb-1">${a.first_name} ${a.last_name || ''}</p><p class="text-gray-500 text-[11px] leading-relaxed mb-2">${a.address_1}${a.address_2 ? ', ' + a.address_2 : ''}<br>${a.city}, ${a.state} - <span class="font-bold text-luxury-dark">${a.pincode}</span></p><p class="text-luxury-dark font-medium text-[11px]"><i class="fas fa-phone-alt text-luxury-rose/70 mr-1.5 text-[9px]"></i> ${a.phone}</p></div><button type="button" onclick="window.editAddress(${i}, event)" class="absolute top-4 right-4 text-[9px] text-gray-400 hover:text-luxury-rose uppercase font-bold tracking-widest bg-white w-8 h-8 rounded-full border border-luxury-blush flex items-center justify-center transition-colors"><i class="fas fa-pen"></i></button></div>`; }); c.innerHTML = h; f.classList.add('hidden'); if(ba) ba.classList.remove('hidden'); } updateCheckoutUI(); 
 }
 
-window.selectAddress = function(index) { selectedAddressIndex = index; document.getElementById('checkout-profile-form').classList.add('hidden'); document.getElementById('btn-show-add-address').classList.remove('hidden'); renderAddressBook(); };
+window.selectAddress = function(i) { selectedAddressIndex = i; document.getElementById('checkout-profile-form').classList.add('hidden'); document.getElementById('btn-show-add-address').classList.remove('hidden'); renderAddressBook(); };
 window.showAddressForm = function() { editingAddressIndex = null; clearAddressForm(); document.getElementById('checkout-profile-form').classList.remove('hidden'); document.getElementById('btn-show-add-address').classList.add('hidden'); if(savedAddresses.length > 0) document.getElementById('btn-cancel-address')?.classList.remove('hidden'); updateCheckoutUI(); };
 window.hideAddressForm = function() { document.getElementById('checkout-profile-form').classList.add('hidden'); document.getElementById('btn-show-add-address').classList.remove('hidden'); editingAddressIndex = null; updateCheckoutUI(); };
-window.editAddress = function(index, event) { event.stopPropagation(); editingAddressIndex = index; const addr = savedAddresses[index]; document.getElementById('prof-fname').value = addr.first_name || ''; document.getElementById('prof-lname').value = addr.last_name || ''; document.getElementById('prof-email').value = addr.email || ''; document.getElementById('prof-phone').value = addr.phone || ''; document.getElementById('prof-add1').value = addr.address_1 || ''; document.getElementById('prof-add2').value = addr.address_2 || ''; document.getElementById('prof-city').value = addr.city || ''; document.getElementById('prof-state').value = addr.state || ''; document.getElementById('prof-pin').value = addr.pincode || ''; document.getElementById('checkout-profile-form').classList.remove('hidden'); document.getElementById('btn-show-add-address').classList.add('hidden'); document.getElementById('btn-cancel-address')?.classList.remove('hidden'); updateCheckoutUI(); };
+window.editAddress = function(i, e) { e.stopPropagation(); editingAddressIndex = i; const a = savedAddresses[i]; document.getElementById('prof-fname').value = a.first_name || ''; document.getElementById('prof-lname').value = a.last_name || ''; document.getElementById('prof-email').value = a.email || ''; document.getElementById('prof-phone').value = a.phone || ''; document.getElementById('prof-add1').value = a.address_1 || ''; document.getElementById('prof-add2').value = a.address_2 || ''; document.getElementById('prof-city').value = a.city || ''; document.getElementById('prof-state').value = a.state || ''; document.getElementById('prof-pin').value = a.pincode || ''; document.getElementById('checkout-profile-form').classList.remove('hidden'); document.getElementById('btn-show-add-address').classList.add('hidden'); document.getElementById('btn-cancel-address')?.classList.remove('hidden'); updateCheckoutUI(); };
 
 window.saveAddressFromForm = async function() {
-    const addr = { first_name: document.getElementById('prof-fname').value.trim(), last_name: document.getElementById('prof-lname').value.trim(), email: document.getElementById('prof-email').value.trim(), phone: document.getElementById('prof-phone').value.trim(), address_1: document.getElementById('prof-add1').value.trim(), address_2: document.getElementById('prof-add2').value.trim(), city: document.getElementById('prof-city').value.trim(), state: document.getElementById('prof-state').value.trim(), pincode: document.getElementById('prof-pin').value.trim() };
-    if(!addr.first_name || !addr.phone || !addr.address_1 || !addr.city || !addr.pincode) { window.showToast("Please fill all required fields", "fa-exclamation-circle", "text-red-500"); return false; }
+    const a = { first_name: document.getElementById('prof-fname').value.trim(), last_name: document.getElementById('prof-lname').value.trim(), email: document.getElementById('prof-email').value.trim(), phone: document.getElementById('prof-phone').value.trim(), address_1: document.getElementById('prof-add1').value.trim(), address_2: document.getElementById('prof-add2').value.trim(), city: document.getElementById('prof-city').value.trim(), state: document.getElementById('prof-state').value.trim(), pincode: document.getElementById('prof-pin').value.trim() };
+    if(!a.first_name || !a.phone || !a.address_1 || !a.city || !a.pincode) return window.showToast("Please fill all required fields", "fa-exclamation-circle", "text-red-500");
     showInteractionLoader("Saving Address...");
-    if (currentSessionUser) {
-        try {
-            addr.user_id = currentSessionUser.id;
-            if (editingAddressIndex !== null) { await _supabase.from('addresses').update(addr).eq('id', savedAddresses[editingAddressIndex].id); } else { await _supabase.from('addresses').insert([addr]); }
-            await syncCloudAddresses();
-        } catch (err) { alert("Failed to save address to Cloud: " + err.message); hideInteractionLoader(); return false; }
-    } else {
-        if (editingAddressIndex !== null) { savedAddresses[editingAddressIndex] = addr; selectedAddressIndex = editingAddressIndex; } else { savedAddresses.push(addr); selectedAddressIndex = savedAddresses.length - 1; }
-        localStorage.setItem('th_saved_addresses', JSON.stringify(savedAddresses));
-    }
+    if (currentSessionUser) { try { a.user_id = currentSessionUser.id; if (editingAddressIndex !== null) await _supabase.from('addresses').update(a).eq('id', savedAddresses[editingAddressIndex].id); else await _supabase.from('addresses').insert([a]); await syncCloudAddresses(); } catch (e) { alert("Failed to save address: " + e.message); hideInteractionLoader(); return false; } } 
+    else { if (editingAddressIndex !== null) { savedAddresses[editingAddressIndex] = a; selectedAddressIndex = editingAddressIndex; } else { savedAddresses.push(a); selectedAddressIndex = savedAddresses.length - 1; } localStorage.setItem('th_saved_addresses', JSON.stringify(savedAddresses)); }
     editingAddressIndex = null; renderAddressBook(); hideInteractionLoader(); window.showToast("Address Saved", "fa-check"); return true;
 };
 
-function clearAddressForm() { document.getElementById('prof-fname').value = ''; document.getElementById('prof-lname').value = ''; document.getElementById('prof-email').value = ''; document.getElementById('prof-phone').value = ''; document.getElementById('prof-add1').value = ''; document.getElementById('prof-add2').value = ''; document.getElementById('prof-city').value = ''; document.getElementById('prof-state').value = ''; document.getElementById('prof-pin').value = ''; }
+function clearAddressForm() { ['fname','lname','email','phone','add1','add2','city','state','pin'].forEach(id => document.getElementById('prof-'+id).value = ''); }
 
-function calculateDynamicDelivery(subtotal, pincode, items) {
-    if (subtotal >= 2499 || subtotal === 0) return 0; 
-    let totalChargeableWeightKg = 0;
-    items.forEach(item => {
-        let itemDeadWeight = 0.2; let itemVolumetricWeight = 0.2; const cat = item.mainCategory || item.category || ''; const qty = parseInt(item.qty || 1);
-        if (cat.includes('Canvas')) { itemDeadWeight = 1.5; itemVolumetricWeight = (45 * 35 * 5) / 5000; } else if (cat.includes('Clay')) { itemDeadWeight = 0.8; itemVolumetricWeight = (25 * 25 * 10) / 5000; } else { itemDeadWeight = 0.15; itemVolumetricWeight = (15 * 10 * 5) / 5000; }
-        const chargeablePerItem = Math.max(itemDeadWeight, itemVolumetricWeight); totalChargeableWeightKg += (chargeablePerItem * qty);
-    });
-    const weightSlabs = Math.ceil(totalChargeableWeightKg / 0.5); let zone = 'D'; 
-    if (pincode && pincode.toString().length >= 2) { const pinPrefix = parseInt(pincode.toString().substring(0, 2)), pinPrefixThree = parseInt(pincode.toString().substring(0, 3)); if (pinPrefixThree === 387 || pinPrefixThree === 388) zone = 'A'; else if ((pinPrefix >= 36 && pinPrefix <= 42) || pinPrefix === 39) zone = 'B'; else if (pinPrefix === 19 || (pinPrefix >= 78 && pinPrefix <= 79)) zone = 'E'; }
-    let baseRate = 0, additionalSlabRate = 0;
-    switch(zone) { case 'A': baseRate = 35; additionalSlabRate = 35; break; case 'B': baseRate = 45; additionalSlabRate = 40; break; case 'E': baseRate = 85; additionalSlabRate = 80; break; default:  baseRate = 55; additionalSlabRate = 50; break; }
-    let finalShippingFee = baseRate; if (weightSlabs > 1) finalShippingFee += ((weightSlabs - 1) * additionalSlabRate); return finalShippingFee;
+// ==========================================
+// 🚨 CHECKOUT NAVIGATION & PAYMENT
+// ==========================================
+function calculateDynamicDelivery(sub, pin, items) {
+    if (sub >= 2499 || sub === 0) return 0; let tw = 0;
+    items.forEach(i => { let dw = 0.2, vw = 0.2; const c = i.mainCategory || i.category || '', q = parseInt(i.qty || 1); if (c.includes('Canvas')) { dw = 1.5; vw = (45 * 35 * 5) / 5000; } else if (c.includes('Clay')) { dw = 0.8; vw = (25 * 25 * 10) / 5000; } else { dw = 0.15; vw = (15 * 10 * 5) / 5000; } tw += Math.max(dw, vw) * q; });
+    const ws = Math.ceil(tw / 0.5); let z = 'D'; 
+    if (pin && String(pin).length >= 2) { const p2 = parseInt(String(pin).substring(0, 2)), p3 = parseInt(String(pin).substring(0, 3)); if (p3 === 387 || p3 === 388) z = 'A'; else if ((p2 >= 36 && p2 <= 42) || p2 === 39) z = 'B'; else if (p2 === 19 || (p2 >= 78 && p2 <= 79)) z = 'E'; }
+    let br = 0, ar = 0; switch(z) { case 'A': br = 35; ar = 35; break; case 'B': br = 45; ar = 40; break; case 'E': br = 85; ar = 80; break; default: br = 55; ar = 50; break; }
+    return br + (ws > 1 ? ((ws - 1) * ar) : 0);
 }
 
-window.goToCheckoutStep = function(step) { 
-    if (step === 1) { checkoutStep = 1; updateCheckoutUI(); } 
-    else if (step === 2) { if (cart.length === 0) return window.showToast("Your bag is empty!", "fa-times", "text-red-500"); checkoutStep = 2; updateCheckoutUI(); } 
-    else if (step === 3) { if (cart.length === 0) return; if (savedAddresses.length === 0 || selectedAddressIndex === -1) return window.showToast("Please provide a delivery address.", "fa-exclamation-circle", "text-red-500"); window.preparePaymentGateway(); }
+window.goToCheckoutStep = function(s) { 
+    if (s === 1) { checkoutStep = 1; updateCheckoutUI(); } 
+    else if (s === 2) { if (cart.length === 0) return window.showToast("Your bag is empty!", "fa-times", "text-red-500"); checkoutStep = 2; updateCheckoutUI(); } 
+    else if (s === 3) { if (cart.length === 0) return; if (savedAddresses.length === 0 || selectedAddressIndex === -1) return window.showToast("Please provide a delivery address.", "fa-exclamation-circle", "text-red-500"); window.preparePaymentGateway(); }
 };
 
 function updateCheckoutUI() {
-    const fill = document.getElementById('progress-bar-fill'), ind1 = document.getElementById('step-indicator-1'), ind2 = document.getElementById('step-indicator-2'), ind3 = document.getElementById('step-indicator-3'), sidebar = document.getElementById('checkout-price-sidebar'), mobileBtn = document.getElementById('checkout-action-btn-mobile'); if(!fill) return;
-
-    let trueSubtotal = 0, sellingSubtotal = 0, totalItems = 0; 
-    cart.forEach((item) => { const cleanPrice = Number(String(item.price || 0).replace(/[^0-9.,]/g, '')); const qty = parseInt(item.qty || 1); const discountPercent = getDiscountPercent(String(item.id)); trueSubtotal += (Math.round(cleanPrice * (1 + (discountPercent / 100))) * qty); sellingSubtotal += (cleanPrice * qty); totalItems += qty; });
-
-    let currentPin = ''; const form = document.getElementById('checkout-profile-form');
-    if (form && !form.classList.contains('hidden') && document.getElementById('prof-pin')) currentPin = document.getElementById('prof-pin').value.trim(); else if (savedAddresses.length > 0 && selectedAddressIndex !== -1) currentPin = savedAddresses[selectedAddressIndex].pincode;
-
-    const deliveryFeeEl = document.getElementById('qo-delivery-fee');
-    if (sellingSubtotal >= 2499) { currentDeliveryFee = 0; if(deliveryFeeEl) deliveryFeeEl.innerHTML = '<span class="text-green-600 font-bold uppercase tracking-widest text-[10px]">Free</span>'; } 
-    else if (currentPin.length >= 2) { currentDeliveryFee = calculateDynamicDelivery(sellingSubtotal, currentPin, cart); if(deliveryFeeEl) deliveryFeeEl.innerHTML = `₹${currentDeliveryFee}`; } 
-    else { currentDeliveryFee = 0; if(deliveryFeeEl) deliveryFeeEl.innerHTML = '<span class="text-gray-400 text-[10px] font-medium">Calculated next step</span>'; }
-    
-    const { discount: vipDiscount, currentTier } = calculateCartDiscount(sellingSubtotal); let couponSubtraction = activeCouponValue > 0 ? Math.round(sellingSubtotal * (activeCouponValue / 100)) : 0; const rowCoupon = document.getElementById('qo-coupon-row');
-    if (rowCoupon) { if (couponSubtraction > 0) { document.getElementById('qo-coupon-discount').textContent = `- ₹${couponSubtraction}`; rowCoupon.classList.remove('hidden'); } else { rowCoupon.classList.add('hidden'); } }
-
-    const finalTotal = sellingSubtotal - vipDiscount - couponSubtraction + currentDeliveryFee; const productDiscountTotal = trueSubtotal - sellingSubtotal; const totalSavings = productDiscountTotal + vipDiscount + couponSubtraction;
-
-    if(document.getElementById('qo-item-count')) document.getElementById('qo-item-count').textContent = totalItems;
-    if(document.getElementById('qo-original-value')) document.getElementById('qo-original-value').textContent = `₹${trueSubtotal}`;
-    if(document.getElementById('qo-product-discount')) document.getElementById('qo-product-discount').textContent = `- ₹${productDiscountTotal}`;
-    const vipRow = document.getElementById('qo-vip-row'); if(vipRow) { if(vipDiscount > 0) { if(document.getElementById('qo-vip-label')) document.getElementById('qo-vip-label').textContent = currentTier.label; if(document.getElementById('qo-vip-discount')) document.getElementById('qo-vip-discount').textContent = `- ₹${vipDiscount}`; vipRow.classList.remove('hidden'); } else { vipRow.classList.add('hidden'); } }
-    if(document.getElementById('qo-total-savings')) document.getElementById('qo-total-savings').textContent = totalSavings;
-    if(document.getElementById('qo-final-total')) document.getElementById('qo-final-total').textContent = `₹${finalTotal}`;
-
-    if(mobileBtn) {
-        if(checkoutStep === 1) { mobileBtn.innerHTML = `Next: Delivery <i class="fas fa-arrow-right ml-1"></i>`; if(cart.length === 0) { mobileBtn.disabled = true; mobileBtn.classList.add('opacity-50', 'cursor-not-allowed'); } else { mobileBtn.disabled = false; mobileBtn.classList.remove('opacity-50', 'cursor-not-allowed'); } } 
-        else if (checkoutStep === 2) { mobileBtn.innerHTML = `Next: Secure Payment <i class="fas fa-lock ml-1"></i>`; mobileBtn.disabled = false; mobileBtn.classList.remove('opacity-50', 'cursor-not-allowed'); }
-    }
-
-    if(sidebar) { if(window.innerWidth < 1024) { sidebar.className = (checkoutStep === 1) ? "block w-full mt-2" : "hidden w-full mt-2"; } else { sidebar.className = (checkoutStep === 1 || checkoutStep === 2) ? "block lg:col-span-4 w-full lg:mt-0" : "hidden lg:block lg:col-span-4 w-full lg:mt-0"; } }
-
-    const indActive = "w-8 h-8 rounded-full flex items-center justify-center text-[12px] font-bold transition-colors bg-[#D9778A] text-white shadow-md border-2 border-white group-hover:scale-105", indInactive = "w-8 h-8 rounded-full flex items-center justify-center text-[12px] font-bold transition-colors bg-white text-gray-400 border-2 border-luxury-blush group-hover:scale-105";
-
-    if (checkoutStep === 1) {
-        document.getElementById('checkout-step-1')?.classList.remove('hidden'); document.getElementById('checkout-step-2')?.classList.add('hidden'); document.getElementById('checkout-step-3')?.classList.add('hidden'); fill.style.width = '0%';
-        if(ind1) ind1.className = indActive; if(ind2) ind2.className = indInactive; if(ind3) ind3.className = indInactive;
-    } else if (checkoutStep === 2) {
-        document.getElementById('checkout-step-1')?.classList.add('hidden'); document.getElementById('checkout-step-2')?.classList.remove('hidden'); document.getElementById('checkout-step-3')?.classList.add('hidden'); fill.style.width = '50%';
-        if(ind1) ind1.className = indActive; if(ind2) ind2.className = indActive; if(ind3) ind3.className = indInactive;
-    } else if (checkoutStep === 3) {
-        document.getElementById('checkout-step-1')?.classList.add('hidden'); document.getElementById('checkout-step-2')?.classList.add('hidden'); document.getElementById('checkout-step-3')?.classList.remove('hidden'); fill.style.width = '100%';
-        if(ind1) ind1.className = indActive; if(ind2) ind2.className = indActive; if(ind3) ind3.className = indActive;
-    }
+    const f = document.getElementById('progress-bar-fill'), i1 = document.getElementById('step-indicator-1'), i2 = document.getElementById('step-indicator-2'), i3 = document.getElementById('step-indicator-3'), sb = document.getElementById('checkout-price-sidebar'), mb = document.getElementById('checkout-action-btn-mobile'); if(!f) return;
+    let ts = 0, ss = 0, ti = 0; cart.forEach((i) => { const cp = Number(String(i.price || 0).replace(/[^0-9.,]/g, '')), q = parseInt(i.qty || 1), dp = getDiscountPercent(String(i.id)); ts += (Math.round(cp * (1 + (dp / 100))) * q); ss += (cp * q); ti += q; });
+    let cPin = ''; const cf = document.getElementById('checkout-profile-form'); if (cf && !cf.classList.contains('hidden') && document.getElementById('prof-pin')) cPin = document.getElementById('prof-pin').value.trim(); else if (savedAddresses.length > 0 && selectedAddressIndex !== -1) cPin = savedAddresses[selectedAddressIndex].pincode;
+    const de = document.getElementById('qo-delivery-fee'); if (ss >= 2499) { currentDeliveryFee = 0; if(de) de.innerHTML = '<span class="text-green-600 font-bold uppercase tracking-widest text-[10px]">Free</span>'; } else if (cPin.length >= 2) { currentDeliveryFee = calculateDynamicDelivery(ss, cPin, cart); if(de) de.innerHTML = `₹${currentDeliveryFee}`; } else { currentDeliveryFee = 0; if(de) de.innerHTML = '<span class="text-gray-400 text-[10px] font-medium">Calculated next step</span>'; }
+    const { discount: vd, currentTier: ct } = calculateCartDiscount(ss); let cd = activeCouponValue > 0 ? Math.round(ss * (activeCouponValue / 100)) : 0; const rc = document.getElementById('qo-coupon-row'); if (rc) { if (cd > 0) { document.getElementById('qo-coupon-discount').textContent = `- ₹${cd}`; rc.classList.remove('hidden'); } else { rc.classList.add('hidden'); } }
+    const ft = ss - vd - cd + currentDeliveryFee, pd = ts - ss, tos = pd + vd + cd;
+    if(document.getElementById('qo-item-count')) document.getElementById('qo-item-count').textContent = ti; if(document.getElementById('qo-original-value')) document.getElementById('qo-original-value').textContent = `₹${ts}`; if(document.getElementById('qo-product-discount')) document.getElementById('qo-product-discount').textContent = `- ₹${pd}`;
+    const vr = document.getElementById('qo-vip-row'); if(vr) { if(vd > 0) { document.getElementById('qo-vip-label').textContent = ct.label; document.getElementById('qo-vip-discount').textContent = `- ₹${vd}`; vr.classList.remove('hidden'); } else { vr.classList.add('hidden'); } }
+    if(document.getElementById('qo-total-savings')) document.getElementById('qo-total-savings').textContent = tos; if(document.getElementById('qo-final-total')) document.getElementById('qo-final-total').textContent = `₹${ft}`;
+    if(mb) { if(checkoutStep === 1) { mb.innerHTML = `Next: Delivery <i class="fas fa-arrow-right ml-1"></i>`; mb.disabled = cart.length===0; mb.className=`w-full bg-luxury-dark text-white hover:bg-[#D9778A] py-4 rounded-xl font-bold text-[11px] uppercase tracking-[0.15em] transition-all shadow-float flex items-center justify-center gap-2 ${cart.length===0?'opacity-50 cursor-not-allowed':''}`; } else if (checkoutStep === 2) { mb.innerHTML = `Next: Secure Payment <i class="fas fa-lock ml-1"></i>`; mb.disabled = false; mb.className="w-full bg-luxury-dark text-white hover:bg-[#D9778A] py-4 rounded-xl font-bold text-[11px] uppercase tracking-[0.15em] transition-all shadow-float flex items-center justify-center gap-2"; } }
+    if(sb) { if(window.innerWidth < 1024) { sb.className = (checkoutStep === 1) ? "block w-full mt-2" : "hidden w-full mt-2"; } else { sb.className = (checkoutStep === 1 || checkoutStep === 2) ? "block lg:col-span-4 w-full lg:mt-0" : "hidden lg:block lg:col-span-4 w-full lg:mt-0"; } }
+    const aCl = "w-8 h-8 rounded-full flex items-center justify-center text-[12px] font-bold transition-colors bg-[#D9778A] text-white shadow-md border-2 border-white group-hover:scale-105", iCl = "w-8 h-8 rounded-full flex items-center justify-center text-[12px] font-bold transition-colors bg-white text-gray-400 border-2 border-luxury-blush group-hover:scale-105";
+    if (checkoutStep === 1) { document.getElementById('checkout-step-1')?.classList.remove('hidden'); document.getElementById('checkout-step-2')?.classList.add('hidden'); document.getElementById('checkout-step-3')?.classList.add('hidden'); f.style.width = '0%'; if(i1) i1.className = aCl; if(i2) i2.className = iCl; if(i3) i3.className = iCl; } 
+    else if (checkoutStep === 2) { document.getElementById('checkout-step-1')?.classList.add('hidden'); document.getElementById('checkout-step-2')?.classList.remove('hidden'); document.getElementById('checkout-step-3')?.classList.add('hidden'); f.style.width = '50%'; if(i1) i1.className = aCl; if(i2) i2.className = aCl; if(i3) i3.className = iCl; } 
+    else if (checkoutStep === 3) { document.getElementById('checkout-step-1')?.classList.add('hidden'); document.getElementById('checkout-step-2')?.classList.add('hidden'); document.getElementById('checkout-step-3')?.classList.remove('hidden'); f.style.width = '100%'; if(i1) i1.className = aCl; if(i2) i2.className = aCl; if(i3) i3.className = aCl; }
 }
 
 window.handleMobileStickyAction = function() { window.handleCheckoutAction(); };
-
 window.handleCheckoutAction = function() {
-    if (checkoutStep === 1) {
-        if (cart.length === 0) return window.showToast("Your bag is empty!", "fa-times", "text-red-500");
-        if (!currentSessionUser) { window.showToast("Please Sign In to Checkout", "fa-user-lock", "text-luxury-rose"); window.openCustomerAuthModal(); return; }
-        checkoutStep = 2; updateCheckoutUI(); renderAddressBook(); document.getElementById('checkout-overlay')?.scrollTo({top: 0, behavior: 'smooth'});
-    } else if (checkoutStep === 2) {
-        const form = document.getElementById('checkout-profile-form'); if (form && !form.classList.contains('hidden')) { const success = window.saveAddressFromForm(); if (!success) return; }
-        if (savedAddresses.length === 0 || selectedAddressIndex === -1) { window.showToast("Please provide a delivery address.", "fa-exclamation-circle", "text-red-500"); return; }
-        window.preparePaymentGateway();
-    }
+    if (checkoutStep === 1) { if (cart.length === 0) return window.showToast("Your bag is empty!", "fa-times", "text-red-500"); if (!currentSessionUser) { window.showToast("Please Sign In to Checkout", "fa-user-lock", "text-luxury-rose"); window.openCustomerAuthModal(); return; } checkoutStep = 2; updateCheckoutUI(); renderAddressBook(); document.getElementById('checkout-overlay')?.scrollTo({top: 0, behavior: 'smooth'}); } 
+    else if (checkoutStep === 2) { const f = document.getElementById('checkout-profile-form'); if (f && !f.classList.contains('hidden')) { window.saveAddressFromForm().then(s=>{ if(!s) return; }); } if (savedAddresses.length === 0 || selectedAddressIndex === -1) { return window.showToast("Please provide a delivery address.", "fa-exclamation-circle", "text-red-500"); } window.preparePaymentGateway(); }
 };
 
 window.preparePaymentGateway = function() {
-    const type = document.getElementById('comm-type') ? document.getElementById('comm-type').value : 'Standard Order';
-    const colors = document.getElementById('comm-colors') ? document.getElementById('comm-colors').value.trim() : 'No notes'; 
-    const dims = document.getElementById('comm-dimensions') ? document.getElementById('comm-dimensions').value.trim() : '';
-    
-    showInteractionLoader("Securing Order Engine...");
-    
-    let sellingSubtotal = 0, totalPrepTime = "", itemsToSave = [];
-    cart.forEach((item) => { const cleanPrice = Number(String(item.price || 0).replace(/[^0-9.,]/g, '')); const qty = parseInt(item.qty || 1); sellingSubtotal += (cleanPrice * qty); itemsToSave.push({ id: item.id, name: item.name, price: cleanPrice, qty: qty, image: item.image || item.image1 }); });
-    totalPrepTime = calculateTotalPrepTime(cart);
-    const targetAddress = savedAddresses[selectedAddressIndex]; currentDeliveryFee = calculateDynamicDelivery(sellingSubtotal, targetAddress.pincode, cart);
-    const { discount: vipDiscount } = calculateCartDiscount(sellingSubtotal); let couponSubtraction = activeCouponValue > 0 ? Math.round(sellingSubtotal * (activeCouponValue / 100)) : 0; const finalTotal = sellingSubtotal - vipDiscount - couponSubtraction + currentDeliveryFee; 
-    const safeCountryCode = (settings.countryCode || '+91'), fullContactPhone = safeCountryCode + " " + targetAddress.phone;
-    let fullAddress = `${targetAddress.address_1}, ${targetAddress.address_2 ? targetAddress.address_2 + ', ' : ''}${targetAddress.city}, ${targetAddress.state} - ${targetAddress.pincode}`;
-    const cleanNameForNote = targetAddress.first_name.replace(/[^a-zA-Z0-9]/g, '').substring(0, 10); currentOrderReference = `TH_${cleanNameForNote}_${String(Date.now()).slice(-4)}`; 
-
-    let artDetails = `Order ID: ${currentOrderReference} | Phone: ${fullContactPhone} | Patron: ${targetAddress.first_name} ${targetAddress.last_name || ''} | Email: ${targetAddress.email} | Address: ${fullAddress} | Purpose: ${type} | Notes: ${colors} | Delivery Fee: ₹${currentDeliveryFee}`;
-    if(activeCouponValue > 0) artDetails += ` | Coupon: ${activeCouponCode} (-₹${couponSubtraction})`; if(dims && document.getElementById('comm-dimensions-wrapper') && !document.getElementById('comm-dimensions-wrapper').classList.contains('hidden')) { artDetails += ` | Size: ${dims}`; } artDetails += ` | Est. Prep: ${totalPrepTime}`; 
-
-    const formattedTotal = Number(finalTotal).toFixed(2), cleanUpiId = (settings.upiId || "khushisj315@oksbi").trim(), upiLink = `upi://pay?pa=${cleanUpiId}&pn=${settings.storeName ? settings.storeName.replace(/\s+/g, '_') : 'Khushiified_Art'}&am=${formattedTotal}&cu=INR&tn=${currentOrderReference}`;
-
-    pendingOrderPayload = { order_details: JSON.stringify(itemsToSave), subtotal: sellingSubtotal, discount: vipDiscount, total: finalTotal, customer_reqs: artDetails, status: 'new', user_id: currentSessionUser ? currentSessionUser.id : null };
-    
-    setTimeout(() => {
-        checkoutStep = 3; if(document.getElementById('checkout-payment-amount')) document.getElementById('checkout-payment-amount').textContent = `₹${formattedTotal}`;
-        const verifyBtn = document.getElementById('btn-confirm-payment'); if(verifyBtn) { verifyBtn.innerHTML = 'I Have Completed Payment <i class="fas fa-check-circle"></i>'; verifyBtn.disabled = false; }
-        if (isMobileDevice()) {
-            if(document.getElementById('payment-mobile-btn')) document.getElementById('payment-mobile-btn').href = upiLink;
-            document.getElementById('payment-mobile-container')?.classList.remove('hidden'); document.getElementById('payment-qr-container')?.classList.add('hidden');
-        } else {
-            const qrUrl = `https://quickchart.io/qr?size=250&margin=2&text=${encodeURIComponent(upiLink)}`;
-            if(document.getElementById('payment-qr-img')) document.getElementById('payment-qr-img').src = qrUrl;
-            document.getElementById('payment-qr-container')?.classList.remove('hidden'); document.getElementById('payment-mobile-container')?.classList.add('hidden');
-        }
-        updateCheckoutUI(); document.getElementById('checkout-overlay')?.scrollTo({top: 0, behavior: 'smooth'}); hideInteractionLoader();
-    }, 1500); 
+    const t = document.getElementById('comm-type') ? document.getElementById('comm-type').value : 'Standard Order', c = document.getElementById('comm-colors') ? document.getElementById('comm-colors').value.trim() : 'No notes', dims = document.getElementById('comm-dimensions') ? document.getElementById('comm-dimensions').value.trim() : ''; showInteractionLoader("Securing Order Engine...");
+    let ss = 0, tpt = "", its = []; cart.forEach((i) => { const cp = Number(String(i.price || 0).replace(/[^0-9.,]/g, '')), q = parseInt(i.qty || 1); ss += (cp * q); its.push({ id: i.id, name: i.name, price: cp, qty: q, image: i.image || i.image1 }); }); tpt = calculateTotalPrepTime(cart);
+    const ta = savedAddresses[selectedAddressIndex]; currentDeliveryFee = calculateDynamicDelivery(ss, ta.pincode, cart);
+    const { discount: vd } = calculateCartDiscount(ss); let cd = activeCouponValue > 0 ? Math.round(ss * (activeCouponValue / 100)) : 0; const ft = ss - vd - cd + currentDeliveryFee; 
+    const scc = (settings.countryCode || '+91'), fcp = scc + " " + ta.phone; let fa = `${ta.address_1}, ${ta.address_2 ? ta.address_2 + ', ' : ''}${ta.city}, ${ta.state} - ${ta.pincode}`;
+    const cln = ta.first_name.replace(/[^a-zA-Z0-9]/g, '').substring(0, 10); currentOrderReference = `TH_${cln}_${String(Date.now()).slice(-4)}`; 
+    let ad = `ID: ${currentOrderReference} | Ph: ${fcp} | Patron: ${ta.first_name} ${ta.last_name || ''} | Email: ${ta.email} | Address: ${fa} | Purpose: ${t} | Notes: ${c} | Delivery Fee: ₹${currentDeliveryFee}`; if(activeCouponValue > 0) ad += ` | Coupon: ${activeCouponCode} (-₹${cd})`; if(dims && document.getElementById('comm-dimensions-wrapper') && !document.getElementById('comm-dimensions-wrapper').classList.contains('hidden')) ad += ` | Size: ${dims}`; ad += ` | Est. Prep: ${tpt}`; 
+    const fmt = Number(ft).toFixed(2), uId = (settings.upiId || "khushisj315@oksbi").trim(), uLnk = `upi://pay?pa=${uId}&pn=${settings.storeName ? settings.storeName.replace(/\s+/g, '_') : 'Twisted_Happiness'}&am=${fmt}&cu=INR&tn=${currentOrderReference}`;
+    pendingOrderPayload = { order_details: JSON.stringify(its), subtotal: ss, discount: vd, total: ft, customer_reqs: ad, status: 'new', user_id: currentSessionUser ? currentSessionUser.id : null };
+    setTimeout(() => { checkoutStep = 3; if(document.getElementById('checkout-payment-amount')) document.getElementById('checkout-payment-amount').textContent = `₹${fmt}`; const vb = document.getElementById('btn-confirm-payment'); if(vb) { vb.innerHTML = 'I Have Completed Payment <i class="fas fa-check-circle"></i>'; vb.disabled = false; } if (isMobileDevice()) { if(document.getElementById('payment-mobile-btn')) document.getElementById('payment-mobile-btn').href = uLnk; document.getElementById('payment-mobile-container')?.classList.remove('hidden'); document.getElementById('payment-qr-container')?.classList.add('hidden'); } else { const qrUrl = `https://quickchart.io/qr?size=250&margin=2&text=${encodeURIComponent(uLnk)}`; if(document.getElementById('payment-qr-img')) document.getElementById('payment-qr-img').src = qrUrl; document.getElementById('payment-qr-container')?.classList.remove('hidden'); document.getElementById('payment-mobile-container')?.classList.add('hidden'); } updateCheckoutUI(); document.getElementById('checkout-overlay')?.scrollTo({top: 0, behavior: 'smooth'}); hideInteractionLoader(); }, 1500); 
 };
 
 window.confirmPaymentAndOrder = async function() {
-    if(!pendingOrderPayload) return; const btn = document.getElementById('btn-confirm-payment'); if(btn) { btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Securing Order...'; btn.disabled = true; }
+    if(!pendingOrderPayload) return; const b = document.getElementById('btn-confirm-payment'); if(b) { b.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Securing Order...'; b.disabled = true; }
     pendingOrderPayload.order_id = currentOrderReference; const { error } = await _supabase.from('orders').insert([pendingOrderPayload]);
-    if (error) { console.error("Order writing failure:", error); window.showToast("Network error. Please try again.", "fa-times", "text-red-500"); if(btn) { btn.innerHTML = 'I Have Completed Payment <i class="fas fa-check-circle"></i>'; btn.disabled = false; } return; }
-    document.getElementById('payment-gateway-view')?.classList.add('hidden'); document.getElementById('payment-gateway-view')?.classList.remove('flex');
-    if(document.getElementById('success-ref-note')) document.getElementById('success-ref-note').textContent = currentOrderReference;
-    document.getElementById('payment-success-view')?.classList.remove('hidden'); document.getElementById('payment-success-view')?.classList.add('flex');
+    if (error) { window.showToast("Network error. Please try again.", "fa-times", "text-red-500"); if(b) { b.innerHTML = 'I Have Completed Payment <i class="fas fa-check-circle"></i>'; b.disabled = false; } return; }
+    document.getElementById('payment-gateway-view')?.classList.add('hidden'); document.getElementById('payment-gateway-view')?.classList.remove('flex'); if(document.getElementById('success-ref-note')) document.getElementById('success-ref-note').textContent = currentOrderReference; document.getElementById('payment-success-view')?.classList.remove('hidden'); document.getElementById('payment-success-view')?.classList.add('flex');
     cart = []; localStorage.setItem('th_cart', JSON.stringify(cart)); updateCartCount(); 
 };
 
-// 🚨 TRACKING & UI 🚨
+// ==========================================
+// 🚨 ORDER TRACKING LOGIC
+// ==========================================
 async function renderCustomerOrdersPipeline() {
-    const container = document.getElementById('customer-orders-pipeline'); if(!container || !currentSessionUser) return;
-    container.innerHTML = '<div class="text-center py-8 text-gray-400 text-[11px] font-medium"><i class="fas fa-spinner fa-spin mr-2"></i> Querying secure logs...</div>';
-    try {
-        const { data } = await _supabase.from('orders').select('*').eq('user_id', currentSessionUser.id).order('created_at', { ascending: false });
-        if(!data || data.length === 0) { container.innerHTML = '<div class="text-center p-10 text-gray-400 text-[11px] uppercase tracking-widest"><i class="fas fa-box-open text-2xl block mb-2 opacity-40"></i> No commissions found.</div>'; return; }
-        let html = '';
-        data.forEach(order => {
-            const date = new Date(order.created_at).toLocaleDateString('en-IN', { day: 'numeric', month: 'short' });
-            let txt = "Verifying Payment", cls = "text-yellow-600 bg-yellow-50 border-yellow-200";
-            if (order.status === 'curating') { txt = "Artisan is Crafting"; cls = "text-luxury-gold bg-luxury-gold/5 border-luxury-gold/20"; } 
-            else if (order.status === 'ready') { txt = "Ready for Dispatch"; cls = "text-purple-600 bg-purple-50 border-purple-200"; } 
-            else if (order.status === 'completed') { txt = "Elegantly Delivered"; cls = "text-green-600 bg-green-50 border-green-200"; }
-            const idMatch = (order.customer_reqs || '').match(/Order ID:\s*([^|]+)/); const extractedId = idMatch ? idMatch[1].trim() : 'TH_LOG';
-            html += `<div class="bg-white border border-luxury-blush p-4 rounded-2xl shadow-sm"><div class="flex justify-between items-start border-b border-luxury-blush pb-3 mb-3"><div><span class="text-[8px] text-gray-400 uppercase tracking-widest block mb-0.5">Reference</span><h4 class="font-poppins font-bold text-sm">${extractedId}</h4></div><span class="text-[8px] font-bold border px-2 py-0.5 rounded uppercase ${cls}">${txt}</span></div><p class="text-gray-400 text-[10px]">Placed on ${date}</p><p class="font-bold text-luxury-dark text-[12px] mt-1">Invoice Total: ₹${order.total}</p></div>`;
-        });
-        container.innerHTML = html;
-    } catch(err) { container.innerHTML = '<div class="text-center text-red-500 py-4 text-xs">Failed to fetch.</div>'; }
+    const c = document.getElementById('customer-orders-pipeline'); if(!c || !currentSessionUser) return; c.innerHTML = '<div class="text-center py-8 text-gray-400 text-[11px] font-medium"><i class="fas fa-spinner fa-spin mr-2"></i> Querying secure logs...</div>';
+    try { const { data } = await _supabase.from('orders').select('*').eq('user_id', currentSessionUser.id).order('created_at', { ascending: false }); if(!data || data.length === 0) { c.innerHTML = '<div class="text-center p-10 text-gray-400 text-[11px] uppercase tracking-widest"><i class="fas fa-box-open text-2xl block mb-2 opacity-40"></i> No commissions found.</div>'; return; } let html = ''; data.forEach(o => { const dt = new Date(o.created_at).toLocaleDateString('en-IN', { day: 'numeric', month: 'short' }); let t = "Verifying Payment", cl = "text-yellow-600 bg-yellow-50 border-yellow-200"; if (o.status === 'curating') { t = "Artisan is Crafting"; cl = "text-luxury-gold bg-luxury-gold/5 border-luxury-gold/20"; } else if (o.status === 'ready') { t = "Ready for Dispatch"; cl = "text-purple-600 bg-purple-50 border-purple-200"; } else if (o.status === 'completed') { t = "Elegantly Delivered"; cl = "text-green-600 bg-green-50 border-green-200"; } const idm = (o.customer_reqs || '').match(/Order ID:\s*([^|]+)/); const exId = idm ? idm[1].trim() : 'TH_LOG'; html += `<div class="bg-white border border-luxury-blush p-4 rounded-2xl shadow-sm"><div class="flex justify-between items-start border-b border-luxury-blush pb-3 mb-3"><div><span class="text-[8px] text-gray-400 uppercase tracking-widest block mb-0.5">Reference</span><h4 class="font-poppins font-bold text-sm">${exId}</h4></div><span class="text-[8px] font-bold border px-2 py-0.5 rounded uppercase ${cl}">${t}</span></div><p class="text-gray-400 text-[10px]">Placed on ${dt}</p><p class="font-bold text-luxury-dark text-[12px] mt-1">Invoice Total: ₹${o.total}</p></div>`; }); c.innerHTML = html; } catch(err) { c.innerHTML = '<div class="text-center text-red-500 py-4 text-xs">Failed to fetch.</div>'; }
 }
 
 window.openTrackOrderModal = function() { document.getElementById('track-order-id-guest').value = ''; document.getElementById('track-result-container-guest').classList.add('hidden'); window.openPolicyModal('track-order-modal', 'track-order-box'); };
 window.closeTrackOrderModal = function() { window.closePolicyModal('track-order-modal', 'track-order-box'); };
 
 async function handleTrackOrder(e) {
-    e.preventDefault(); const orderId = document.getElementById('track-order-id').value.trim(); if(!orderId) return;
-    const btn = document.getElementById('btn-track-submit'); const originalText = btn.innerHTML; btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Searching...'; btn.disabled = true;
-    try {
-        const { data, error } = await _supabase.from('orders').select('status').ilike('customer_reqs', `%${orderId}%`).limit(1); if (error) throw error;
-        const resContainer = document.getElementById('track-result-container'), resStatus = document.getElementById('track-result-status'), resDesc = document.getElementById('track-result-desc');
-        if(data && data.length > 0) {
-            const status = data[0].status; resContainer.classList.remove('hidden');
-            if(status === 'new' || status === 'pending') { resStatus.textContent = "Verifying Payment"; resStatus.className = "font-poppins font-bold text-yellow-600 text-lg tracking-wide mb-2"; resDesc.textContent = "We have received your request and are verifying the transaction with our bank. We will begin crafting shortly!"; } 
-            else if (status === 'curating') { resStatus.textContent = "Artisan is Crafting"; resStatus.className = "font-poppins font-bold text-luxury-gold text-lg tracking-wide mb-2"; resDesc.textContent = "Your payment is verified and our artisan is currently pouring love into your handcrafted piece."; } 
-            else if (status === 'ready') { resStatus.textContent = "Ready for Dispatch"; resStatus.className = "font-poppins font-bold text-purple-600 text-lg tracking-wide mb-2"; resDesc.textContent = "Your masterpiece is complete, securely packaged, and awaiting courier pickup via Shiprocket."; } 
-            else if (status === 'completed') { resStatus.textContent = "Elegantly Delivered"; resStatus.className = "font-poppins font-bold text-green-600 text-lg tracking-wide mb-2"; resDesc.textContent = "Your order has been successfully delivered. Thank you for curating your space with Khushiified Art!"; }
-        } else { resContainer.classList.remove('hidden'); resStatus.textContent = "Not Found"; resStatus.className = "font-poppins font-bold text-red-500 text-lg tracking-wide mb-2"; resDesc.textContent = "We couldn't find an active order with that reference ID."; }
-    } catch(err) { window.showToast("Network Error", "fa-times", "text-red-500"); }
-    btn.innerHTML = originalText; btn.disabled = false;
+    e.preventDefault(); const oid = document.getElementById('track-order-id').value.trim(); if(!oid) return; const b = document.getElementById('btn-track-submit'); const oTxt = b.innerHTML; b.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Searching...'; b.disabled = true;
+    try { const { data, error } = await _supabase.from('orders').select('status').ilike('customer_reqs', `%${oid}%`).limit(1); if (error) throw error; const rc = document.getElementById('track-result-container'), rs = document.getElementById('track-result-status'), rd = document.getElementById('track-result-desc'); if(data && data.length > 0) { const s = data[0].status; rc.classList.remove('hidden'); if(s === 'new' || s === 'pending') { rs.textContent = "Verifying Payment"; rs.className = "font-poppins font-bold text-yellow-600 text-lg tracking-wide mb-2"; rd.textContent = "We have received your request and are verifying the transaction with our bank. We will begin crafting shortly!"; } else if (s === 'curating') { rs.textContent = "Artisan is Crafting"; rs.className = "font-poppins font-bold text-luxury-gold text-lg tracking-wide mb-2"; rd.textContent = "Your payment is verified and our artisan is currently pouring love into your handcrafted piece."; } else if (s === 'ready') { rs.textContent = "Ready for Dispatch"; rs.className = "font-poppins font-bold text-purple-600 text-lg tracking-wide mb-2"; rd.textContent = "Your masterpiece is complete, securely packaged, and awaiting courier pickup."; } else if (s === 'completed') { rs.textContent = "Elegantly Delivered"; rs.className = "font-poppins font-bold text-green-600 text-lg tracking-wide mb-2"; rd.textContent = "Your order has been successfully delivered. Thank you for curating your space!"; } } else { rc.classList.remove('hidden'); rs.textContent = "Not Found"; rs.className = "font-poppins font-bold text-red-500 text-lg tracking-wide mb-2"; rd.textContent = "We couldn't find an active order with that reference ID."; } } catch(err) { window.showToast("Network Error", "fa-times", "text-red-500"); } b.innerHTML = oTxt; b.disabled = false;
 }
 
 async function handleTrackOrderGuest(e) {
-    e.preventDefault(); const orderId = document.getElementById('track-order-id-guest').value.trim(); if(!orderId) return;
-    const btn = document.getElementById('btn-track-submit-guest'); const originalText = btn.innerHTML; btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Searching...'; btn.disabled = true;
-    try {
-        const { data, error } = await _supabase.from('orders').select('status').ilike('customer_reqs', `%${orderId}%`).limit(1); if (error) throw error;
-        const resContainer = document.getElementById('track-result-container-guest'), resStatus = document.getElementById('track-result-status-guest'), resDesc = document.getElementById('track-result-desc-guest');
-        if(data && data.length > 0) {
-            const status = data[0].status; resContainer.classList.remove('hidden');
-            if(status === 'new' || status === 'pending') { resStatus.textContent = "Verifying Payment"; resStatus.className = "font-poppins font-bold text-yellow-600 text-lg tracking-wide mb-2"; resDesc.textContent = "We have received your request and are verifying the transaction with our bank. We will begin crafting shortly!"; } 
-            else if (status === 'curating') { resStatus.textContent = "Artisan is Crafting"; resStatus.className = "font-poppins font-bold text-luxury-gold text-lg tracking-wide mb-2"; resDesc.textContent = "Your payment is verified and our artisan is currently pouring love into your handcrafted piece."; } 
-            else if (status === 'ready') { resStatus.textContent = "Ready for Dispatch"; resStatus.className = "font-poppins font-bold text-purple-600 text-lg tracking-wide mb-2"; resDesc.textContent = "Your masterpiece is complete, securely packaged, and awaiting courier pickup via Shiprocket."; } 
-            else if (status === 'completed') { resStatus.textContent = "Elegantly Delivered"; resStatus.className = "font-poppins font-bold text-green-600 text-lg tracking-wide mb-2"; resDesc.textContent = "Your order has been successfully delivered. Thank you for curating your space with Khushiified Art!"; }
-        } else { resContainer.classList.remove('hidden'); resStatus.textContent = "Not Found"; resStatus.className = "font-poppins font-bold text-red-500 text-lg tracking-wide mb-2"; resDesc.textContent = "We couldn't find an active order with that reference ID."; }
-    } catch(err) { window.showToast("Network Error", "fa-times", "text-red-500"); }
-    btn.innerHTML = originalText; btn.disabled = false;
+    e.preventDefault(); const oid = document.getElementById('track-order-id-guest').value.trim(); if(!oid) return; const b = document.getElementById('btn-track-submit-guest'); const oTxt = b.innerHTML; b.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Searching...'; b.disabled = true;
+    try { const { data, error } = await _supabase.from('orders').select('status').ilike('customer_reqs', `%${oid}%`).limit(1); if (error) throw error; const rc = document.getElementById('track-result-container-guest'), rs = document.getElementById('track-result-status-guest'), rd = document.getElementById('track-result-desc-guest'); if(data && data.length > 0) { const s = data[0].status; rc.classList.remove('hidden'); if(s === 'new' || s === 'pending') { rs.textContent = "Verifying Payment"; rs.className = "font-poppins font-bold text-yellow-600 text-lg tracking-wide mb-2"; rd.textContent = "We have received your request and are verifying the transaction with our bank. We will begin crafting shortly!"; } else if (s === 'curating') { rs.textContent = "Artisan is Crafting"; rs.className = "font-poppins font-bold text-luxury-gold text-lg tracking-wide mb-2"; rd.textContent = "Your payment is verified and our artisan is currently pouring love into your handcrafted piece."; } else if (s === 'ready') { rs.textContent = "Ready for Dispatch"; rs.className = "font-poppins font-bold text-purple-600 text-lg tracking-wide mb-2"; rd.textContent = "Your masterpiece is complete, securely packaged, and awaiting courier pickup."; } else if (s === 'completed') { rs.textContent = "Elegantly Delivered"; rs.className = "font-poppins font-bold text-green-600 text-lg tracking-wide mb-2"; rd.textContent = "Your order has been successfully delivered. Thank you for curating your space!"; } } else { rc.classList.remove('hidden'); rs.textContent = "Not Found"; rs.className = "font-poppins font-bold text-red-500 text-lg tracking-wide mb-2"; rd.textContent = "We couldn't find an active order with that reference ID."; } } catch(err) { window.showToast("Network Error", "fa-times", "text-red-500"); } b.innerHTML = oTxt; b.disabled = false;
 }
 
-// 🚨 CAROUSEL / LIGHTBOX 🚨
-window.openLightboxFromCarousel = function() { currentLightboxIndex = currentSlideIndex; const lb = document.getElementById('lightbox-modal'); const track = document.getElementById('lightbox-track'); if(!lb || !track) return; track.innerHTML = ''; modalImages.forEach((src) => { track.innerHTML += `<div class="w-full h-full flex-shrink-0 flex items-center justify-center p-2 md:p-8"><img loading="lazy" decoding="async" src="${src}" class="w-full max-h-full object-contain"></div>`; }); track.style.transition = 'none'; track.style.transform = `translateX(-${currentLightboxIndex * 100}%)`; updateLightboxCounter(); currentModalLevel = 2; safePushState(2); lb.classList.remove('hidden'); requestAnimationFrame(() => { lb.classList.remove('opacity-0'); }); setupLightboxTouch(); };
+// ==========================================
+// 🚨 CACHED UI NAVIGATION (Lightbox / Carousel)
+// ==========================================
+window.openLightboxFromCarousel = function() { currentLightboxIndex = currentSlideIndex; const lb = document.getElementById('lightbox-modal'); const tr = document.getElementById('lightbox-track'); if(!lb || !tr) return; tr.innerHTML = ''; modalImages.forEach((src) => { tr.innerHTML += `<div class="w-full h-full flex-shrink-0 flex items-center justify-center p-2 md:p-8"><img loading="lazy" decoding="async" src="${src}" class="w-full max-h-full object-contain"></div>`; }); tr.style.transition = 'none'; tr.style.transform = `translateX(-${currentLightboxIndex * 100}%)`; document.getElementById('lightbox-counter').textContent = `${currentLightboxIndex + 1} / ${modalImages.length}`; currentModalLevel = 2; window.safePushState(2); lb.classList.remove('hidden'); requestAnimationFrame(() => { lb.classList.remove('opacity-0'); }); setupLightboxTouch(); };
 window.forceCloseLightbox = function() { const lb = document.getElementById('lightbox-modal'); if(!lb) return; requestAnimationFrame(() => { lb.classList.add('opacity-0'); setTimeout(() => { lb.classList.add('hidden'); }, 200); }); };
-window.moveLightboxSlide = function(direction) { if (isLightboxAnimating) return; isLightboxAnimating = true; currentLightboxIndex += direction; if (currentLightboxIndex < 0) currentLightboxIndex = modalImages.length - 1; if (currentLightboxIndex >= modalImages.length) currentLightboxIndex = 0; const track = document.getElementById('lightbox-track'); if(!track) return; requestAnimationFrame(() => { track.style.transition = 'transform 0.4s ease-out'; track.style.transform = `translateX(-${currentLightboxIndex * 100}%)`; }); updateLightboxCounter(); setTimeout(() => { isLightboxAnimating = false; }, 400); };
-function updateLightboxCounter() { const counter = document.getElementById('lightbox-counter'); if(counter) counter.textContent = `${currentLightboxIndex + 1} / ${modalImages.length}`; }
-function moveSlide(direction) { if (isAnimating) return; isAnimating = true; currentSlideIndex += direction; if (currentSlideIndex < 0) currentSlideIndex = modalImages.length - 1; if (currentSlideIndex >= modalImages.length) currentSlideIndex = 0; const track = document.getElementById('modal-carousel-track'); if(!track) return; requestAnimationFrame(() => { track.style.transition = 'transform 0.4s ease-out'; track.style.transform = `translateX(-${currentSlideIndex * 100}%)`; }); updateActiveThumb(currentSlideIndex, modalImages.length); setTimeout(() => { isAnimating = false; }, 400); }
-window.goToSlide = function(index) { if (isAnimating || index === currentSlideIndex) return; isAnimating = true; currentSlideIndex = index; const track = document.getElementById('modal-carousel-track'); if(!track) return; requestAnimationFrame(() => { track.style.transition = 'transform 0.4s ease-out'; track.style.transform = `translateX(-${currentSlideIndex * 100}%)`; }); updateActiveThumb(currentSlideIndex, modalImages.length); setTimeout(() => { isAnimating = false; }, 400); };
-function setupTouchCarousel() { let startX = 0, endX = 0; const track = document.getElementById('modal-carousel-track'); if(track) { track.replaceWith(track.cloneNode(true)); const newTrack = document.getElementById('modal-carousel-track'); newTrack.addEventListener('touchstart', (e) => { startX = e.changedTouches[0].screenX; }, {passive: true}); newTrack.addEventListener('touchend', (e) => { endX = e.changedTouches[0].screenX; requestAnimationFrame(() => { if (endX < startX - 30) moveSlide(1); else if (endX > startX + 30) moveSlide(-1); }); }, {passive: true}); } }
-function setupLightboxTouch() { let lbStartX = 0, lbEndX = 0; const track = document.getElementById('lightbox-track'); if(track) { track.replaceWith(track.cloneNode(true)); const newTrack = document.getElementById('lightbox-track'); newTrack.addEventListener('touchstart', (e) => { lbStartX = e.changedTouches[0].screenX; }, {passive: true}); newTrack.addEventListener('touchend', (e) => { lbEndX = e.changedTouches[0].screenX; requestAnimationFrame(() => { if (lbEndX < lbStartX - 30) window.moveLightboxSlide(1); else if (lbEndX > lbStartX + 30) window.moveLightboxSlide(-1); }); }, {passive: true}); } }
-function updateActiveThumb(activeIndex, totalImages) { requestAnimationFrame(() => { for(let i = 0; i < totalImages; i++) { const thumb = document.getElementById(`thumb-${i}`); if(thumb) { if(i === activeIndex) { thumb.classList.add('border-luxury-rose', 'scale-105', 'opacity-100'); thumb.classList.remove('border-transparent', 'opacity-60'); } else { thumb.classList.remove('border-luxury-rose', 'scale-105', 'opacity-100'); thumb.classList.add('border-transparent', 'opacity-60'); } } } }); }
+window.moveLightboxSlide = function(dir) { if (isLightboxAnimating) return; isLightboxAnimating = true; currentLightboxIndex += dir; if (currentLightboxIndex < 0) currentLightboxIndex = modalImages.length - 1; if (currentLightboxIndex >= modalImages.length) currentLightboxIndex = 0; const tr = document.getElementById('lightbox-track'); if(!tr) return; requestAnimationFrame(() => { tr.style.transition = 'transform 0.4s ease-out'; tr.style.transform = `translateX(-${currentLightboxIndex * 100}%)`; }); document.getElementById('lightbox-counter').textContent = `${currentLightboxIndex + 1} / ${modalImages.length}`; setTimeout(() => { isLightboxAnimating = false; }, 400); };
+function moveSlide(dir) { if (isAnimating) return; isAnimating = true; currentSlideIndex += dir; if (currentSlideIndex < 0) currentSlideIndex = modalImages.length - 1; if (currentSlideIndex >= modalImages.length) currentSlideIndex = 0; const tr = document.getElementById('modal-carousel-track'); if(!tr) return; requestAnimationFrame(() => { tr.style.transition = 'transform 0.4s ease-out'; tr.style.transform = `translateX(-${currentSlideIndex * 100}%)`; }); updateActiveThumb(currentSlideIndex, modalImages.length); setTimeout(() => { isAnimating = false; }, 400); }
+window.goToSlide = function(idx) { if (isAnimating || idx === currentSlideIndex) return; isAnimating = true; currentSlideIndex = idx; const tr = document.getElementById('modal-carousel-track'); if(!tr) return; requestAnimationFrame(() => { tr.style.transition = 'transform 0.4s ease-out'; tr.style.transform = `translateX(-${currentSlideIndex * 100}%)`; }); updateActiveThumb(currentSlideIndex, modalImages.length); setTimeout(() => { isAnimating = false; }, 400); };
+function setupTouchCarousel() { let sX = 0, eX = 0; const tr = document.getElementById('modal-carousel-track'); if(tr) { tr.replaceWith(tr.cloneNode(true)); const nt = document.getElementById('modal-carousel-track'); nt.addEventListener('touchstart', (e) => { sX = e.changedTouches[0].screenX; }, {passive: true}); nt.addEventListener('touchend', (e) => { eX = e.changedTouches[0].screenX; requestAnimationFrame(() => { if (eX < sX - 30) moveSlide(1); else if (eX > sX + 30) moveSlide(-1); }); }, {passive: true}); } }
+function setupLightboxTouch() { let lsX = 0, leX = 0; const tr = document.getElementById('lightbox-track'); if(tr) { tr.replaceWith(tr.cloneNode(true)); const nt = document.getElementById('lightbox-track'); nt.addEventListener('touchstart', (e) => { lsX = e.changedTouches[0].screenX; }, {passive: true}); nt.addEventListener('touchend', (e) => { leX = e.changedTouches[0].screenX; requestAnimationFrame(() => { if (leX < lsX - 30) window.moveLightboxSlide(1); else if (leX > lsX + 30) window.moveLightboxSlide(-1); }); }, {passive: true}); } }
+function updateActiveThumb(aIdx, tot) { requestAnimationFrame(() => { for(let i = 0; i < tot; i++) { const th = document.getElementById(`thumb-${i}`); if(th) { if(i === aIdx) { th.classList.add('border-luxury-rose', 'scale-105', 'opacity-100'); th.classList.remove('border-transparent', 'opacity-60'); } else { th.classList.remove('border-luxury-rose', 'scale-105', 'opacity-100'); th.classList.add('border-transparent', 'opacity-60'); } } } }); }
 
-// 🚨 SEARCH, SORT & FILTER 🚨
+// ==========================================
+// 🚨 SEARCH, SORT & FILTER
+// ==========================================
 function syncSearch(val) { currentSearchQuery = val; if(document.getElementById('searchInputDesk') && document.getElementById('searchInputDesk').value !== val) document.getElementById('searchInputDesk').value = val; if(document.getElementById('searchInputMob') && document.getElementById('searchInputMob').value !== val) document.getElementById('searchInputMob').value = val; clearTimeout(searchTimeout); searchTimeout = setTimeout(() => { requestAnimationFrame(() => renderProducts(val)); }, 250); }
 function setSortMode(val) { currentSortMode = val; if(document.getElementById('sortInputDesk')) document.getElementById('sortInputDesk').value = val; if(document.getElementById('sortInputMob')) document.getElementById('sortInputMob').value = val; renderProducts(currentSearchQuery); }
 function filterMainCategory(cat) { currentMainCategory = cat; activeSubCategories = []; renderFilters(); renderProducts(currentSearchQuery); }
 function filterSubCategory(cat) { activeSubCategories = cat === 'All' ? [] : [cat]; renderFilters(); renderProducts(currentSearchQuery); }
 
 function renderFilters() {
-    const mainContainer = document.getElementById('main-category-filters'); const mainCats = ['All', 'Pipe Cleaner Crafts', 'Canvas Paintings', 'Clay Art Paintings'];
-    if(mainContainer) { mainContainer.innerHTML = ''; mainCats.forEach(cat => { const btn = document.createElement('button'); btn.className = `text-[9px] sm:text-[10px] font-bold uppercase tracking-widest whitespace-nowrap px-4 py-2.5 border-b-[2px] transition-colors ${currentMainCategory === cat ? 'text-luxury-rose border-luxury-rose' : 'text-gray-400 border-transparent hover:text-luxury-dark'}`; btn.textContent = cat; btn.onclick = () => filterMainCategory(cat); mainContainer.appendChild(btn); }); }
-    let subs = []; if(currentMainCategory === 'All') { subs = [...new Set(products.map(p => p.category).filter(c => c))]; } else { subs = [...new Set(products.filter(p => p.mainCategory === currentMainCategory).map(p => p.category).filter(c => c))]; }
-    activeSubCategories = activeSubCategories.filter(cat => subs.includes(cat));
-    const subContainerMob = document.getElementById('sub-category-filters-mob'); if(subContainerMob) { let htmlMob = `<option value="All">All Sub-Categories</option>`; subs.forEach(cat => { const isSelected = activeSubCategories.length === 1 && activeSubCategories[0] === cat; htmlMob += `<option value="${cat}" ${isSelected ? 'selected' : ''}>${cat}</option>`; }); subContainerMob.innerHTML = htmlMob; }
-    const subContainerDesk = document.getElementById('desktop-checkbox-filters');
-    if(subContainerDesk) { let htmlDesk = ''; subs.forEach(cat => { const isChecked = activeSubCategories.includes(cat); htmlDesk += `<label class="flex items-center gap-3 cursor-pointer group w-full p-2 hover:bg-white rounded-lg transition-colors border border-transparent hover:border-luxury-blush"><div class="relative flex items-center justify-center w-[14px] h-[14px] rounded border border-luxury-rose/50 bg-white group-hover:border-luxury-rose transition-colors shrink-0 overflow-hidden shadow-sm"><input type="checkbox" value="${cat}" class="peer sr-only" onchange="window.th_toggleSubCategory('${cat}')" ${isChecked ? 'checked' : ''}><div class="absolute inset-0 bg-luxury-rose scale-0 peer-checked:scale-100 transition-transform duration-300 origin-center"></div><i class="fas fa-check text-[7px] text-white opacity-0 peer-checked:opacity-100 transition-opacity duration-300 absolute z-10"></i></div><span class="text-[10px] font-bold text-luxury-dark tracking-[0.1em] transition-colors truncate uppercase ${isChecked ? 'text-luxury-rose' : ''}">${cat}</span></label>`; }); subContainerDesk.innerHTML = htmlDesk || `<p class="text-[9px] text-gray-400 italic px-2 pt-2">No sub-categories</p>`; }
+    const mc = document.getElementById('main-category-filters'); const mCats = ['All', 'Pipe Cleaner Crafts', 'Canvas Paintings', 'Clay Art Paintings'];
+    if(mc) { mc.innerHTML = ''; mCats.forEach(c => { const btn = document.createElement('button'); btn.className = `text-[9px] sm:text-[10px] font-bold uppercase tracking-widest whitespace-nowrap px-4 py-2.5 border-b-[2px] transition-colors ${currentMainCategory === c ? 'text-luxury-rose border-luxury-rose' : 'text-gray-400 border-transparent hover:text-luxury-dark'}`; btn.textContent = c; btn.onclick = () => filterMainCategory(c); mc.appendChild(btn); }); }
+    let subs = []; if(currentMainCategory === 'All') { subs = [...new Set(products.map(p => p.category).filter(c => c))]; } else { subs = [...new Set(products.filter(p => p.mainCategory === currentMainCategory).map(p => p.category).filter(c => c))]; } activeSubCategories = activeSubCategories.filter(c => subs.includes(c));
+    const scm = document.getElementById('sub-category-filters-mob'); if(scm) { let hMob = `<option value="All">All Sub-Categories</option>`; subs.forEach(c => { const isS = activeSubCategories.length === 1 && activeSubCategories[0] === c; hMob += `<option value="${c}" ${isS ? 'selected' : ''}>${c}</option>`; }); scm.innerHTML = hMob; }
+    const scd = document.getElementById('desktop-checkbox-filters'); if(scd) { let hDesk = ''; subs.forEach(c => { const isC = activeSubCategories.includes(c); hDesk += `<label class="flex items-center gap-3 cursor-pointer group w-full p-2 hover:bg-white rounded-lg transition-colors border border-transparent hover:border-luxury-blush"><div class="relative flex items-center justify-center w-[14px] h-[14px] rounded border border-luxury-rose/50 bg-white group-hover:border-luxury-rose transition-colors shrink-0 overflow-hidden shadow-sm"><input type="checkbox" value="${c}" class="peer sr-only" onchange="window.th_toggleSubCategory('${c}')" ${isC ? 'checked' : ''}><div class="absolute inset-0 bg-luxury-rose scale-0 peer-checked:scale-100 transition-transform duration-300 origin-center"></div><i class="fas fa-check text-[7px] text-white opacity-0 peer-checked:opacity-100 transition-opacity duration-300 absolute z-10"></i></div><span class="text-[10px] font-bold text-luxury-dark tracking-[0.1em] transition-colors truncate uppercase ${isC ? 'text-luxury-rose' : ''}">${c}</span></label>`; }); scd.innerHTML = hDesk || `<p class="text-[9px] text-gray-400 italic px-2 pt-2">No sub-categories</p>`; }
 }
 
 window.th_toggleSubCategory = function(cat) { const idx = activeSubCategories.indexOf(cat); if(idx > -1) { activeSubCategories.splice(idx, 1); } else { activeSubCategories.push(cat); } renderFilters(); renderProducts(currentSearchQuery); };
 
-window.showToast = function(msg, icon = 'fa-check', color = 'text-luxury-rose') { const t = document.getElementById('toast'); document.getElementById('toast-msg').textContent = msg; document.getElementById('toast-icon').className = `fas ${icon} ${color} text-sm drop-shadow-sm`; requestAnimationFrame(() => { t.classList.remove('opacity-0', 'translate-y-10'); setTimeout(() => t.classList.add('opacity-0', 'translate-y-10'), 3000); }); };
-function setupScrollReveal() { const observer = new IntersectionObserver((entries) => { entries.forEach(entry => { if(entry.isIntersecting) { requestAnimationFrame(() => { entry.target.classList.remove('opacity-0', 'translate-y-4'); observer.unobserve(entry.target); }); } }); }, { threshold: 0.05, rootMargin: '50px' }); document.querySelectorAll('.scroll-reveal').forEach(el => observer.observe(el)); }
+window.openPolicyModal = function(mId, bId) { currentModalLevel = 2; window.safePushState(2); const mod = document.getElementById(mId); const bx = document.getElementById(bId); if(!mod || !bx) return; mod.classList.remove('hidden'); document.body.classList.add('overflow-hidden'); requestAnimationFrame(() => { mod.classList.remove('opacity-0'); bx.classList.remove('scale-95', 'translate-y-2'); bx.classList.add('scale-100', 'translate-y-0'); }); };
+window.closePolicyModal = function(mId, bId) { const mod = document.getElementById(mId); const bx = document.getElementById(bId); if(!mod || !bx) return; requestAnimationFrame(() => { mod.classList.add('opacity-0'); bx.classList.remove('scale-100', 'translate-y-0'); bx.classList.add('scale-95', 'translate-y-2'); setTimeout(() => { mod.classList.add('hidden'); if(document.getElementById('checkout-overlay')?.classList.contains('hidden')) { document.body.classList.remove('overflow-hidden'); } }, 200); }); };
 
-window.openPolicyModal = function(modalId, boxId) {
-    currentModalLevel = 2; safePushState(2); const modal = document.getElementById(modalId); const box = document.getElementById(boxId); if(!modal || !box) return;
-    modal.classList.remove('hidden'); document.body.classList.add('overflow-hidden');
-    requestAnimationFrame(() => { modal.classList.remove('opacity-0'); box.classList.remove('scale-95', 'translate-y-2'); box.classList.add('scale-100', 'translate-y-0'); });
-};
-
-window.closePolicyModal = function(modalId, boxId) {
-    const modal = document.getElementById(modalId); const box = document.getElementById(boxId); if(!modal || !box) return;
-    requestAnimationFrame(() => { modal.classList.add('opacity-0'); box.classList.remove('scale-100', 'translate-y-0'); box.classList.add('scale-95', 'translate-y-2'); setTimeout(() => { modal.classList.add('hidden'); if(document.getElementById('checkout-overlay')?.classList.contains('hidden')) document.body.classList.remove('overflow-hidden'); }, 200); });
-};
 // --- END OF FILE ---
