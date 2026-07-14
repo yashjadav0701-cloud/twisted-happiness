@@ -1,13 +1,17 @@
 /**
- * Khushiified Art - Studio Admin Engine
- * Version: 14.0.0 - Fully Stable Safe Build
+ * Twisted Happiness - Studio Admin Engine
+ * Version: 14.0.0 - 100% Complete & Uncompressed Build
  */
 
 const SUPABASE_URL = "https://gvrfucjtnyqfkdynrmqs.supabase.co"; 
 const SUPABASE_ANON_KEY = "sb_publishable_8jru2BqvTdE9bcwNOLIHAA_dx6aUCM0";
 let _supabase;
 
-const countryCodeMapping = { "+91": "🇮🇳 IN (+91)", "+1": "🇺🇸 US (+1)", "+44": "🇬🇧 UK (+44)" };
+const countryCodeMapping = { 
+    "+91": "🇮🇳 IN (+91)", 
+    "+1": "🇺🇸 US (+1)", 
+    "+44": "🇬🇧 UK (+44)" 
+};
 
 // 🛡️ DEFENSIVE CACHE PARSER
 function safeJSONParse(key, fallback) { 
@@ -22,11 +26,11 @@ function safeJSONParse(key, fallback) {
     } 
 }
 
-// 📦 GLOBAL STATE (Forced Update to Khushiified Art)
+// 📦 GLOBAL STATE (Forced Update to Twisted Happiness)
 let settings = safeJSONParse('th_settings', null);
-if (!settings || settings.storeName === "Twisted Happiness" || !settings.upiId) {
+if (!settings || settings.storeName === "Khushiified Art" || !settings.upiId) {
     settings = { 
-        storeName: "Khushiified Art", 
+        storeName: "Twisted Happiness", 
         instagram: "https://www.instagram.com/khushiified_art?igsh=aW1vZ2N4cTl2OWo=", 
         whatsapp: "9909310501", 
         upiId: "khushisj315@oksbi", 
@@ -114,7 +118,7 @@ function unlockDashboard() {
         document.getElementById('admin-wa').value = settings.whatsapp || ''; 
         document.getElementById('admin-country-code').value = settings.countryCode || '+91'; 
         if(document.getElementById('admin-upi-id')) document.getElementById('admin-upi-id').value = settings.upiId || 'khushisj315@oksbi';
-        if(document.getElementById('admin-store-name')) document.getElementById('admin-store-name').value = settings.storeName || 'Khushiified Art';
+        if(document.getElementById('admin-store-name')) document.getElementById('admin-store-name').value = settings.storeName || 'Twisted Happiness';
         if(document.getElementById('admin-ig')) document.getElementById('admin-ig').value = settings.instagram || 'https://www.instagram.com/khushiified_art?igsh=aW1vZ2N4cTl2OWo=';
         
         fetchDatabase(); 
@@ -556,7 +560,7 @@ window.th_startCrafting = async function(id) {
         const customerData = extractCustomerData(order.customer_reqs);
         if (customerData.phone) {
             let cleanPhone = customerData.phone.replace(/\D/g, ''); 
-            const acceptMsg = `✨ Dear ${customerData.name},\n\nWe have successfully received your payment! 🎉\n\nYour exquisite commission from *${settings.storeName || 'Khushiified Art'}* has been embraced. Our artisan has officially begun handcrafting your masterpiece.\n\nIt will take approximately *${customerData.prepTime}* to perfectly curate and prepare for dispatch.\n\nThank you for trusting us to curate your space! 🕊️`;
+            const acceptMsg = `✨ Dear ${customerData.name},\n\nWe have successfully received your payment! 🎉\n\nYour exquisite commission from *${settings.storeName || 'Twisted Happiness'}* has been embraced. Our artisan has officially begun handcrafting your masterpiece.\n\nIt will take approximately *${customerData.prepTime}* to perfectly curate and prepare for dispatch.\n\nThank you for trusting us to curate your space! 🕊️`;
             window.open(`https://wa.me/${cleanPhone}?text=${encodeURIComponent(acceptMsg)}`, '_blank');
         }
     } catch(e) { showToast("Error processing order", "fa-times", "text-red-500"); console.error(e); }
@@ -574,7 +578,7 @@ window.th_rejectOrder = async function(id) {
         const customerData = extractCustomerData(order.customer_reqs);
         if (customerData.phone) {
             let cleanPhone = customerData.phone.replace(/\D/g, ''); 
-            const denyMsg = `✨ Dear ${customerData.name},\n\nWe are reaching out regarding your recent order attempt at *${settings.storeName || 'Khushiified Art'}*.\n\nUnfortunately, we were unable to verify your UPI payment. As a result, your order reservation has been cancelled.\n\nIf the amount was deducted from your account, it will automatically be refunded by your bank within 2-3 business days.\n\nIf you would like to secure your handcrafted piece, please reply to this message and we will assist you! 🕊️`;
+            const denyMsg = `✨ Dear ${customerData.name},\n\nWe are reaching out regarding your recent order attempt at *${settings.storeName || 'Twisted Happiness'}*.\n\nUnfortunately, we were unable to verify your UPI payment. As a result, your order reservation has been cancelled.\n\nIf the amount was deducted from your account, it will automatically be refunded by your bank within 2-3 business days.\n\nIf you would like to secure your handcrafted piece, please reply to this message and we will assist you! 🕊️`;
             window.open(`https://wa.me/${cleanPhone}?text=${encodeURIComponent(denyMsg)}`, '_blank');
         }
     } catch(e) { showToast("Error", "fa-times", "text-red-500"); } 

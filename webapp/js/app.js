@@ -1,6 +1,6 @@
 /**
  * Twisted Happiness - Enterprise Storefront Engine
- * Version: 14.0.0 - Fully Stable, Uncompressed, Cloud-Integrated Build
+ * Version: 14.5.0 - Fully Stable Code
  */
 
 const SUPABASE_URL = "https://gvrfucjtnyqfkdynrmqs.supabase.co"; 
@@ -15,15 +15,7 @@ const DISCOUNT_TIERS = [
     { threshold: 299,  type: 'flat',    value: 30, label: '₹30 OFF VIP' }
 ];
 
-const countryCodeMapping = { 
-    "+91": "🇮🇳 IN (+91)", 
-    "+1": "🇺🇸 US (+1)", 
-    "+44": "🇬🇧 UK (+44)" 
-};
-
-// ==========================================
-// 🛡️ DEFENSIVE CACHE & STATE MANAGEMENT
-// ==========================================
+// 🛡️ DEFENSIVE CACHE PARSER
 function safeJSONParse(key, fallback) { 
     try { 
         const item = localStorage.getItem(key); 
@@ -36,11 +28,11 @@ function safeJSONParse(key, fallback) {
     } 
 }
 
-// 📦 Global Application State
+// 📦 GLOBAL STATE 
 let settings = safeJSONParse('th_settings', null);
-if (!settings || settings.storeName === "Twisted Happiness") {
+if (!settings || settings.storeName === "Khushiified Art" || !settings.upiId) {
     settings = { 
-        storeName: "Khushiified Art", 
+        storeName: "Twisted Happiness", 
         instagram: "https://www.instagram.com/khushiified_art?igsh=aW1vZ2N4cTl2OWo=", 
         whatsapp: "9909310501", 
         upiId: "khushisj315@oksbi", 
@@ -59,7 +51,6 @@ let activeSubCategories = [];
 let currentSortMode = 'newest'; 
 let currentSearchQuery = ''; 
 let searchTimeout = null; 
-
 let modalImages = []; 
 let currentSlideIndex = 0; 
 let isAnimating = false; 
@@ -68,7 +59,7 @@ let isLightboxAnimating = false;
 let currentModalLevel = 0; 
 let statePushed = false;
 
-// Checkout & Gateway State
+// Checkout State
 let checkoutStep = 1; 
 let pendingOrderPayload = null; 
 let currentOrderReference = null; 
@@ -76,15 +67,13 @@ let currentDeliveryFee = 0;
 let activeCouponValue = 0; 
 let activeCouponCode = "";
 
-// Auth & Address Profile State
+// Auth & Address State
 let selectedAddressIndex = savedAddresses.length > 0 ? 0 : -1; 
 let editingAddressIndex = null; 
 let currentSessionUser = null; 
 let authModalMode = "login"; 
 
-// ==========================================
 // 🚀 BULLETPROOF INITIALIZATION
-// ==========================================
 function initApp() {
     try { 
         _supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY); 
@@ -107,9 +96,7 @@ if (document.readyState === 'loading') {
     initApp();
 }
 
-// ==========================================
-// 🚨 UI LOADERS & SETTINGS
-// ==========================================
+// 🚨 LOADERS
 function dismissPreloader() {
     const preloader = document.getElementById('luxury-page-preloader');
     if (preloader && !preloader.classList.contains('hidden')) {
@@ -139,7 +126,7 @@ function hideInteractionLoader() {
 }
 
 function applyDynamicSettings() {
-    const name = settings.storeName || "Khushiified Art";
+    const name = settings.storeName || "Twisted Happiness";
     document.title = `${name} | Fine Art & Handcrafted Gifts`;
     if(document.getElementById('dynamic-store-name')) document.getElementById('dynamic-store-name').textContent = name;
     if(document.getElementById('footer-dynamic-name')) document.getElementById('footer-dynamic-name').textContent = name;
@@ -147,20 +134,15 @@ function applyDynamicSettings() {
     if(document.getElementById('current-year')) document.getElementById('current-year').textContent = new Date().getFullYear();
 }
 
-function isMobileDevice() { 
-    return /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent); 
-}
+function isMobileDevice() { return /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent); }
 
 function setupSocialLinks() {
     const phone = (settings.whatsapp || "9909310501").replace(/\D/g, '');
     const code = (settings.countryCode || "91").replace(/\D/g, '');
-    
     const waLink = document.getElementById('footer-whatsapp');
     const floatLink = document.getElementById('floating-wa-btn');
-    const msg = "Hello!%20I%20am%20exploring%20your%20beautiful%20collection.";
-    
-    if(waLink) waLink.href = `https://wa.me/${code}${phone}?text=${msg}`;
-    if(floatLink) floatLink.href = `https://wa.me/${code}${phone}?text=${msg}`;
+    if(waLink) waLink.href = `https://wa.me/${code}${phone}?text=Hello!%20I%20am%20exploring%20your%20beautiful%20collection.`;
+    if(floatLink) floatLink.href = `https://wa.me/${code}${phone}?text=Hello!%20I%20am%20exploring%20your%20beautiful%20collection.`;
     
     const igLink = document.getElementById('footer-instagram');
     if(igLink) {
@@ -177,14 +159,10 @@ function setupSocialLinks() {
     }
 }
 
-// ==========================================
-// 🚨 DOM EVENT BINDING
-// ==========================================
+// 🚨 SAFE DOM EVENT BINDING
 function bindDOMEvents() {
     document.addEventListener('keydown', (e) => {
-        if (e.ctrlKey && e.shiftKey && e.key.toLowerCase() === 'k') { 
-            e.preventDefault(); window.location.href = '/khushiified'; 
-        }
+        if (e.ctrlKey && e.shiftKey && e.key.toLowerCase() === 'k') { e.preventDefault(); window.location.href = '/khushiified'; }
     });
 
     document.getElementById('prof-pin')?.addEventListener('input', () => {
@@ -193,18 +171,15 @@ function bindDOMEvents() {
         }
     });
 
-    // Search and Filters
     document.getElementById('searchInputDesk')?.addEventListener('input', (e) => syncSearch(e.target.value));
     document.getElementById('searchInputMob')?.addEventListener('input', (e) => syncSearch(e.target.value));
     document.getElementById('sortInputMob')?.addEventListener('change', (e) => setSortMode(e.target.value));
     document.getElementById('sortInputDesk')?.addEventListener('change', (e) => setSortMode(e.target.value));
     document.getElementById('sub-category-filters-mob')?.addEventListener('change', (e) => filterSubCategory(e.target.value));
 
-    // Carousel
     document.getElementById('btn-slide-prev')?.addEventListener('click', (e) => { e.stopPropagation(); moveSlide(-1); });
     document.getElementById('btn-slide-next')?.addEventListener('click', (e) => { e.stopPropagation(); moveSlide(1); });
     
-    // Forms
     document.getElementById('track-order-form')?.addEventListener('submit', handleTrackOrder);
     document.getElementById('customer-auth-form')?.addEventListener('submit', handleAuthFormSubmit);
     
@@ -233,9 +208,7 @@ function injectSkeletons() {
     loadingGrid.innerHTML = skeletonHTML;
 }
 
-// ==========================================
-// 🚨 AUTHENTICATION SYSTEM
-// ==========================================
+// 🚨 AUTHENTICATION 🚨
 function setupAuthSessionListener() {
     _supabase.auth.onAuthStateChange((event, session) => {
         currentSessionUser = session ? session.user : null;
@@ -249,6 +222,27 @@ function setupAuthSessionListener() {
         }
     });
 }
+
+window.handleAccountHeaderClick = function() { 
+    if (currentSessionUser) window.openCustomerProfile(); 
+    else window.openCustomerAuthModal(); 
+};
+
+window.openCustomerAuthModal = function() { 
+    authModalMode = "login"; 
+    document.getElementById('auth-panel-heading').textContent = "Welcome Back"; 
+    document.getElementById('btn-auth-submit').textContent = "Sign In"; 
+    document.getElementById('customer-auth-form').reset(); 
+    window.openPolicyModal('customer-auth-modal', 'customer-auth-box'); 
+};
+
+window.closeCustomerAuthModal = function() { window.closePolicyModal('customer-auth-modal', 'customer-auth-box'); };
+
+window.toggleAuthViewMode = function() {
+    authModalMode = (authModalMode === "login") ? "signup" : "login";
+    document.getElementById('auth-panel-heading').textContent = authModalMode === "login" ? "Welcome Back" : "Create Account";
+    document.getElementById('btn-auth-submit').textContent = authModalMode === "login" ? "Sign In" : "Register Account";
+};
 
 async function handleAuthFormSubmit(e) {
     e.preventDefault(); 
@@ -290,35 +284,7 @@ window.handleGoogleOAuthLogin = async function() {
             options: { redirectTo: window.location.origin } 
         }); 
         if (error) throw error; 
-    } catch (err) { 
-        alert("Google Auth Error: " + err.message); 
-    } 
-};
-
-// ==========================================
-// 🚨 CUSTOMER PROFILE DASHBOARD
-// ==========================================
-window.handleAccountHeaderClick = function() { 
-    if (currentSessionUser) window.openCustomerProfile(); 
-    else window.openCustomerAuthModal(); 
-};
-
-window.openCustomerAuthModal = function() { 
-    authModalMode = "login"; 
-    document.getElementById('auth-panel-heading').textContent = "Welcome Back"; 
-    document.getElementById('btn-auth-submit').textContent = "Sign In"; 
-    document.getElementById('customer-auth-form').reset(); 
-    window.openPolicyModal('customer-auth-modal', 'customer-auth-box'); 
-};
-
-window.closeCustomerAuthModal = function() { 
-    window.closePolicyModal('customer-auth-modal', 'customer-auth-box'); 
-};
-
-window.toggleAuthViewMode = function() {
-    authModalMode = (authModalMode === "login") ? "signup" : "login";
-    document.getElementById('auth-panel-heading').textContent = authModalMode === "login" ? "Welcome Back" : "Create Account";
-    document.getElementById('btn-auth-submit').textContent = authModalMode === "login" ? "Sign In" : "Register Account";
+    } catch (err) { alert(err.message); } 
 };
 
 window.openCustomerProfile = async function() { 
@@ -327,7 +293,7 @@ window.openCustomerProfile = async function() {
     const overlay = document.getElementById('customer-profile-overlay'); 
     document.getElementById('profile-meta-email').textContent = currentSessionUser.email; 
     
-    // Reset tracker fields in profile
+    // Reset tracker fields
     document.getElementById('track-order-id').value = '';
     document.getElementById('track-result-container').classList.add('hidden');
     
@@ -360,34 +326,26 @@ window.handleCustomerLogout = async function() {
     selectedAddressIndex = -1; 
     window.closeCustomerProfile(); 
     hideInteractionLoader(); 
-    window.showToast("Signed Out Safely", "fa-sign-out-alt"); 
+    window.showToast("Signed Out", "fa-sign-out-alt"); 
 };
 
-// ==========================================
-// 🚨 WISHLIST LOGIC
-// ==========================================
+// 🚨 WISHLIST 🚨
 async function syncCloudWishlist() {
     if (!currentSessionUser) return;
     try { 
         const { data } = await _supabase.from('wishlist').select('product_id').eq('user_id', currentSessionUser.id); 
         if (data) localWishlist = data.map(w => w.product_id); 
         localStorage.setItem('th_wishlist', JSON.stringify(localWishlist)); 
-    } catch(e) {
-        console.error("Wishlist sync error");
-    }
+    } catch(e) {}
 }
 
 window.th_toggleWishlistProduct = async function(productId, event) {
     if(event) { event.preventDefault(); event.stopPropagation(); }
-    
     const index = localWishlist.indexOf(String(productId)); 
     const isAdding = index === -1;
     
-    if (isAdding) {
-        localWishlist.push(String(productId)); 
-    } else {
-        localWishlist.splice(index, 1);
-    }
+    if (isAdding) localWishlist.push(String(productId)); 
+    else localWishlist.splice(index, 1);
     
     localStorage.setItem('th_wishlist', JSON.stringify(localWishlist));
 
@@ -415,18 +373,14 @@ function updateWishlistUIElements(id, isAdded) {
     });
 }
 
-// ==========================================
-// 🚨 CALCULATORS & UTILITIES
-// ==========================================
+// 🚨 LOGIC CALCS 🚨
 function calculateEDDBracket(prepTimeStr) {
     const matches = (prepTimeStr || '3').match(/\d+/g); 
     let minDays = matches && matches.length > 0 ? parseInt(matches[0]) : 3; 
     let maxDays = matches && matches.length > 1 ? parseInt(matches[1]) : minDays + 2;
-    
     const today = new Date(); 
     const minDate = new Date(); minDate.setDate(today.getDate() + minDays + 2); 
     const maxDate = new Date(); maxDate.setDate(today.getDate() + maxDays + 4);
-    
     const options = { day: 'numeric', month: 'short' }; 
     return `Estimated Delivery: ${minDate.toLocaleDateString('en-IN', options)} — ${maxDate.toLocaleDateString('en-IN', options)}`;
 }
@@ -453,9 +407,21 @@ window.applyCouponCode = function() {
     updateCheckoutUI();
 };
 
-// ==========================================
-// 🚨 DATABASE FETCHING & RENDERING
-// ==========================================
+async function syncCloudAddresses() {
+    if (currentSessionUser) { 
+        try { 
+            const { data } = await _supabase.from('addresses').select('*').order('created_at', { ascending: true }); 
+            savedAddresses = data || []; 
+            selectedAddressIndex = savedAddresses.length > 0 ? 0 : -1; 
+        } catch (err) {} 
+    } else { 
+        savedAddresses = safeJSONParse('th_saved_addresses', []); 
+        selectedAddressIndex = savedAddresses.length > 0 ? 0 : -1; 
+    }
+    renderAddressBook();
+}
+
+// 🚨 DATABASE FETCHING
 async function fetchDatabase() { 
     try { 
         const { data, error } = await _supabase.from('creations').select('*').order('created_at', { ascending: false }); 
@@ -481,7 +447,6 @@ async function fetchDatabase() {
                 image5: parsedImages.length > 4 ? parsedImages[4].data : ''
             };
         });
-        
         requestAnimationFrame(() => { 
             renderFilters(); 
             renderProducts(); 
@@ -512,7 +477,6 @@ function renderProducts(searchQuery = '') {
     }
 
     const fragment = document.createDocumentFragment();
-    
     filtered.forEach((p) => {
         const cleanPrice = Number(String(p.price || 0).replace(/[^0-9.,]/g, '')); 
         const discountPercent = getDiscountPercent(String(p.id)); 
@@ -552,7 +516,6 @@ function renderProducts(searchQuery = '') {
             
         fragment.appendChild(card);
     }); 
-    
     grid.appendChild(fragment); 
     setupScrollReveal();
 }
@@ -685,7 +648,7 @@ function renderRelatedProducts(currentId, mainCategory, subCategory) {
 }
 
 // ==========================================
-// 🚨 CART & CHECKOUT LOGIC
+// 🚨 CART & CHECKOUT ENGINE
 // ==========================================
 function renderCheckoutItems() {
     const container = document.getElementById('checkout-items-list'); 
@@ -698,7 +661,7 @@ function renderCheckoutItems() {
     
     let itemsHTML = '';
     cart.forEach(item => {
-        const cleanPrice = Number((item.price || 0).toString().replace(/[^0-9.,]/g, '')); 
+        const cleanPrice = Number(String(item.price || 0).replace(/[^0-9.,]/g, '')); 
         const discountPercent = getDiscountPercent(String(item.id)); 
         const originalPrice = Math.round(cleanPrice * (1 + (discountPercent / 100))); 
         const itemImg = (typeof item.image1 === 'string' && item.image1.trim() !== '') ? item.image1 : (typeof item.image === 'string' ? item.image : 'https://placehold.co/150/F8E9EA/423133'); 
@@ -935,13 +898,7 @@ window.saveAddressFromForm = async function() {
     return true;
 };
 
-function clearAddressForm() { 
-    document.getElementById('prof-fname').value = ''; document.getElementById('prof-lname').value = ''; 
-    document.getElementById('prof-email').value = ''; document.getElementById('prof-phone').value = ''; 
-    document.getElementById('prof-add1').value = ''; document.getElementById('prof-add2').value = ''; 
-    document.getElementById('prof-city').value = ''; document.getElementById('prof-state').value = ''; 
-    document.getElementById('prof-pin').value = ''; 
-}
+function clearAddressForm() { document.getElementById('prof-fname').value = ''; document.getElementById('prof-lname').value = ''; document.getElementById('prof-email').value = ''; document.getElementById('prof-phone').value = ''; document.getElementById('prof-add1').value = ''; document.getElementById('prof-add2').value = ''; document.getElementById('prof-city').value = ''; document.getElementById('prof-state').value = ''; document.getElementById('prof-pin').value = ''; }
 
 // ==========================================
 // 🚨 CHECKOUT NAVIGATION & MATH LOGIC
@@ -995,7 +952,7 @@ window.goToCheckoutStep = function(step) {
         checkoutStep = 2; 
         updateCheckoutUI(); 
     } else if (step === 3) {
-        if (cart.length === 0) return;
+        if (cart.length === 0) return window.showToast("Your bag is empty!", "fa-times", "text-red-500");
         if (savedAddresses.length === 0 || selectedAddressIndex === -1) return window.showToast("Please provide a delivery address.", "fa-exclamation-circle", "text-red-500");
         preparePaymentGateway();
     }
@@ -1170,7 +1127,7 @@ function preparePaymentGateway() {
     const formattedTotal = Number(finalTotal).toFixed(2);
     const cleanUpiId = (settings.upiId || "khushisj315@oksbi").trim();
     
-    const upiLink = `upi://pay?pa=${cleanUpiId}&pn=${settings.storeName ? settings.storeName.replace(/\s+/g, '_') : 'Khushiified_Art'}&am=${formattedTotal}&cu=INR&tn=${currentOrderReference}`;
+    const upiLink = `upi://pay?pa=${cleanUpiId}&pn=${settings.storeName ? settings.storeName.replace(/\s+/g, '_') : 'Twisted_Happiness'}&am=${formattedTotal}&cu=INR&tn=${currentOrderReference}`;
 
     pendingOrderPayload = { 
         order_details: JSON.stringify(itemsToSave), 
@@ -1298,7 +1255,7 @@ async function handleTrackOrder(e) {
             if(status === 'new' || status === 'pending') { resStatus.textContent = "Verifying Payment"; resStatus.className = "font-poppins font-bold text-yellow-600 text-lg tracking-wide mb-2"; resDesc.textContent = "We have received your request and are verifying the transaction with our bank. We will begin crafting shortly!"; } 
             else if (status === 'curating') { resStatus.textContent = "Artisan is Crafting"; resStatus.className = "font-poppins font-bold text-luxury-gold text-lg tracking-wide mb-2"; resDesc.textContent = "Your payment is verified and our artisan is currently pouring love into your handcrafted piece."; } 
             else if (status === 'ready') { resStatus.textContent = "Ready for Dispatch"; resStatus.className = "font-poppins font-bold text-purple-600 text-lg tracking-wide mb-2"; resDesc.textContent = "Your masterpiece is complete, securely packaged, and awaiting courier pickup via Shiprocket."; } 
-            else if (status === 'completed') { resStatus.textContent = "Elegantly Delivered"; resStatus.className = "font-poppins font-bold text-green-600 text-lg tracking-wide mb-2"; resDesc.textContent = "Your order has been successfully delivered. Thank you for curating your space with Khushiified Art!"; }
+            else if (status === 'completed') { resStatus.textContent = "Elegantly Delivered"; resStatus.className = "font-poppins font-bold text-green-600 text-lg tracking-wide mb-2"; resDesc.textContent = "Your order has been successfully delivered. Thank you for curating your space with Twisted Happiness!"; }
         } else { 
             resContainer.classList.remove('hidden'); 
             resStatus.textContent = "Not Found"; 
@@ -1338,7 +1295,7 @@ async function handleTrackOrderGuest(e) {
             if(status === 'new' || status === 'pending') { resStatus.textContent = "Verifying Payment"; resStatus.className = "font-poppins font-bold text-yellow-600 text-lg tracking-wide mb-2"; resDesc.textContent = "We have received your request and are verifying the transaction with our bank. We will begin crafting shortly!"; } 
             else if (status === 'curating') { resStatus.textContent = "Artisan is Crafting"; resStatus.className = "font-poppins font-bold text-luxury-gold text-lg tracking-wide mb-2"; resDesc.textContent = "Your payment is verified and our artisan is currently pouring love into your handcrafted piece."; } 
             else if (status === 'ready') { resStatus.textContent = "Ready for Dispatch"; resStatus.className = "font-poppins font-bold text-purple-600 text-lg tracking-wide mb-2"; resDesc.textContent = "Your masterpiece is complete, securely packaged, and awaiting courier pickup via Shiprocket."; } 
-            else if (status === 'completed') { resStatus.textContent = "Elegantly Delivered"; resStatus.className = "font-poppins font-bold text-green-600 text-lg tracking-wide mb-2"; resDesc.textContent = "Your order has been successfully delivered. Thank you for curating your space with Khushiified Art!"; }
+            else if (status === 'completed') { resStatus.textContent = "Elegantly Delivered"; resStatus.className = "font-poppins font-bold text-green-600 text-lg tracking-wide mb-2"; resDesc.textContent = "Your order has been successfully delivered. Thank you for curating your space with Twisted Happiness!"; }
         } else { 
             resContainer.classList.remove('hidden'); 
             resStatus.textContent = "Not Found"; 
