@@ -41,32 +41,16 @@ let pendingOrderPayload = null;
 let currentOrderReference = null;
 let currentDeliveryFee = 0;
 
-// 🎀 BULLETPROOF LOADING ENGINE 🎀
-const dismissPreloader = () => {
-    const preloader = document.getElementById('luxury-page-preloader');
-    if (preloader && !preloader.classList.contains('hidden')) {
-        preloader.classList.add('opacity-0');
-        setTimeout(() => preloader.classList.add('hidden'), 700);
-    }
-};
-
-// Attempt to dismiss on window load (if network is fast)
-window.addEventListener('load', () => {
-    setTimeout(dismissPreloader, 300);
-});
-
-// Absolute Failsafe: if external resources hang, force dismiss after 2.5 seconds
-setTimeout(dismissPreloader, 2500);
-
 document.addEventListener('DOMContentLoaded', () => {
-    // Force preloader dismiss if DOM is ready and 1.5s pass
-    setTimeout(dismissPreloader, 1500); 
+    // Failsafe: if Supabase fails or takes too long, dismiss preloader after 5 seconds unconditionally
+    setTimeout(dismissPreloader, 5000); 
 
     try {
         _supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
-        fetchDatabase();
+        fetchDatabase(); // The preloader will now dismiss upon successful render inside this function
     } catch (e) {
         console.error("Supabase Init Error:", e);
+        dismissPreloader(); // Fallback dismiss if error occurs
     }
     
     applyDynamicSettings();
@@ -75,6 +59,15 @@ document.addEventListener('DOMContentLoaded', () => {
     updateCartCount();
     setupSocialLinks();
 });
+
+// 🎀 BULLETPROOF LOADING ENGINE 🎀
+function dismissPreloader() {
+    const preloader = document.getElementById('luxury-page-preloader');
+    if (preloader && !preloader.classList.contains('hidden')) {
+        preloader.classList.add('opacity-0');
+        setTimeout(() => preloader.classList.add('hidden'), 700);
+    }
+}
 
 function showInteractionLoader(text = "Please wait...") {
     const loader = document.getElementById('interaction-loader');
@@ -248,8 +241,16 @@ async function fetchDatabase() {
                 image1: parsedImages[0] ? parsedImages[0].data : '', image2: parsedImages[1] ? parsedImages[1].data : '', image3: parsedImages[2] ? parsedImages[2].data : '', image4: parsedImages[3] ? parsedImages[3].data : '', image5: parsedImages[4] ? parsedImages[4].data : ''
             };
         });
-        requestAnimationFrame(() => { renderFilters(); renderProducts(); });
-    } catch (error) { console.error("Database initialization failed:", error); } 
+        requestAnimationFrame(() => { 
+            renderFilters(); 
+            renderProducts(); 
+            // 🎀 Safe Dismissal triggered after successful render
+            setTimeout(dismissPreloader, 400); 
+        });
+    } catch (error) { 
+        console.error("Database initialization failed:", error); 
+        dismissPreloader(); // Safe dismissal on error
+    } 
 }
 
 function renderProducts(searchQuery = '') { 
@@ -277,11 +278,11 @@ function generateProductCardHTML(p) {
     card.innerHTML = `
         <div class="w-full relative rounded-2xl overflow-hidden group shadow-sm bg-gradient-to-tr from-luxury-bg to-white border border-luxury-blush aspect-[4/5] mb-2">
             <span class="absolute top-2.5 left-2.5 z-10 bg-white/95 text-luxury-dark text-[7px] sm:text-[8px] font-bold px-2.5 py-1 rounded-md uppercase tracking-[0.15em] border border-luxury-blush truncate max-w-[80%] shadow-sm">${p.category}</span>
-            <img loading="lazy" decoding="async" src="${mainImg}" alt="${p.name}" width="400" height="500" onerror="this.src='https://placehold.co/400x500/F8E9EA/423133';" class="absolute inset-0 w-full h-full object-cover opacity-0 transition-opacity duration-500 pointer-events-none" onload="this.classList.remove('opacity-0')">
+            <img loading="lazy" decoding="async" src="${mainImg}" alt="${p.name}" width="400" height="500" onerror="this.src='https://placehold.co/400x500/F8E9EA/423133';" class="absolute inset-0 w-full h-full object-cover transition-opacity duration-500 pointer-events-none">
         </div>
         <div class="px-1 flex flex-col justify-start text-left w-full">
             <h3 class="font-bitter font-semibold text-[11px] sm:text-[12px] text-luxury-dark leading-snug w-full transition-colors group-hover:text-luxury-rose mb-0.5 line-clamp-2">${p.name}</h3>
-            <div class="flex items-center md:items-baseline gap-1.5 flex-wrap w-full">
+            <div class="flex items-center gap-1.5 flex-wrap w-full">
                 <span class="font-poppins font-extrabold text-luxury-dark text-[14px] sm:text-[15px] tracking-tight leading-none">₹${cleanPrice}</span>
                 <span class="font-poppins text-gray-400 text-[9px] font-medium line-through leading-none">₹${originalPrice}</span>
             </div>
@@ -305,7 +306,8 @@ function openProductPage(id) {
     
     const track = document.getElementById('modal-carousel-track'); const thumbContainer = document.getElementById('modal-thumbnails'); 
     track.style.transition = 'none'; let html = '';
-    modalImages.forEach(imgSrc => { html += `<div class="w-full h-full flex-shrink-0 flex items-center justify-center relative bg-transparent" onclick="window.openLightboxFromCarousel()"><img loading="lazy" decoding="async" src="${imgSrc}" class="w-full h-full object-cover"></div>`; }); 
+    // Used object-contain to prevent image cropping on mobile 1:1 boxes
+    modalImages.forEach(imgSrc => { html += `<div class="w-full h-full flex-shrink-0 flex items-center justify-center relative bg-transparent" onclick="window.openLightboxFromCarousel()"><img loading="lazy" decoding="async" src="${imgSrc}" class="w-full h-full object-contain"></div>`; }); 
     track.innerHTML = html; currentSlideIndex = 0; track.style.transform = `translateX(0)`;
     
     thumbContainer.innerHTML = ''; 
@@ -313,7 +315,7 @@ function openProductPage(id) {
         modalImages.forEach((imgSrc, index) => { 
             const thumb = document.createElement('img'); thumb.src = imgSrc; 
             thumb.className = `w-12 h-12 object-cover rounded-md border-2 transition-all cursor-pointer ${index === 0 ? 'border-luxury-rose scale-105 opacity-100' : 'border-transparent opacity-60 hover:opacity-100'}`; 
-            thumb.id = `thumb-${index}`; thumb.onclick = () => { goToSlide(index); }; thumbContainer.appendChild(thumb); 
+            thumb.id = `thumb-${index}`; thumb.onclick = () => { window.goToSlide(index); }; thumbContainer.appendChild(thumb); 
         }); 
     } 
     
@@ -340,7 +342,8 @@ function openProductPage(id) {
         else { careGuide.innerHTML = `<li>Keep away from direct, harsh sunlight.</li><li>Lightly dust with a soft, dry brush.</li><li>Do not expose to moisture.</li>`; }
     }
 
-    renderRelatedProducts(p.id, p.mainCategory); updateProductButtons(p.id);
+    renderRelatedProducts(p.id, p.mainCategory, p.category); 
+    updateProductButtons(p.id);
     document.getElementById('customer-view').classList.add('hidden'); document.getElementById('product-view').classList.remove('hidden');
     window.scrollTo(0, 0); currentModalLevel = 1; safePushState(1); 
 }
@@ -357,11 +360,21 @@ function updateProductButtons(id) {
     }
 }
 
-function renderRelatedProducts(currentId, mainCategory) {
+function renderRelatedProducts(currentId, mainCategory, subCategory) {
     const grid = document.getElementById('related-products-grid'); if(!grid) return; grid.innerHTML = '';
-    let related = products.filter(p => p.id !== currentId); let sameCat = related.filter(p => p.mainCategory === mainCategory); let others = related.filter(p => p.mainCategory !== mainCategory); let finalRelated = [...sameCat, ...others].slice(0, 12); 
-    const fragment = document.createDocumentFragment(); finalRelated.forEach(p => { fragment.appendChild(generateProductCardHTML(p)); });
+    let related = products.filter(p => p.id !== currentId); 
+    
+    // Priority: Same subcategory -> Same main category -> Others
+    let sameSubCat = related.filter(p => p.category === subCategory); 
+    let sameMainCat = related.filter(p => p.mainCategory === mainCategory && p.category !== subCategory);
+    let others = related.filter(p => p.mainCategory !== mainCategory); 
+    
+    let finalRelated = [...sameSubCat, ...sameMainCat, ...others].slice(0, 15); // Show up to 15 related products
+    
+    const fragment = document.createDocumentFragment(); 
+    finalRelated.forEach(p => { fragment.appendChild(generateProductCardHTML(p)); });
     grid.appendChild(fragment);
+    requestAnimationFrame(() => { setupScrollReveal(); });
 }
 
 function syncSearch(val) { currentSearchQuery = val; if(document.getElementById('searchInputDesk') && document.getElementById('searchInputDesk').value !== val) document.getElementById('searchInputDesk').value = val; if(document.getElementById('searchInputMob') && document.getElementById('searchInputMob').value !== val) document.getElementById('searchInputMob').value = val; clearTimeout(searchTimeout); searchTimeout = setTimeout(() => { requestAnimationFrame(() => renderProducts(val)); }, 250); }
@@ -463,17 +476,19 @@ function isProfileComplete() {
 
 function openCheckoutBase() {
     currentModalLevel = 1; safePushState(1);
-    checkoutStep = 1;
     const overlay = document.getElementById('checkout-overlay');
     if(!overlay) return;
     
-    // Explicit 100% solidity for no background bleeding
+    // Smart Jump: If they already have an address, go straight to Step 2 to save time.
+    if (isProfileComplete() && currentCommissionContext !== 'header') {
+        checkoutStep = 2;
+    } else {
+        checkoutStep = 1;
+    }
+
     overlay.classList.remove('hidden');
     document.body.classList.add('overflow-hidden');
     
-    document.getElementById('checkout-step-1')?.classList.remove('hidden');
-    document.getElementById('checkout-step-2')?.classList.remove('flex'); document.getElementById('checkout-step-2')?.classList.add('hidden');
-    document.getElementById('checkout-step-3')?.classList.remove('flex'); document.getElementById('checkout-step-3')?.classList.add('hidden');
     document.getElementById('payment-success-view')?.classList.add('hidden'); document.getElementById('payment-success-view')?.classList.remove('flex');
     document.getElementById('payment-gateway-view')?.classList.remove('hidden'); document.getElementById('payment-gateway-view')?.classList.add('flex');
     
@@ -502,6 +517,9 @@ function openCheckoutBase() {
     if(document.getElementById('prof-state')) document.getElementById('prof-state').value = shiprocketProfile.state || ''; 
     if(document.getElementById('prof-pin')) document.getElementById('prof-pin').value = shiprocketProfile.pincode || '';
 
+    if (checkoutStep === 2) {
+        renderCheckoutItems();
+    }
     updateCheckoutUI();
     
     requestAnimationFrame(() => {
@@ -659,6 +677,23 @@ function calculateDynamicDelivery(subtotal, pincode, items) {
     return finalShippingFee;
 }
 
+// 🚨 Stepper Navigation Logic
+function goToCheckoutStep(step) {
+    if (step === 1) {
+        checkoutStep = 1;
+        updateCheckoutUI();
+    } else if (step === 2) {
+        if (isProfileComplete()) {
+            checkoutStep = 2;
+            renderCheckoutItems();
+            updateCheckoutUI();
+        } else {
+            showToast("Please save your delivery details first.", "fa-exclamation-circle", "text-red-500");
+        }
+    }
+    // Note: We don't allow jumping to step 3 manually; it requires pushing the checkout button.
+}
+
 function updateCheckoutUI() {
     const btn = document.getElementById('checkout-action-btn');
     const fill = document.getElementById('progress-bar-fill');
@@ -666,6 +701,7 @@ function updateCheckoutUI() {
     const ind3 = document.getElementById('step-indicator-3');
     const lbl2 = document.getElementById('step-label-2');
     const lbl3 = document.getElementById('step-label-3');
+    const sidebar = document.getElementById('checkout-price-sidebar');
 
     if(!btn || !fill) return;
 
@@ -713,23 +749,44 @@ function updateCheckoutUI() {
     if(document.getElementById('qo-total-savings')) document.getElementById('qo-total-savings').textContent = totalSavings;
     if(document.getElementById('qo-final-total')) document.getElementById('qo-final-total').textContent = `₹${finalTotal}`;
 
+    // Sidebar Mobile Visibility Logic
+    if(sidebar) {
+        if (checkoutStep === 2) {
+            sidebar.className = "block lg:col-span-4 w-full"; // Visible on mobile & PC
+        } else {
+            sidebar.className = "hidden lg:block lg:col-span-4 w-full"; // Hidden on mobile, visible on PC
+        }
+    }
+
     if (checkoutStep === 1) {
+        document.getElementById('checkout-step-1')?.classList.remove('hidden');
+        document.getElementById('checkout-step-2')?.classList.add('hidden'); document.getElementById('checkout-step-2')?.classList.remove('flex');
+        document.getElementById('checkout-step-3')?.classList.add('hidden'); document.getElementById('checkout-step-3')?.classList.remove('flex');
+
         fill.style.width = '0%';
-        if(ind2) ind2.className = "w-8 h-8 rounded-full flex items-center justify-center text-[12px] font-bold transition-colors bg-white text-gray-400 border-2 border-luxury-blush";
+        if(ind2) ind2.className = "w-8 h-8 rounded-full flex items-center justify-center text-[12px] font-bold transition-colors bg-white text-gray-400 border-2 border-luxury-blush group-hover:scale-105";
         if(lbl2) lbl2.className = "text-[9px] font-bold uppercase tracking-widest text-gray-400";
         if(ind3) ind3.className = "w-8 h-8 rounded-full flex items-center justify-center text-[12px] font-bold transition-colors bg-white text-gray-400 border-2 border-luxury-blush";
         if(lbl3) lbl3.className = "text-[9px] font-bold uppercase tracking-widest text-gray-400";
         btn.innerHTML = currentCommissionContext === 'header' ? 'Save Profile <i class="fas fa-check"></i>' : 'Continue to Review Items <i class="fas fa-arrow-right"></i>';
         btn.classList.remove('hidden');
     } else if (checkoutStep === 2) {
+        document.getElementById('checkout-step-1')?.classList.add('hidden');
+        document.getElementById('checkout-step-2')?.classList.remove('hidden'); document.getElementById('checkout-step-2')?.classList.add('flex');
+        document.getElementById('checkout-step-3')?.classList.add('hidden'); document.getElementById('checkout-step-3')?.classList.remove('flex');
+
         fill.style.width = '50%';
-        if(ind2) ind2.className = "w-8 h-8 rounded-full flex items-center justify-center text-[12px] font-bold transition-colors bg-luxury-rose text-white shadow-md border-2 border-white";
+        if(ind2) ind2.className = "w-8 h-8 rounded-full flex items-center justify-center text-[12px] font-bold transition-colors bg-luxury-rose text-white shadow-md border-2 border-white group-hover:scale-105";
         if(lbl2) lbl2.className = "text-[9px] font-bold uppercase tracking-widest text-luxury-dark";
         if(ind3) ind3.className = "w-8 h-8 rounded-full flex items-center justify-center text-[12px] font-bold transition-colors bg-white text-gray-400 border-2 border-luxury-blush";
         if(lbl3) lbl3.className = "text-[9px] font-bold uppercase tracking-widest text-gray-400";
         btn.innerHTML = 'Proceed to Secure Payment <i class="fas fa-lock text-[10px]"></i>';
         btn.classList.remove('hidden');
     } else if (checkoutStep === 3) {
+        document.getElementById('checkout-step-1')?.classList.add('hidden');
+        document.getElementById('checkout-step-2')?.classList.add('hidden'); document.getElementById('checkout-step-2')?.classList.remove('flex');
+        document.getElementById('checkout-step-3')?.classList.remove('hidden'); document.getElementById('checkout-step-3')?.classList.add('flex');
+
         fill.style.width = '100%';
         if(ind3) ind3.className = "w-8 h-8 rounded-full flex items-center justify-center text-[12px] font-bold transition-colors bg-luxury-rose text-white shadow-md border-2 border-white";
         if(lbl3) lbl3.className = "text-[9px] font-bold uppercase tracking-widest text-luxury-dark";
@@ -755,8 +812,6 @@ function handleCheckoutAction() {
         }
 
         checkoutStep = 2;
-        document.getElementById('checkout-step-1').classList.add('hidden');
-        document.getElementById('checkout-step-2').classList.remove('hidden'); document.getElementById('checkout-step-2').classList.add('flex');
         
         let hasCustomizable = false;
         if (currentCommissionContext === 'single' && singleProductToCommission) {
@@ -829,8 +884,6 @@ function preparePaymentGateway() {
     
     setTimeout(() => {
         checkoutStep = 3;
-        document.getElementById('checkout-step-2').classList.add('hidden'); document.getElementById('checkout-step-2').classList.remove('flex');
-        document.getElementById('checkout-step-3').classList.remove('hidden'); document.getElementById('checkout-step-3').classList.add('flex');
         
         document.getElementById('checkout-payment-amount').textContent = `₹${formattedTotal}`;
         
@@ -904,6 +957,7 @@ window.th_toggleSubCategory = toggleSubCategoryCheckbox;
 window.th_routeCheckoutFromModal = routeCheckoutFromModal;
 window.th_updateCartQty = updateCartQty;
 window.updateCheckoutQty = updateCheckoutQty;
+window.goToCheckoutStep = goToCheckoutStep; // NEW Binding
 
 function showToast(msg, icon = 'fa-check', color = 'text-luxury-rose') { const t = document.getElementById('toast'); document.getElementById('toast-msg').textContent = msg; document.getElementById('toast-icon').className = `fas ${icon} ${color} text-sm drop-shadow-sm`; requestAnimationFrame(() => { t.classList.remove('opacity-0', 'translate-y-10'); setTimeout(() => t.classList.add('opacity-0', 'translate-y-10'), 3000); }); }
 function setupScrollReveal() { const observer = new IntersectionObserver((entries) => { entries.forEach(entry => { if(entry.isIntersecting) { requestAnimationFrame(() => { entry.target.classList.remove('opacity-0', 'translate-y-4'); observer.unobserve(entry.target); }); } }); }, { threshold: 0.05, rootMargin: '50px' }); document.querySelectorAll('.scroll-reveal').forEach(el => observer.observe(el)); }
