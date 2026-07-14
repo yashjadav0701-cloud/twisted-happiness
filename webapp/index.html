@@ -296,8 +296,8 @@
             </div>
         </div>
 
-        <!-- Curated For You -->
-        <section class="w-full border-t border-luxury-blush bg-luxury-bg pt-10 pb-16 mt-8">
+        <!-- Curated For You (Dynamic Sub-category Logic) -->
+        <section id="related-products-section" class="w-full border-t border-luxury-blush bg-luxury-bg pt-10 pb-16 mt-8 hidden">
             <div class="max-w-[1600px] mx-auto px-4 sm:px-8">
                 <h3 class="font-logo text-2xl sm:text-3xl text-luxury-dark mb-6 border-b border-luxury-rose/30 pb-2 inline-block">Curated For You</h3>
                 <div id="related-products-grid" class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-3 sm:gap-4 md:gap-[18px] lg:gap-5 px-3 w-full"></div>
@@ -305,7 +305,7 @@
         </section>
     </article>
 
-    <!-- 🚨 NEW UNIFIED MULTI-STEP CHECKOUT ENGINE 🚨 -->
+    <!-- 🚨 UNIFIED MULTI-STEP CHECKOUT ENGINE 🚨 -->
     <div id="checkout-overlay" class="fixed inset-0 bg-[#FFF0F2] z-[3000] hidden overflow-y-auto custom-scroll transition-opacity duration-300 opacity-0">
         <!-- Checkout Header -->
         <header class="w-full bg-white border-b border-luxury-blush px-4 py-4 flex items-center justify-between sticky top-0 z-50 shadow-sm">
@@ -440,39 +440,27 @@
                     </div>
                 </div>
 
-                <!-- STEP 3: SECURE PAYMENT -->
+                <!-- STEP 3: SECURE PAYMENT (Instamojo) -->
                 <div id="checkout-step-3" class="w-full bg-white border border-luxury-blush rounded-3xl p-6 md:p-8 shadow-sm hidden flex-col items-center animate-fade-in text-center">
                     <div id="payment-gateway-view" class="w-full flex flex-col items-center">
                         <div class="w-16 h-16 bg-[#FFF0F2] rounded-full flex items-center justify-center mb-5 border border-[#f4c6ce] shadow-sm">
-                            <i class="fas fa-shield-alt text-luxury-rose text-2xl"></i>
+                            <i class="fas fa-lock text-[#D9778A] text-2xl"></i>
                         </div>
-                        <h2 class="font-logo text-3xl text-luxury-dark mb-2">Secure Your Order</h2>
-                        <p class="text-[12px] text-gray-500 font-medium mb-8 max-w-sm leading-relaxed">
-                            Complete the secure payment of <span class="font-poppins font-bold text-luxury-dark text-[14px]" id="checkout-payment-amount">₹0</span> to officially commission your artwork.
+                        <h2 class="font-logo text-3xl text-luxury-dark mb-2">Secure Payment</h2>
+                        <p class="text-[12px] text-gray-500 font-medium mb-6 max-w-sm leading-relaxed">
+                            Complete your payment of <span class="font-poppins font-bold text-luxury-dark text-[14px]" id="checkout-payment-amount">₹0</span> via our secure partner, Instamojo.
                         </p>
 
-                        <!-- Desktop QR Code -->
-                        <div id="payment-qr-container" class="hidden flex-col items-center w-full mb-6">
-                            <div class="p-4 bg-white border-2 border-luxury-blush rounded-3xl shadow-sm relative group">
-                                <img id="payment-qr-img" src="" alt="UPI QR Code" class="w-56 h-56 object-contain">
-                                <div class="absolute inset-0 bg-white/60 backdrop-blur-[2px] hidden items-center justify-center group-hover:flex transition-all rounded-3xl">
-                                    <span class="bg-luxury-dark text-white text-[9px] font-bold uppercase tracking-widest px-4 py-2 rounded-full shadow-md">Scan to Pay</span>
-                                </div>
-                            </div>
-                            <p class="text-[9px] text-gray-400 uppercase tracking-widest font-bold mt-4"><i class="fas fa-camera text-luxury-rose mr-1"></i> Scan using any UPI app</p>
-                        </div>
-
-                        <!-- Mobile UPI Button -->
-                        <div id="payment-mobile-container" class="hidden w-full max-w-sm mb-6">
-                            <a id="payment-mobile-btn" href="javascript:void(0)" target="_blank" rel="noopener noreferrer" class="w-full bg-luxury-dark text-white hover:bg-luxury-rosegold py-4 rounded-xl font-bold text-[11px] uppercase flex items-center justify-center gap-2 tracking-[0.15em] shadow-float transition-all">
-                                Pay via UPI App <i class="fas fa-external-link-alt"></i>
+                        <div class="w-full max-w-sm mb-6">
+                            <a id="payment-instamojo-btn" href="javascript:void(0)" target="_blank" rel="noopener noreferrer" class="w-full bg-luxury-dark text-white hover:bg-[#D9778A] py-4 rounded-xl font-bold text-[11px] uppercase flex items-center justify-center gap-2 tracking-[0.15em] shadow-float transition-all">
+                                Proceed to Pay <i class="fas fa-external-link-alt"></i>
                             </a>
                         </div>
                         
-                        <p class="text-[8px] text-gray-400 uppercase tracking-widest max-w-xs mx-auto mt-2">Only click "Verify" after your bank confirms the transaction is successful.</p>
+                        <p class="text-[8px] text-gray-400 uppercase tracking-widest max-w-xs mx-auto mt-2">After successful payment on the gateway, return here and click the button below to confirm your order.</p>
                         
                         <div class="w-full border-t border-luxury-blush pt-5 mt-4">
-                            <button id="btn-confirm-payment" class="w-full bg-green-600 text-white hover:bg-green-700 py-4 rounded-xl font-bold text-[10px] uppercase flex items-center justify-center gap-2 tracking-[0.15em] shadow-md transition-colors">
+                            <button type="button" id="btn-confirm-payment" onclick="window.confirmPaymentAndOrder()" class="w-full bg-green-600 text-white hover:bg-green-700 py-4 rounded-xl font-bold text-[10px] uppercase flex items-center justify-center gap-2 tracking-[0.15em] shadow-md transition-colors">
                                 I Have Completed Payment <i class="fas fa-check-circle"></i>
                             </button>
                         </div>
@@ -488,7 +476,7 @@
                             Your request has been securely routed to our studio. Our artisan will verify your payment shortly and begin crafting your masterpiece.
                         </p>
                         <div class="w-full max-w-sm bg-[#FFF0F2] border border-[#f4c6ce] rounded-2xl p-5 mb-8 text-center shadow-inner">
-                            <span class="block text-[9px] font-bold text-luxury-rose uppercase tracking-widest mb-1.5">Order Reference</span>
+                            <span class="block text-[9px] font-bold text-[#D9778A] uppercase tracking-widest mb-1.5">Order Reference</span>
                             <span id="success-ref-note" class="font-poppins font-black text-luxury-dark text-xl tracking-wider"></span>
                         </div>
                         <button type="button" onclick="window.closeCheckout()" class="w-full max-w-sm border-2 border-luxury-rose text-luxury-dark hover:bg-luxury-rose hover:text-white py-4 rounded-full font-bold text-[10px] uppercase tracking-[0.15em] transition-colors shadow-sm">
@@ -496,9 +484,7 @@
                         </button>
                     </div>
                 </div>
-                
-                <!-- Spacer for mobile scrolling so the checkout button doesn't cover content -->
-                <div class="h-20 lg:hidden block w-full"></div>
+
             </div>
 
             <!-- RIGHT COLUMN: Price Details / Quotation Sidebar -->
@@ -518,8 +504,8 @@
                             <span id="qo-product-discount">- ₹0</span>
                         </div>
                         
-                        <div id="qo-vip-row" class="flex justify-between items-center text-luxury-rose hidden">
-                            <span>VIP Privilege <span id="qo-vip-label" class="bg-luxury-blush px-1.5 py-0.5 rounded-sm ml-1 text-[7px] text-luxury-rose font-extrabold border border-luxury-rose/30 shadow-sm uppercase tracking-widest"></span></span>
+                        <div id="qo-vip-row" class="flex justify-between items-center text-[#D9778A] hidden">
+                            <span>VIP Privilege <span id="qo-vip-label" class="bg-luxury-blush px-1.5 py-0.5 rounded-sm ml-1 text-[7px] text-[#D9778A] font-extrabold border border-[#D9778A]/30 shadow-sm uppercase tracking-widest"></span></span>
                             <span id="qo-vip-discount">- ₹0</span>
                         </div>
 
@@ -541,7 +527,7 @@
 
                     <!-- Dynamic Action Button (Will stick to bottom on Mobile) -->
                     <div class="fixed bottom-0 left-0 w-full p-4 bg-white/95 backdrop-blur-md border-t border-luxury-blush z-[100] lg:relative lg:bg-transparent lg:border-none lg:p-0 lg:z-auto">
-                        <button type="button" id="checkout-action-btn" onclick="window.handleCheckoutAction()" class="w-full bg-luxury-dark text-white hover:bg-luxury-rosegold py-4 rounded-xl font-bold text-[11px] uppercase tracking-[0.15em] transition-all shadow-float flex items-center justify-center gap-2">
+                        <button type="button" id="checkout-action-btn" onclick="window.handleCheckoutAction()" class="w-full bg-luxury-dark text-white hover:bg-[#D9778A] py-4 rounded-xl font-bold text-[11px] uppercase tracking-[0.15em] transition-all shadow-float flex items-center justify-center gap-2">
                             Deliver Here <i class="fas fa-arrow-right"></i>
                         </button>
                     </div>
@@ -570,7 +556,7 @@
                     <li>Contact us via WhatsApp within <strong>24 hours</strong> of the delivery timestamp provided by Shiprocket.</li>
                 </ol>
                 <p>Upon verification of the unboxing video, our artisan will review the claim and issue a replacement of the same artwork. Cash refunds are not provided under any circumstance.</p>
-                <p class="text-luxury-rose font-medium text-[11px] text-center mt-4">By placing an order, you accept these terms.</p>
+                <p class="text-[#D9778A] font-medium text-[11px] text-center mt-4">By placing an order, you accept these terms.</p>
             </div>
         </div>
     </div>

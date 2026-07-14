@@ -1,6 +1,6 @@
 /**
  * Twisted Happiness - Enterprise Storefront Engine
- * Version: 8.5.0 - Standardized Multi-Step Checkout, Adblock-Proof QR, Volumetric Shipping, Fail-Safe Preloader.
+ * Version: 8.5.0 - Standardized Multi-Step Checkout, Instamojo Gateway, Volumetric Shipping, Fail-Safe Preloader.
  */
 
 const SUPABASE_URL = "https://gvrfucjtnyqfkdynrmqs.supabase.co"; 
@@ -23,7 +23,7 @@ const countryCodeMapping = {
     "+82": "🇰🇷 KR (+82)", "+64": "🇳🇿 NZ (+64)", "+27": "🇿🇦 ZA (+27)"
 };
 
-let settings = safeJSONParse('th_settings', { storeName: "Twisted Happiness", instagram: "", whatsapp: "9909310501", upiId: "khushisj315@oksbi", countryCode: "+91" });
+let settings = safeJSONParse('th_settings', { storeName: "Twisted Happiness", instagram: "", whatsapp: "9909310501", instamojoUser: "twistedhappiness", countryCode: "+91" });
 let shiprocketProfile = safeJSONParse('th_shiprocket_profile', { first_name: '', last_name: '', email: '', phone: '', address_1: '', address_2: '', city: '', state: '', pincode: '' });
 let cart = safeJSONParse('th_cart', []); 
 let products = [];
@@ -41,9 +41,26 @@ let pendingOrderPayload = null;
 let currentOrderReference = null;
 let currentDeliveryFee = 0;
 
+// 🎀 BULLETPROOF LOADING ENGINE 🎀
+const dismissPreloader = () => {
+    const preloader = document.getElementById('luxury-page-preloader');
+    if (preloader && !preloader.classList.contains('hidden')) {
+        preloader.classList.add('opacity-0');
+        setTimeout(() => preloader.classList.add('hidden'), 700);
+    }
+};
+
+// Attempt to dismiss on window load (if network is fast)
+window.addEventListener('load', () => {
+    setTimeout(dismissPreloader, 300);
+});
+
+// Absolute Failsafe: if external resources hang, force dismiss after 2.5 seconds
+setTimeout(dismissPreloader, 2500);
+
 document.addEventListener('DOMContentLoaded', () => {
-    // Failsafe: if Supabase fails or takes too long, dismiss preloader after 5 seconds unconditionally
-    setTimeout(dismissPreloader, 5000); 
+    // Force preloader dismiss if DOM is ready and 1.5s pass
+    setTimeout(dismissPreloader, 1500); 
 
     try {
         _supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
@@ -59,15 +76,6 @@ document.addEventListener('DOMContentLoaded', () => {
     updateCartCount();
     setupSocialLinks();
 });
-
-// 🎀 BULLETPROOF LOADING ENGINE 🎀
-function dismissPreloader() {
-    const preloader = document.getElementById('luxury-page-preloader');
-    if (preloader && !preloader.classList.contains('hidden')) {
-        preloader.classList.add('opacity-0');
-        setTimeout(() => preloader.classList.add('hidden'), 700);
-    }
-}
 
 function showInteractionLoader(text = "Please wait...") {
     const loader = document.getElementById('interaction-loader');
@@ -188,7 +196,6 @@ function closePolicyModal(modalId, boxId) {
 function safeJSONParse(key, fallback) { try { const item = localStorage.getItem(key); return item ? JSON.parse(item) : fallback; } catch (e) { localStorage.removeItem(key); return fallback; } }
 function safePushState(level) { try { history.pushState({ level: level }, ""); statePushed = true; } catch(e) { statePushed = false; } }
 function safeBack() { if (statePushed) { try { history.back(); } catch(e) {} statePushed = false; } }
-function isMobileDevice() { return /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent); }
 
 function setupSocialLinks() {
     const phone = (settings.whatsapp || "9909310501").replace(/\D/g, '');
@@ -205,9 +212,11 @@ function setupSocialLinks() {
                 cleanIg = 'https://' + cleanIg;
             }
             igLink.href = cleanIg;
-            igLink.style.display = 'flex'; 
+            igLink.classList.remove('hidden');
+            igLink.classList.add('flex'); 
         } else {
-            igLink.style.display = 'none';
+            igLink.classList.add('hidden');
+            igLink.classList.remove('flex');
         }
     }
 }
@@ -278,11 +287,11 @@ function generateProductCardHTML(p) {
     card.innerHTML = `
         <div class="w-full relative rounded-2xl overflow-hidden group shadow-sm bg-gradient-to-tr from-luxury-bg to-white border border-luxury-blush aspect-[4/5] mb-2">
             <span class="absolute top-2.5 left-2.5 z-10 bg-white/95 text-luxury-dark text-[7px] sm:text-[8px] font-bold px-2.5 py-1 rounded-md uppercase tracking-[0.15em] border border-luxury-blush truncate max-w-[80%] shadow-sm">${p.category}</span>
-            <img loading="lazy" decoding="async" src="${mainImg}" alt="${p.name}" width="400" height="500" onerror="this.src='https://placehold.co/400x500/F8E9EA/423133';" class="absolute inset-0 w-full h-full object-cover transition-opacity duration-500 pointer-events-none">
+            <img loading="lazy" decoding="async" src="${mainImg}" alt="${p.name}" width="400" height="500" onerror="this.src='https://placehold.co/400x500/F8E9EA/423133';" class="absolute inset-0 w-full h-full object-cover opacity-0 transition-opacity duration-500 pointer-events-none" onload="this.classList.remove('opacity-0')">
         </div>
         <div class="px-1 flex flex-col justify-start text-left w-full">
             <h3 class="font-bitter font-semibold text-[11px] sm:text-[12px] text-luxury-dark leading-snug w-full transition-colors group-hover:text-luxury-rose mb-0.5 line-clamp-2">${p.name}</h3>
-            <div class="flex items-center gap-1.5 flex-wrap w-full">
+            <div class="flex items-center md:items-baseline gap-1.5 flex-wrap w-full">
                 <span class="font-poppins font-extrabold text-luxury-dark text-[14px] sm:text-[15px] tracking-tight leading-none">₹${cleanPrice}</span>
                 <span class="font-poppins text-gray-400 text-[9px] font-medium line-through leading-none">₹${originalPrice}</span>
             </div>
@@ -354,26 +363,37 @@ function updateProductButtons(id) {
     const actionContainer = document.getElementById('modal-action-buttons'); if(!actionContainer) return;
     const cartItem = cart.find(item => item.id === id); const qty = cartItem ? parseInt(cartItem.qty || 1) : 0;
     if(qty > 0) {
-        actionContainer.innerHTML = `<div class="flex items-center justify-between w-full h-full bg-white border border-luxury-rose rounded-full px-2 sm:px-4 py-3 shadow-sm min-h-[44px]"><button onclick="window.th_updateCartQty('${id}', -1, event)" class="w-8 h-8 rounded-full bg-luxury-bg hover:bg-luxury-blush border border-luxury-blush text-luxury-dark active:scale-90 flex items-center justify-center shrink-0"><i class="fas fa-minus text-xs"></i></button><span class="text-base sm:text-lg font-bold text-luxury-rose font-poppins min-w-[20px] text-center">${qty}</span><button onclick="window.th_updateCartQty('${id}', 1, event)" class="w-8 h-8 rounded-full bg-luxury-bg hover:bg-luxury-blush border border-luxury-blush text-luxury-dark active:scale-90 flex items-center justify-center shrink-0"><i class="fas fa-plus text-xs"></i></button></div><button onclick="window.th_routeCheckoutFromModal('${id}', event)" class="w-full bg-luxury-dark text-white hover:bg-luxury-gold font-bold px-2 py-3.5 sm:px-4 rounded-full flex items-center justify-center gap-2 text-[11px] sm:text-[12px] uppercase tracking-wider shadow-md active:scale-[0.98] transition-colors min-h-[44px]"><i class="fas fa-bolt text-luxury-gold"></i> Checkout</button>`;
+        actionContainer.innerHTML = `<div class="flex items-center justify-between w-full h-full bg-white border border-luxury-rose rounded-full px-2 sm:px-4 py-3 shadow-sm min-h-[44px]"><button type="button" onclick="window.th_updateCartQty('${id}', -1, event)" class="w-8 h-8 rounded-full bg-luxury-bg hover:bg-luxury-blush border border-luxury-blush text-luxury-dark active:scale-90 flex items-center justify-center shrink-0"><i class="fas fa-minus text-xs"></i></button><span class="text-base sm:text-lg font-bold text-luxury-rose font-poppins min-w-[20px] text-center">${qty}</span><button type="button" onclick="window.th_updateCartQty('${id}', 1, event)" class="w-8 h-8 rounded-full bg-luxury-bg hover:bg-luxury-blush border border-luxury-blush text-luxury-dark active:scale-90 flex items-center justify-center shrink-0"><i class="fas fa-plus text-xs"></i></button></div><button type="button" onclick="window.th_routeCheckoutFromModal('${id}', event)" class="w-full bg-luxury-dark text-white hover:bg-[#D9778A] font-bold px-2 py-3.5 sm:px-4 rounded-full flex items-center justify-center gap-2 text-[11px] sm:text-[12px] uppercase tracking-wider shadow-md active:scale-[0.98] transition-colors min-h-[44px]"><i class="fas fa-bolt text-luxury-gold"></i> Checkout</button>`;
     } else {
-        actionContainer.innerHTML = `<button onclick="window.th_updateCartQty('${id}', 1, event)" class="w-full bg-white border border-luxury-dark text-luxury-dark hover:bg-luxury-bg font-bold px-2 py-3.5 sm:px-4 rounded-full flex items-center justify-center gap-2 text-[11px] sm:text-[12px] uppercase tracking-wider transition-colors shadow-sm active:scale-[0.98] min-h-[44px]"><i class="fas fa-shopping-bag"></i> Add to Bag</button><button onclick="window.th_routeCheckoutFromModal('${id}', event)" class="w-full bg-luxury-dark text-white hover:bg-luxury-gold font-bold px-2 py-3.5 sm:px-4 rounded-full flex items-center justify-center gap-2 text-[11px] sm:text-[12px] uppercase tracking-wider shadow-md active:scale-[0.98] transition-colors min-h-[44px]"><i class="fas fa-bolt text-luxury-gold"></i> Buy Now</button>`;
+        actionContainer.innerHTML = `<button type="button" onclick="window.th_updateCartQty('${id}', 1, event)" class="w-full bg-white border border-luxury-dark text-luxury-dark hover:bg-luxury-bg font-bold px-2 py-3.5 sm:px-4 rounded-full flex items-center justify-center gap-2 text-[11px] sm:text-[12px] uppercase tracking-wider transition-colors shadow-sm active:scale-[0.98] min-h-[44px]"><i class="fas fa-shopping-bag"></i> Add to Bag</button><button type="button" onclick="window.th_routeCheckoutFromModal('${id}', event)" class="w-full bg-luxury-dark text-white hover:bg-[#D9778A] font-bold px-2 py-3.5 sm:px-4 rounded-full flex items-center justify-center gap-2 text-[11px] sm:text-[12px] uppercase tracking-wider shadow-md active:scale-[0.98] transition-colors min-h-[44px]"><i class="fas fa-bolt text-luxury-gold"></i> Buy Now</button>`;
     }
 }
 
 function renderRelatedProducts(currentId, mainCategory, subCategory) {
-    const grid = document.getElementById('related-products-grid'); if(!grid) return; grid.innerHTML = '';
+    const grid = document.getElementById('related-products-grid'); 
+    const section = document.getElementById('related-products-section');
+    if(!grid || !section) return; 
+    
+    grid.innerHTML = '';
     let related = products.filter(p => p.id !== currentId); 
     
-    // Priority: Same subcategory -> Same main category -> Others
     let sameSubCat = related.filter(p => p.category === subCategory); 
     let sameMainCat = related.filter(p => p.mainCategory === mainCategory && p.category !== subCategory);
-    let others = related.filter(p => p.mainCategory !== mainCategory); 
     
-    let finalRelated = [...sameSubCat, ...sameMainCat, ...others].slice(0, 15); // Show up to 15 related products
+    // Strict 14 product logic with category matching
+    let finalRelated = [...sameSubCat, ...sameMainCat].slice(0, 14); 
     
+    if (finalRelated.length === 0) {
+        section.classList.add('hidden');
+        return;
+    } else {
+        section.classList.remove('hidden');
+    }
+
     const fragment = document.createDocumentFragment(); 
     finalRelated.forEach(p => { fragment.appendChild(generateProductCardHTML(p)); });
     grid.appendChild(fragment);
+    
     requestAnimationFrame(() => { setupScrollReveal(); });
 }
 
@@ -420,7 +440,7 @@ function renderCart() {
     container.innerHTML = ''; let trueSubtotal = 0; let sellingSubtotal = 0;    
     cart.forEach(item => { 
         const cleanPrice = Number(item.price.toString().replace(/[^0-9.,]/g, '')); const qty = parseInt(item.qty || 1); const discountPercent = getDiscountPercent(item.id.toString()); const originalPrice = Math.round(cleanPrice * (1 + (discountPercent / 100))); trueSubtotal += (originalPrice * qty); sellingSubtotal += (cleanPrice * qty); const itemImg = (item.image && typeof item.image === 'string' && item.image.trim() !== '') ? item.image : 'https://placehold.co/150/F8E9EA/423133';
-        container.innerHTML += `<div class="flex gap-4 border border-luxury-blush bg-white p-3 rounded-2xl shadow-sm relative group hover:border-luxury-rose transition-colors duration-400"><img loading="lazy" decoding="async" src="${itemImg}" alt="${item.name}" width="150" height="150" class="w-16 h-20 object-cover bg-luxury-bg border border-luxury-blush rounded-xl transition-transform duration-400 group-hover:scale-105"><div class="flex flex-col justify-center flex-grow pr-4"><h4 class="font-bitter text-[12px] font-semibold text-luxury-dark leading-snug mb-1 line-clamp-2 transition-colors duration-400 group-hover:text-luxury-rose">${item.name}</h4><div class="flex items-baseline gap-1.5 mb-2"><span class="font-poppins text-luxury-dark font-bold text-[13px]">₹${cleanPrice}</span><span class="font-poppins text-gray-400 text-[9px] line-through">₹${originalPrice}</span></div><div class="flex items-center gap-2 bg-luxury-bg rounded-full border border-luxury-blush w-fit overflow-hidden h-[36px]"><button onclick="window.th_updateCartQty('${item.id}', -1, event)" class="touch-action-manipulation w-8 h-full flex items-center justify-center hover:bg-luxury-blush text-luxury-dark"><i class="fas fa-minus text-[8px]"></i></button><span class="text-[10px] font-bold text-luxury-rose font-poppins min-w-[16px] text-center">${qty}</span><button onclick="window.th_updateCartQty('${item.id}', 1, event)" class="touch-action-manipulation w-8 h-full flex items-center justify-center hover:bg-luxury-blush text-luxury-dark"><i class="fas fa-plus text-[8px]"></i></button></div></div></div>`; 
+        container.innerHTML += `<div class="flex gap-4 border border-luxury-blush bg-white p-3 rounded-2xl shadow-sm relative group hover:border-luxury-rose transition-colors duration-400"><img loading="lazy" decoding="async" src="${itemImg}" alt="${item.name}" width="150" height="150" class="w-16 h-20 object-cover bg-luxury-bg border border-luxury-blush rounded-xl transition-transform duration-400 group-hover:scale-105"><div class="flex flex-col justify-center flex-grow pr-4"><h4 class="font-bitter text-[12px] font-semibold text-luxury-dark leading-snug mb-1 line-clamp-2 transition-colors duration-400 group-hover:text-luxury-rose">${item.name}</h4><div class="flex items-baseline gap-1.5 mb-2"><span class="font-poppins text-luxury-dark font-bold text-[13px]">₹${cleanPrice}</span><span class="font-poppins text-gray-400 text-[9px] line-through">₹${originalPrice}</span></div><div class="flex items-center gap-2 bg-luxury-bg rounded-full border border-luxury-blush w-fit overflow-hidden h-[36px]"><button type="button" onclick="window.th_updateCartQty('${item.id}', -1, event)" class="touch-action-manipulation w-8 h-full flex items-center justify-center hover:bg-luxury-blush text-luxury-dark"><i class="fas fa-minus text-[8px]"></i></button><span class="text-[10px] font-bold text-luxury-rose font-poppins min-w-[16px] text-center">${qty}</span><button type="button" onclick="window.th_updateCartQty('${item.id}', 1, event)" class="touch-action-manipulation w-8 h-full flex items-center justify-center hover:bg-luxury-blush text-luxury-dark"><i class="fas fa-plus text-[8px]"></i></button></div></div></div>`; 
     }); 
     const productDiscountTotal = trueSubtotal - sellingSubtotal; const { discount: vipDiscount, currentTier, nextTier, amountNeeded } = calculateCartDiscount(sellingSubtotal); const finalTotal = sellingSubtotal - vipDiscount; const totalSavings = productDiscountTotal + vipDiscount;
     if (nextTier) { banner.innerHTML = `Add <span class="font-bold font-poppins">₹${amountNeeded}</span> more to unlock <span class="font-bold text-white">${nextTier.label}</span>! ✨`; banner.classList.remove('hidden'); } else if (currentTier && sellingSubtotal >= 4999) { banner.innerHTML = `✨ You've unlocked the <span class="font-bold text-white">Maximum VIP Discount</span>! ✨`; banner.classList.remove('hidden'); } else { banner.classList.add('hidden'); }
@@ -479,7 +499,6 @@ function openCheckoutBase() {
     const overlay = document.getElementById('checkout-overlay');
     if(!overlay) return;
     
-    // Smart Jump: If they already have an address, go straight to Step 2 to save time.
     if (isProfileComplete() && currentCommissionContext !== 'header') {
         checkoutStep = 2;
     } else {
@@ -616,7 +635,6 @@ function renderCheckoutItems() {
     container.innerHTML = itemsHTML;
 }
 
-// 🚨 ENTERPRISE DYNAMIC SHIPPING ENGINE (GST FREE) 🚨
 function calculateDynamicDelivery(subtotal, pincode, items) {
     if (subtotal >= 2499 || subtotal === 0) return 0; 
     
@@ -677,7 +695,6 @@ function calculateDynamicDelivery(subtotal, pincode, items) {
     return finalShippingFee;
 }
 
-// 🚨 Stepper Navigation Logic
 function goToCheckoutStep(step) {
     if (step === 1) {
         checkoutStep = 1;
@@ -691,7 +708,6 @@ function goToCheckoutStep(step) {
             showToast("Please save your delivery details first.", "fa-exclamation-circle", "text-red-500");
         }
     }
-    // Note: We don't allow jumping to step 3 manually; it requires pushing the checkout button.
 }
 
 function updateCheckoutUI() {
@@ -749,12 +765,11 @@ function updateCheckoutUI() {
     if(document.getElementById('qo-total-savings')) document.getElementById('qo-total-savings').textContent = totalSavings;
     if(document.getElementById('qo-final-total')) document.getElementById('qo-final-total').textContent = `₹${finalTotal}`;
 
-    // Sidebar Mobile Visibility Logic
     if(sidebar) {
         if (checkoutStep === 2) {
-            sidebar.className = "block lg:col-span-4 w-full"; // Visible on mobile & PC
+            sidebar.className = "block lg:col-span-4 w-full"; 
         } else {
-            sidebar.className = "hidden lg:block lg:col-span-4 w-full"; // Hidden on mobile, visible on PC
+            sidebar.className = "hidden lg:block lg:col-span-4 w-full"; 
         }
     }
 
@@ -776,7 +791,7 @@ function updateCheckoutUI() {
         document.getElementById('checkout-step-3')?.classList.add('hidden'); document.getElementById('checkout-step-3')?.classList.remove('flex');
 
         fill.style.width = '50%';
-        if(ind2) ind2.className = "w-8 h-8 rounded-full flex items-center justify-center text-[12px] font-bold transition-colors bg-luxury-rose text-white shadow-md border-2 border-white group-hover:scale-105";
+        if(ind2) ind2.className = "w-8 h-8 rounded-full flex items-center justify-center text-[12px] font-bold transition-colors bg-[#D9778A] text-white shadow-md border-2 border-white group-hover:scale-105";
         if(lbl2) lbl2.className = "text-[9px] font-bold uppercase tracking-widest text-luxury-dark";
         if(ind3) ind3.className = "w-8 h-8 rounded-full flex items-center justify-center text-[12px] font-bold transition-colors bg-white text-gray-400 border-2 border-luxury-blush";
         if(lbl3) lbl3.className = "text-[9px] font-bold uppercase tracking-widest text-gray-400";
@@ -788,7 +803,7 @@ function updateCheckoutUI() {
         document.getElementById('checkout-step-3')?.classList.remove('hidden'); document.getElementById('checkout-step-3')?.classList.add('flex');
 
         fill.style.width = '100%';
-        if(ind3) ind3.className = "w-8 h-8 rounded-full flex items-center justify-center text-[12px] font-bold transition-colors bg-luxury-rose text-white shadow-md border-2 border-white";
+        if(ind3) ind3.className = "w-8 h-8 rounded-full flex items-center justify-center text-[12px] font-bold transition-colors bg-[#D9778A] text-white shadow-md border-2 border-white";
         if(lbl3) lbl3.className = "text-[9px] font-bold uppercase tracking-widest text-luxury-dark";
         btn.classList.add('hidden'); 
     }
@@ -796,7 +811,7 @@ function updateCheckoutUI() {
 
 function handleCheckoutAction() {
     if (checkoutStep === 1) {
-        if (!document.getElementById('checkout-profile-form').classList.contains('hidden')) {
+        if (document.getElementById('checkout-profile-form') && !document.getElementById('checkout-profile-form').classList.contains('hidden')) {
             shiprocketProfile.first_name = document.getElementById('prof-fname').value.trim(); shiprocketProfile.last_name = document.getElementById('prof-lname').value.trim(); shiprocketProfile.email = document.getElementById('prof-email').value.trim(); shiprocketProfile.phone = document.getElementById('prof-phone').value.trim(); shiprocketProfile.address_1 = document.getElementById('prof-add1').value.trim(); shiprocketProfile.address_2 = document.getElementById('prof-add2').value.trim(); shiprocketProfile.city = document.getElementById('prof-city').value.trim(); shiprocketProfile.state = document.getElementById('prof-state').value.trim(); shiprocketProfile.pincode = document.getElementById('prof-pin').value.trim(); 
             if(!shiprocketProfile.first_name || !shiprocketProfile.phone || !shiprocketProfile.address_1 || !shiprocketProfile.city || !shiprocketProfile.pincode) { 
                 showToast("Please fill all required fields", "fa-exclamation-circle", "text-red-500");
@@ -826,7 +841,7 @@ function handleCheckoutAction() {
         if (hasCustomizable) dimWrapper?.classList.remove('hidden'); else dimWrapper?.classList.add('hidden');
         
         updateCheckoutUI();
-        document.getElementById('checkout-overlay').scrollTo({top: 0, behavior: 'smooth'});
+        document.getElementById('checkout-overlay')?.scrollTo({top: 0, behavior: 'smooth'});
 
     } else if (checkoutStep === 2) {
         preparePaymentGateway();
@@ -877,15 +892,16 @@ function preparePaymentGateway() {
     };
     
     const formattedTotal = Number(finalTotal).toFixed(2); 
-    const cleanUpiId = (settings.upiId || "khushisj315@oksbi").trim();
+    const cleanIMUser = (settings.instamojoUser || "twistedhappiness").trim().replace('@', '');
     const cleanNameForNote = shiprocketProfile.first_name.replace(/[^a-zA-Z0-9]/g, '').substring(0, 10); 
     currentOrderReference = `TH_${cleanNameForNote}_${String(Date.now()).slice(-4)}`; 
-    const upiLink = `upi://pay?pa=${cleanUpiId}&pn=${settings.storeName ? settings.storeName.replace(/\s+/g, '_') : 'Twisted_Happiness'}&am=${formattedTotal}&cu=INR&tn=${currentOrderReference}`;
+    
+    const paymentLink = `https://instamojo.com/@${cleanIMUser}?amount=${formattedTotal}&purpose=${currentOrderReference}`;
     
     setTimeout(() => {
         checkoutStep = 3;
         
-        document.getElementById('checkout-payment-amount').textContent = `₹${formattedTotal}`;
+        if(document.getElementById('checkout-payment-amount')) document.getElementById('checkout-payment-amount').textContent = `₹${formattedTotal}`;
         
         const verifyBtn = document.getElementById('btn-confirm-payment');
         if(verifyBtn) {
@@ -893,19 +909,12 @@ function preparePaymentGateway() {
             verifyBtn.disabled = false;
         }
 
-        if (isMobileDevice()) {
-            document.getElementById('payment-mobile-btn').href = upiLink;
-            document.getElementById('payment-mobile-container').classList.remove('hidden');
-            document.getElementById('payment-qr-container').classList.add('hidden');
-        } else {
-            const qrUrl = `https://quickchart.io/qr?size=250&margin=2&text=${encodeURIComponent(upiLink)}`;
-            document.getElementById('payment-qr-img').src = qrUrl;
-            document.getElementById('payment-qr-container').classList.remove('hidden');
-            document.getElementById('payment-mobile-container').classList.add('hidden');
+        if(document.getElementById('payment-instamojo-btn')) {
+            document.getElementById('payment-instamojo-btn').href = paymentLink;
         }
         
         updateCheckoutUI();
-        document.getElementById('checkout-overlay').scrollTo({top: 0, behavior: 'smooth'});
+        document.getElementById('checkout-overlay')?.scrollTo({top: 0, behavior: 'smooth'});
         
         hideInteractionLoader();
         
@@ -933,12 +942,12 @@ async function confirmPaymentAndOrder() {
         return;
     }
 
-    document.getElementById('payment-gateway-view').classList.add('hidden');
-    document.getElementById('payment-gateway-view').classList.remove('flex');
+    document.getElementById('payment-gateway-view')?.classList.add('hidden');
+    document.getElementById('payment-gateway-view')?.classList.remove('flex');
     
-    document.getElementById('success-ref-note').textContent = currentOrderReference;
-    document.getElementById('payment-success-view').classList.remove('hidden');
-    document.getElementById('payment-success-view').classList.add('flex');
+    if(document.getElementById('success-ref-note')) document.getElementById('success-ref-note').textContent = currentOrderReference;
+    document.getElementById('payment-success-view')?.classList.remove('hidden');
+    document.getElementById('payment-success-view')?.classList.add('flex');
 
     if(currentCommissionContext === 'cart') { 
         cart = []; 
@@ -957,7 +966,9 @@ window.th_toggleSubCategory = toggleSubCategoryCheckbox;
 window.th_routeCheckoutFromModal = routeCheckoutFromModal;
 window.th_updateCartQty = updateCartQty;
 window.updateCheckoutQty = updateCheckoutQty;
-window.goToCheckoutStep = goToCheckoutStep; // NEW Binding
+window.goToCheckoutStep = goToCheckoutStep;
+window.toggleCart = toggleCart;
+window.confirmPaymentAndOrder = confirmPaymentAndOrder;
 
 function showToast(msg, icon = 'fa-check', color = 'text-luxury-rose') { const t = document.getElementById('toast'); document.getElementById('toast-msg').textContent = msg; document.getElementById('toast-icon').className = `fas ${icon} ${color} text-sm drop-shadow-sm`; requestAnimationFrame(() => { t.classList.remove('opacity-0', 'translate-y-10'); setTimeout(() => t.classList.add('opacity-0', 'translate-y-10'), 3000); }); }
 function setupScrollReveal() { const observer = new IntersectionObserver((entries) => { entries.forEach(entry => { if(entry.isIntersecting) { requestAnimationFrame(() => { entry.target.classList.remove('opacity-0', 'translate-y-4'); observer.unobserve(entry.target); }); } }); }, { threshold: 0.05, rootMargin: '50px' }); document.querySelectorAll('.scroll-reveal').forEach(el => observer.observe(el)); }

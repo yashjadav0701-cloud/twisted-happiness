@@ -9,7 +9,7 @@ let _supabase;
 
 const countryCodeMapping = { "+91": "🇮🇳 IN (+91)", "+1": "🇺🇸 US (+1)", "+44": "🇬🇧 UK (+44)", "+61": "🇦🇺 AU (+61)", "+971": "🇦🇪 AE (+971)", "+966": "🇸🇦 SA (+966)", "+65": "🇸🇬 SG (+65)", "+60": "🇲🇾 MY (+60)", "+49": "🇩🇪 DE (+49)", "+33": "🇫🇷 FR (+33)", "+39": "🇮🇹 IT (+39)", "+81": "🇯🇵 JP (+81)", "+82": "🇰🇷 KR (+82)", "+64": "🇳🇿 NZ (+64)", "+27": "🇿🇦 ZA (+27)" };
 
-let settings = safeJSONParse('th_settings', { storeName: "Twisted Happiness", instagram: "", whatsapp: "9909310501", upiId: "khushisj315@oksbi", countryCode: "+91" });
+let settings = safeJSONParse('th_settings', { storeName: "Twisted Happiness", instagram: "", whatsapp: "9909310501", instamojoUser: "twisted_happiness", countryCode: "+91" });
 let products = []; let allOrders = []; let selectedFilesData = []; let editModeId = null; let mainImageIndex = 0;
 
 document.addEventListener('DOMContentLoaded', () => {
@@ -57,7 +57,7 @@ function unlockDashboard() {
         dashboard.classList.remove('opacity-0');
         document.getElementById('admin-wa').value = settings.whatsapp || ''; 
         document.getElementById('admin-country-code').value = settings.countryCode || '+91'; 
-        document.getElementById('admin-upi').value = settings.upiId || 'khushisj315@oksbi';
+        if(document.getElementById('admin-im-user')) document.getElementById('admin-im-user').value = settings.instamojoUser || 'twisted_happiness';
         if(document.getElementById('admin-store-name')) document.getElementById('admin-store-name').value = settings.storeName || '';
         if(document.getElementById('admin-ig')) document.getElementById('admin-ig').value = settings.instagram || '';
         fetchDatabase(); fetchOrders(); showToast('Studio Unlocked', 'fa-unlock'); 
@@ -82,7 +82,7 @@ function saveSettings(e) {
     e.preventDefault();
     settings.whatsapp = document.getElementById('admin-wa').value; 
     settings.countryCode = document.getElementById('admin-country-code').value; 
-    settings.upiId = document.getElementById('admin-upi').value; 
+    if(document.getElementById('admin-im-user')) settings.instamojoUser = document.getElementById('admin-im-user').value.trim(); 
     if(document.getElementById('admin-store-name')) settings.storeName = document.getElementById('admin-store-name').value.trim();
     if(document.getElementById('admin-ig')) settings.instagram = document.getElementById('admin-ig').value.trim();
     localStorage.setItem('th_settings', JSON.stringify(settings)); 
