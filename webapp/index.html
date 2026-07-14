@@ -13,6 +13,16 @@
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
     <link href="https://fonts.googleapis.com/css2?family=Marcellus&family=Bitter:ital,wght@0,400;0,500;0,600;1,400&family=Poppins:wght@500;600;700;800&family=Montserrat:wght@300;400;500;600&display=swap" rel="stylesheet">
 
+    <!-- 🛡️ ABSOLUTE FAILSAFE: Guarantees loader removal even if JS crashes -->
+    <script>
+        window.addEventListener('DOMContentLoaded', function() {
+            setTimeout(function() {
+                var pl = document.getElementById('luxury-page-preloader');
+                if(pl) { pl.style.opacity = '0'; pl.style.pointerEvents = 'none'; setTimeout(function(){ pl.remove(); }, 800); }
+            }, 4500);
+        });
+    </script>
+
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2" defer></script>
     <script src="./js/app.js" defer></script>
 
@@ -37,7 +47,6 @@
         <p class="text-[9px] font-bold text-[#8c7a7a] uppercase tracking-[0.3em] mt-4">Curating Beauty...</p>
     </div>
 
-    <!-- INTERACTION LOADER -->
     <div id="interaction-loader" class="fixed inset-0 z-[9999] bg-white/60 backdrop-blur-md hidden flex-col items-center justify-center transition-opacity duration-300 opacity-0">
         <i class="fas fa-circle-notch fa-spin text-[#D9778A] text-4xl mb-4 shadow-sm rounded-full"></i>
         <span class="text-[10px] font-bold text-luxury-dark uppercase tracking-[0.2em] bg-white px-4 py-2 rounded-full border border-luxury-blush shadow-sm" id="interaction-loader-text">Processing...</span>
@@ -86,9 +95,7 @@
                 <nav id="main-category-filters" class="max-w-[1600px] mx-auto w-full flex overflow-x-auto scrollbar-hide px-2 sm:px-4 items-center border-b border-luxury-blush/50 lg:border-none"></nav>
                 <div class="lg:hidden max-w-[1600px] mx-auto w-full flex items-center overflow-hidden">
                     <select id="sortInputMob" class="bg-transparent text-[8px] sm:text-[9px] font-bold uppercase tracking-[0.15em] outline-none cursor-pointer text-luxury-dark shrink-0 border-r border-luxury-blush pl-3 pr-4 py-3">
-                        <option value="newest">Sort: Newest</option>
-                        <option value="low">Price: Low - High</option>
-                        <option value="high">Price: High - Low</option>
+                        <option value="newest">Sort: Newest</option><option value="low">Price: Low - High</option><option value="high">Price: High - Low</option>
                     </select>
                     <select id="sub-category-filters-mob" class="bg-transparent text-[8px] sm:text-[9px] font-bold uppercase tracking-[0.15em] outline-none cursor-pointer text-luxury-dark flex-grow pl-4 pr-3 py-3 max-w-[200px] sm:max-w-xs truncate">
                         <option value="All">All Sub-Categories</option>
@@ -113,7 +120,6 @@
                     <div id="desktop-checkbox-filters" class="flex flex-col gap-1"></div>
                 </div>
             </aside>
-
             <div class="flex-grow w-full min-w-0 pb-12 sm:pb-20">
                 <div id="product-grid" class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-3 sm:gap-4 md:gap-[18px] lg:gap-5 px-3 w-full"></div>
             </div>
@@ -144,10 +150,15 @@
         </footer>
     </main>
 
+    <!-- FLOATING WHATSAPP BUTTON -->
+    <a href="javascript:void(0)" id="floating-wa-btn" target="_blank" rel="noopener noreferrer" class="fixed bottom-24 md:bottom-6 right-4 z-[900] bg-[#25D366] text-white w-14 h-14 rounded-full flex items-center justify-center shadow-[0_10px_20px_rgba(37,211,102,0.3)] hover:bg-[#20ba56] transition-transform hover:scale-105 border-2 border-white">
+        <i class="fab fa-whatsapp text-3xl"></i>
+    </a>
+
     <!-- PRODUCT DETAIL PAGE -->
     <article id="product-view" class="hidden w-full min-h-screen bg-white relative z-[80] pb-24 md:pb-10">
         <header class="sticky top-0 w-full bg-white/95 backdrop-blur-md border-b border-luxury-blush px-4 py-3 flex items-center justify-between shadow-sm z-[999]">
-            <button onclick="window.closeProductPage()" class="flex items-center gap-2 text-luxury-dark font-bold text-[10px] uppercase tracking-widest hover:text-luxury-rose"><i class="fas fa-arrow-left text-sm"></i> Gallery</button>
+            <button onclick="window.closeProductPage()" class="flex items-center gap-2 text-luxury-dark font-bold text-[10px] uppercase tracking-widest hover:text-luxury-rose min-h-[44px]"><i class="fas fa-arrow-left text-sm"></i> Gallery</button>
             <button type="button" onclick="window.openCheckoutBase()" class="relative flex items-center justify-center p-2 min-w-[44px] min-h-[44px] text-luxury-dark hover:text-luxury-rose">
                 <i class="fas fa-shopping-bag text-xl"></i> 
                 <span id="product-page-cart-count" class="absolute top-1 right-1 font-bold text-[8px] bg-luxury-rose text-white w-[16px] h-[16px] flex items-center justify-center rounded-full">0</span>
@@ -168,7 +179,7 @@
             <div class="flex-1 w-full min-w-0 flex flex-col pb-4">
                 <div class="flex justify-between items-start w-full">
                     <nav class="flex text-[9px] sm:text-[10px] text-gray-400 mb-2 space-x-1.5 font-sans uppercase tracking-widest whitespace-nowrap overflow-hidden text-ellipsis">
-                        <button class="hover:text-luxury-dark" onclick="window.closeProductPage()">Gallery</button><span>&rsaquo;</span>
+                        <button class="hover:text-luxury-dark cursor-pointer transition-colors" onclick="window.closeProductPage()">Gallery</button><span>&rsaquo;</span>
                         <span id="breadcrumb-main-cat" class="truncate"></span><span>&rsaquo;</span>
                         <span id="breadcrumb-sub-cat" class="font-bold text-luxury-dark truncate"></span>
                     </nav>
@@ -297,29 +308,29 @@
                 <div id="checkout-step-2" class="w-full bg-white border border-luxury-blush rounded-3xl p-5 md:p-8 shadow-sm hidden flex-col animate-fade-in">
                     <h2 class="font-logo text-2xl text-luxury-dark border-b border-luxury-blush pb-4 mb-6">Delivery Address</h2>
                     <div id="address-book-container" class="flex flex-col gap-4 mb-4"></div>
-                    <button type="button" id="btn-show-add-address" onclick="window.showAddressForm()" class="text-[#D9778A] text-[10px] font-bold uppercase tracking-widest flex items-center gap-2 mb-6 w-max hidden hover:text-luxury-dark"><i class="fas fa-plus"></i> Add New Address</button>
+                    <button type="button" id="btn-show-add-address" onclick="window.showAddressForm()" class="text-[#D9778A] text-[10px] font-bold uppercase tracking-widest flex items-center gap-2 mb-6 w-max hidden hover:text-luxury-dark transition-colors"><i class="fas fa-plus"></i> Add New Address</button>
 
                     <form id="checkout-profile-form" class="space-y-4 font-sans hidden">
                         <div class="grid grid-cols-2 gap-4">
-                            <div><label class="block text-[9px] font-bold text-gray-400 uppercase tracking-widest mb-1.5 pl-1">First Name *</label><input type="text" id="prof-fname" required class="w-full px-4 py-3 bg-luxury-bg border border-luxury-blush rounded-xl outline-none text-[12px] font-medium text-luxury-dark focus:ring-2 focus:ring-luxury-rose/30 transition-all"></div>
-                            <div><label class="block text-[9px] font-bold text-gray-400 uppercase tracking-widest mb-1.5 pl-1">Last Name *</label><input type="text" id="prof-lname" required class="w-full px-4 py-3 bg-luxury-bg border border-luxury-blush rounded-xl outline-none text-[12px] font-medium text-luxury-dark focus:ring-2 focus:ring-luxury-rose/30 transition-all"></div>
+                            <div><label class="block text-[9px] font-bold text-gray-400 uppercase tracking-widest mb-1.5 pl-1">First Name *</label><input type="text" id="prof-fname" required class="w-full px-4 py-3 bg-luxury-bg border border-luxury-blush rounded-xl outline-none text-[12px] font-medium text-luxury-dark focus:ring-2 focus:ring-luxury-rose/30"></div>
+                            <div><label class="block text-[9px] font-bold text-gray-400 uppercase tracking-widest mb-1.5 pl-1">Last Name *</label><input type="text" id="prof-lname" required class="w-full px-4 py-3 bg-luxury-bg border border-luxury-blush rounded-xl outline-none text-[12px] font-medium text-luxury-dark focus:ring-2 focus:ring-luxury-rose/30"></div>
                         </div>
                         <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                            <div><label class="block text-[9px] font-bold text-gray-400 uppercase tracking-widest mb-1.5 pl-1">Email *</label><input type="email" id="prof-email" required class="w-full px-4 py-3 bg-luxury-bg border border-luxury-blush rounded-xl outline-none text-[12px] font-medium text-luxury-dark focus:ring-2 focus:ring-luxury-rose/30 transition-all"></div>
+                            <div><label class="block text-[9px] font-bold text-gray-400 uppercase tracking-widest mb-1.5 pl-1">Email *</label><input type="email" id="prof-email" required class="w-full px-4 py-3 bg-luxury-bg border border-luxury-blush rounded-xl outline-none text-[12px] font-medium text-luxury-dark focus:ring-2 focus:ring-luxury-rose/30"></div>
                             <div>
                                 <label class="block text-[9px] font-bold text-gray-400 uppercase tracking-widest mb-1.5 pl-1">WhatsApp / Phone *</label>
                                 <div class="w-full bg-luxury-bg border border-luxury-blush rounded-xl overflow-hidden focus-within:ring-2 focus-within:ring-luxury-rose/30 flex items-stretch transition-all">
-                                    <div class="flex items-center justify-center bg-white px-3 py-2.5 border-r border-luxury-blush"><span class="text-[11px] font-bold text-gray-500 whitespace-nowrap mt-0.5">🇮🇳 IN (+91)</span></div>
+                                    <div class="flex items-center justify-center bg-white px-3 py-2.5 border-r border-luxury-blush"><span class="text-[11px] font-bold text-gray-500 whitespace-nowrap mt-0.5" id="prof-country-code-display">🇮🇳 IN (+91)</span></div>
                                     <input type="tel" id="prof-phone" required class="w-full min-w-0 px-4 py-3 bg-transparent outline-none text-[13px] font-semibold tracking-wide text-luxury-dark">
                                 </div>
                             </div>
                         </div>
-                        <div><label class="block text-[9px] font-bold text-gray-400 uppercase tracking-widest mb-1.5 pl-1">Flat / House / Building *</label><input type="text" id="prof-add1" required class="w-full px-4 py-3 bg-luxury-bg border border-luxury-blush rounded-xl outline-none text-[12px] font-medium text-luxury-dark focus:ring-2 focus:ring-luxury-rose/30 transition-all"></div>
-                        <div><label class="block text-[9px] font-bold text-gray-400 uppercase tracking-widest mb-1.5 pl-1">Area / Street / Sector</label><input type="text" id="prof-add2" class="w-full bg-luxury-bg border border-luxury-blush rounded-xl outline-none text-[12px] font-medium text-luxury-dark focus:ring-2 focus:ring-luxury-rose/30 transition-all"></div>
+                        <div><label class="block text-[9px] font-bold text-gray-400 uppercase tracking-widest mb-1.5 pl-1">Flat / House / Building *</label><input type="text" id="prof-add1" required class="w-full px-4 py-3 bg-luxury-bg border border-luxury-blush rounded-xl outline-none text-[12px] font-medium text-luxury-dark focus:ring-2 focus:ring-luxury-rose/30"></div>
+                        <div><label class="block text-[9px] font-bold text-gray-400 uppercase tracking-widest mb-1.5 pl-1">Area / Street / Sector</label><input type="text" id="prof-add2" class="w-full bg-luxury-bg border border-luxury-blush rounded-xl outline-none text-[12px] font-medium text-luxury-dark focus:ring-2 focus:ring-luxury-rose/30"></div>
                         <div class="grid grid-cols-2 md:grid-cols-3 gap-4">
-                            <div class="col-span-2 md:col-span-1"><label class="block text-[9px] font-bold text-gray-400 uppercase tracking-widest mb-1.5 pl-1">Pincode *</label><input type="text" id="prof-pin" required maxlength="6" class="w-full px-4 py-3 bg-luxury-bg border border-luxury-blush rounded-xl outline-none text-[12px] font-medium text-luxury-dark focus:ring-2 focus:ring-luxury-rose/30 transition-all"></div>
-                            <div><label class="block text-[9px] font-bold text-gray-400 uppercase tracking-widest mb-1.5 pl-1">City *</label><input type="text" id="prof-city" required class="w-full px-4 py-3 bg-luxury-bg border border-luxury-blush rounded-xl outline-none text-[12px] font-medium text-luxury-dark focus:ring-2 focus:ring-luxury-rose/30 transition-all"></div>
-                            <div><label class="block text-[9px] font-bold text-gray-400 uppercase tracking-widest mb-1.5 pl-1">State *</label><input type="text" id="prof-state" required class="w-full px-4 py-3 bg-luxury-bg border border-luxury-blush rounded-xl outline-none text-[12px] font-medium text-luxury-dark focus:ring-2 focus:ring-luxury-rose/30 transition-all"></div>
+                            <div class="col-span-2 md:col-span-1"><label class="block text-[9px] font-bold text-gray-400 uppercase tracking-widest mb-1.5 pl-1">Pincode *</label><input type="text" id="prof-pin" required maxlength="6" class="w-full px-4 py-3 bg-luxury-bg border border-luxury-blush rounded-xl outline-none text-[12px] font-medium text-luxury-dark focus:ring-2 focus:ring-luxury-rose/30"></div>
+                            <div><label class="block text-[9px] font-bold text-gray-400 uppercase tracking-widest mb-1.5 pl-1">City *</label><input type="text" id="prof-city" required class="w-full px-4 py-3 bg-luxury-bg border border-luxury-blush rounded-xl outline-none text-[12px] font-medium text-luxury-dark focus:ring-2 focus:ring-luxury-rose/30"></div>
+                            <div><label class="block text-[9px] font-bold text-gray-400 uppercase tracking-widest mb-1.5 pl-1">State *</label><input type="text" id="prof-state" required class="w-full px-4 py-3 bg-luxury-bg border border-luxury-blush rounded-xl outline-none text-[12px] font-medium text-luxury-dark focus:ring-2 focus:ring-luxury-rose/30"></div>
                         </div>
                         <div class="flex gap-3 pt-3 mb-4">
                             <button type="button" onclick="window.saveAddressFromForm()" class="bg-luxury-dark text-white hover:bg-[#D9778A] px-6 py-3 rounded-xl font-bold text-[10px] uppercase tracking-widest transition-colors shadow-sm">Save Address</button>
@@ -478,6 +489,7 @@
         </div>
     </div>
 
+    <!-- POLICIES -->
     <div id="return-policy-modal" role="dialog" aria-modal="true" class="hidden transition-opacity duration-200 opacity-0 fixed inset-0 bg-luxury-dark/70 p-4 flex items-center justify-center z-[4000]">
         <div class="transform scale-95 translate-y-2 transition-all duration-300 bg-white rounded-3xl w-full max-w-md p-6 sm:p-8 shadow-2xl relative border border-luxury-rose" id="return-policy-box">
             <button type="button" onclick="window.closePolicyModal('return-policy-modal', 'return-policy-box')" class="absolute top-4 right-4 text-gray-400 w-8 h-8 bg-luxury-bg rounded-full flex items-center justify-center border border-luxury-blush hover:text-luxury-dark"><i class="fas fa-times text-xs"></i></button>
@@ -507,7 +519,7 @@
         </div>
     </div>
 
-    <!-- Global Toast Notification -->
+    <!-- Toast Notification -->
     <div id="toast" role="alert" aria-live="assertive" class="fixed bottom-10 left-1/2 transform -translate-x-1/2 bg-white/90 backdrop-blur-md text-luxury-dark px-8 py-3.5 rounded-full shadow-float flex items-center gap-3 transition-all duration-500 ease-luxury-ease opacity-0 pointer-events-none w-max border border-white translate-y-10 z-[5000]">
         <i id="toast-icon" class="fas fa-check text-[#D9778A] text-sm"></i> 
         <span id="toast-msg" class="text-[11px] font-body font-medium tracking-[0.1em] pt-0.5"></span>

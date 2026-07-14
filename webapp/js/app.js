@@ -1,6 +1,6 @@
 /**
  * Twisted Happiness - Enterprise Storefront Engine
- * Version: 10.0.0
+ * Version: 11.0.0 - Fortified Cache Defense, Floating WhatsApp, Bulletproof Fallbacks.
  */
 
 const SUPABASE_URL = "https://gvrfucjtnyqfkdynrmqs.supabase.co"; 
@@ -15,58 +15,40 @@ const DISCOUNT_TIERS = [
     { threshold: 299,  type: 'flat',    value: 30, label: '₹30 OFF VIP' }
 ];
 
+const countryCodeMapping = { "+91": "🇮🇳 IN (+91)", "+1": "🇺🇸 US (+1)", "+44": "🇬🇧 UK (+44)" };
+
+// Defensive State Parsing (Prevents infinite loading if cache is corrupted)
+function safeJSONParse(key, fallback) { 
+    try { 
+        const item = localStorage.getItem(key); 
+        const parsed = item ? JSON.parse(item) : fallback; 
+        if (Array.isArray(fallback) && !Array.isArray(parsed)) return fallback;
+        return parsed;
+    } catch (e) { localStorage.removeItem(key); return fallback; } 
+}
+
 let settings = safeJSONParse('th_settings', { storeName: "Twisted Happiness", instagram: "", whatsapp: "9909310501", upiId: "khushisj315@oksbi", countryCode: "+91" });
 let cart = safeJSONParse('th_cart', []); 
-let products = [];
-let currentMainCategory = 'All'; let activeSubCategories = []; let currentSortMode = 'newest'; let currentSearchQuery = ''; 
-let searchTimeout = null;
-let modalImages = []; let currentSlideIndex = 0; let isAnimating = false; 
-let currentLightboxIndex = 0; let isLightboxAnimating = false;
-let currentModalLevel = 0; let statePushed = false;
-
-// Checkout State
-let checkoutStep = 1;
-let pendingOrderPayload = null; 
-let currentOrderReference = null;
-let currentDeliveryFee = 0;
-
-// Coupon & Wishlist State
-let activeCouponValue = 0;
-let activeCouponCode = "";
 let localWishlist = safeJSONParse('th_wishlist', []);
+let savedAddresses = safeJSONParse('th_saved_addresses', []);
 
-// Auth & Address State
-let savedAddresses = [];
-let selectedAddressIndex = -1;
-let editingAddressIndex = null;
-let currentSessionUser = null; 
-let authModalMode = "login"; 
+let products = []; let currentMainCategory = 'All'; let activeSubCategories = []; let currentSortMode = 'newest'; let currentSearchQuery = ''; 
+let searchTimeout = null; let modalImages = []; let currentSlideIndex = 0; let isAnimating = false; let currentLightboxIndex = 0; let isLightboxAnimating = false; let currentModalLevel = 0; let statePushed = false;
+let checkoutStep = 1; let pendingOrderPayload = null; let currentOrderReference = null; let currentDeliveryFee = 0; let activeCouponValue = 0; let activeCouponCode = "";
+let selectedAddressIndex = savedAddresses.length > 0 ? 0 : -1; let editingAddressIndex = null; let currentSessionUser = null; let authModalMode = "login"; 
 
 const dismissPreloader = () => {
     const preloader = document.getElementById('luxury-page-preloader');
-    if (preloader && !preloader.classList.contains('hidden')) {
-        preloader.classList.add('opacity-0');
-        setTimeout(() => preloader.classList.add('hidden'), 700);
-    }
+    if (preloader) { preloader.style.opacity = '0'; preloader.style.pointerEvents = 'none'; setTimeout(() => preloader.remove(), 700); }
 };
 
 window.addEventListener('load', () => { setTimeout(dismissPreloader, 300); });
-setTimeout(dismissPreloader, 5000);
+setTimeout(dismissPreloader, 5000); // 5.0 Second Hard Failsafe
 
 document.addEventListener('DOMContentLoaded', () => {
-    try {
-        _supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
-        setupAuthSessionListener();
-        fetchDatabase(); 
-    } catch (e) {
-        console.error("Supabase Init Error:", e);
-        dismissPreloader(); 
-    }
-    applyDynamicSettings();
-    bindDOMEvents();
-    injectSkeletons();
-    updateCartCount();
-    setupSocialLinks();
+    try { _supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY); setupAuthSessionListener(); fetchDatabase(); } 
+    catch (e) { console.error("Supabase Init Error:", e); dismissPreloader(); }
+    applyDynamicSettings(); bindDOMEvents(); injectSkeletons(); updateCartCount(); setupSocialLinks();
 });
 
 // 🚨 AUTHENTICATION 🚨
@@ -93,13 +75,8 @@ async function handleAuthFormSubmit(e) {
     e.preventDefault(); const email = document.getElementById('auth-email').value.trim(), password = document.getElementById('auth-password').value, btn = document.getElementById('btn-auth-submit');
     btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Processing...'; btn.disabled = true;
     try {
-        if (authModalMode === "login") {
-            const { error } = await _supabase.auth.signInWithPassword({ email, password }); if (error) throw error;
-            showToast("Welcome Back!", "fa-user-check");
-        } else {
-            const { error } = await _supabase.auth.signUp({ email, password }); if (error) throw error;
-            showToast("Registration Successful!", "fa-check-circle");
-        }
+        if (authModalMode === "login") { const { error } = await _supabase.auth.signInWithPassword({ email, password }); if (error) throw error; showToast("Welcome Back!", "fa-user-check"); } 
+        else { const { error } = await _supabase.auth.signUp({ email, password }); if (error) throw error; showToast("Registration Successful!", "fa-check-circle"); }
         closeCustomerAuthModal();
     } catch(err) { alert(err.message); } finally { btn.innerHTML = authModalMode === "login" ? "Sign In" : "Register Account"; btn.disabled = false; }
 }
@@ -112,16 +89,12 @@ async function handleCustomerLogout() { showInteractionLoader("Signing Out...");
 // 🚨 WISHLIST 🚨
 async function syncCloudWishlist() {
     if (!currentSessionUser) return;
-    try {
-        const { data } = await _supabase.from('wishlist').select('product_id');
-        if (data) localWishlist = data.map(w => w.product_id);
-    } catch(e) {}
+    try { const { data } = await _supabase.from('wishlist').select('product_id').eq('user_id', currentSessionUser.id); if (data) localWishlist = data.map(w => w.product_id); localStorage.setItem('th_wishlist', JSON.stringify(localWishlist)); } catch(e) {}
 }
 
 async function toggleWishlistProduct(productId, event) {
     if(event) { event.preventDefault(); event.stopPropagation(); }
-    const index = localWishlist.indexOf(productId.toString());
-    const isAdding = index === -1;
+    const index = localWishlist.indexOf(productId.toString()); const isAdding = index === -1;
     if (isAdding) localWishlist.push(productId.toString()); else localWishlist.splice(index, 1);
     localStorage.setItem('th_wishlist', JSON.stringify(localWishlist));
 
@@ -131,8 +104,7 @@ async function toggleWishlistProduct(productId, event) {
             else { await _supabase.from('wishlist').delete().eq('user_id', currentSessionUser.id).eq('product_id', productId.toString()); }
         } catch(e) {}
     }
-    showToast(isAdding ? "Added to Wishlist" : "Removed from Wishlist", "fa-heart", isAdding ? "text-red-500" : "text-gray-300");
-    updateWishlistUIElements(productId, isAdding);
+    showToast(isAdding ? "Added to Wishlist" : "Removed from Wishlist", "fa-heart", isAdding ? "text-red-500" : "text-gray-300"); updateWishlistUIElements(productId, isAdding);
 }
 
 function updateWishlistUIElements(id, isAdded) {
@@ -144,14 +116,9 @@ function updateWishlistUIElements(id, isAdded) {
 
 // 🚨 LOGIC CALCS 🚨
 function calculateEDDBracket(prepTimeStr) {
-    const matches = prepTimeStr.match(/\d+/g);
-    let minDays = matches ? parseInt(matches[0]) : 3;
-    let maxDays = matches && matches[1] ? parseInt(matches[1]) : minDays + 2;
-    const today = new Date();
-    const minDate = new Date(); minDate.setDate(today.getDate() + minDays + 2);
-    const maxDate = new Date(); maxDate.setDate(today.getDate() + maxDays + 4);
-    const options = { day: 'numeric', month: 'short' };
-    return `Estimated Delivery: ${minDate.toLocaleDateString('en-IN', options)} — ${maxDate.toLocaleDateString('en-IN', options)}`;
+    const matches = prepTimeStr.match(/\d+/g); let minDays = matches ? parseInt(matches[0]) : 3; let maxDays = matches && matches[1] ? parseInt(matches[1]) : minDays + 2;
+    const today = new Date(); const minDate = new Date(); minDate.setDate(today.getDate() + minDays + 2); const maxDate = new Date(); maxDate.setDate(today.getDate() + maxDays + 4);
+    const options = { day: 'numeric', month: 'short' }; return `Estimated Delivery: ${minDate.toLocaleDateString('en-IN', options)} — ${maxDate.toLocaleDateString('en-IN', options)}`;
 }
 
 function applyCouponCode() {
@@ -164,11 +131,8 @@ function applyCouponCode() {
 }
 
 async function syncCloudAddresses() {
-    if (currentSessionUser) {
-        try { const { data } = await _supabase.from('addresses').select('*').order('created_at', { ascending: true }); savedAddresses = data || []; selectedAddressIndex = savedAddresses.length > 0 ? 0 : -1; } catch (err) {}
-    } else {
-        savedAddresses = safeJSONParse('th_saved_addresses', []); selectedAddressIndex = savedAddresses.length > 0 ? 0 : -1;
-    }
+    if (currentSessionUser) { try { const { data } = await _supabase.from('addresses').select('*').order('created_at', { ascending: true }); savedAddresses = data || []; selectedAddressIndex = savedAddresses.length > 0 ? 0 : -1; } catch (err) {} } 
+    else { savedAddresses = safeJSONParse('th_saved_addresses', []); selectedAddressIndex = savedAddresses.length > 0 ? 0 : -1; }
     renderAddressBook();
 }
 
@@ -197,17 +161,15 @@ function renderProducts(searchQuery = '') {
 
     const fragment = document.createDocumentFragment();
     filtered.forEach((p) => {
-        const cleanPrice = Number(p.price.toString().replace(/[^0-9.,]/g, '')); const discountPercent = getDiscountPercent(p.id.toString()); const originalPrice = Math.round(cleanPrice * (1 + (discountPercent / 100)));
-        const mainImg = p.image1 || 'https://placehold.co/400x500/F8E9EA/423133';
-        const card = document.createElement('div'); card.className = `w-full relative cursor-pointer opacity-0 transform translate-y-4 transition-all duration-400 ease-out group scroll-reveal`;
-        card.setAttribute('data-card-id', p.id);
-        card.addEventListener('click', () => openProductPage(p.id));
+        const cleanPrice = Number((p.price || 0).toString().replace(/[^0-9.,]/g, '')); const discountPercent = getDiscountPercent(p.id.toString()); const originalPrice = Math.round(cleanPrice * (1 + (discountPercent / 100)));
+        const mainImg = (p.image1 && typeof p.image1 === 'string') ? p.image1 : 'https://placehold.co/400x500/F8E9EA/423133';
+        const card = document.createElement('div'); card.className = `w-full relative cursor-pointer opacity-0 transform translate-y-4 transition-all duration-400 ease-out group scroll-reveal`; card.setAttribute('data-card-id', p.id); card.addEventListener('click', () => openProductPage(p.id));
         const isHearted = localWishlist.includes(p.id.toString());
         card.innerHTML = `
             <div class="w-full relative rounded-2xl overflow-hidden group shadow-sm bg-gradient-to-tr from-luxury-bg to-white border border-luxury-blush aspect-[4/5] mb-2">
-                <span class="absolute top-2.5 left-2.5 z-10 bg-white/95 text-luxury-dark text-[7px] sm:text-[8px] font-bold px-2.5 py-1 rounded-md uppercase tracking-[0.15em] border border-luxury-blush shadow-sm z-10">${p.category}</span>
+                <span class="absolute top-2.5 left-2.5 z-10 bg-white/95 text-luxury-dark text-[7px] sm:text-[8px] font-bold px-2.5 py-1 rounded-md uppercase tracking-[0.15em] border border-luxury-blush shadow-sm">${p.category}</span>
                 <button type="button" onclick="window.th_toggleWishlistProduct('${p.id}', event)" class="absolute top-2.5 right-2.5 bg-white/95 w-7 h-7 flex items-center justify-center rounded-full border border-luxury-blush z-20 shadow-sm transition-transform active:scale-95"><i class="${isHearted ? 'fas fa-heart text-red-500' : 'far fa-heart text-gray-300'} wish-icon"></i></button>
-                <img loading="lazy" decoding="async" src="${mainImg}" alt="${p.name}" class="absolute inset-0 w-full h-full object-cover opacity-0 transition-opacity duration-500 pointer-events-none" onload="this.classList.remove('opacity-0')">
+                <img loading="lazy" decoding="async" src="${mainImg}" alt="${p.name}" class="absolute inset-0 w-full h-full object-cover">
             </div>
             <div class="px-1 flex flex-col justify-start text-left w-full">
                 <h3 class="font-bitter font-semibold text-[11px] sm:text-[12px] text-luxury-dark leading-snug w-full transition-colors group-hover:text-luxury-rose mb-0.5 line-clamp-2">${p.name}</h3>
@@ -223,20 +185,17 @@ function renderProducts(searchQuery = '') {
 
 function openProductPage(id) { 
     const p = products.find(x => x.id == id); if(!p) return;
-    const cleanPrice = Number(p.price.toString().replace(/[^0-9.,]/g, '')); const discountPercent = getDiscountPercent(p.id.toString()); const originalPrice = Math.round(cleanPrice * (1 + (discountPercent / 100)));
+    const cleanPrice = Number((p.price || 0).toString().replace(/[^0-9.,]/g, '')); const discountPercent = getDiscountPercent(p.id.toString()); const originalPrice = Math.round(cleanPrice * (1 + (discountPercent / 100)));
     modalImages = [p.image1, p.image2, p.image3, p.image4, p.image5].filter(img => typeof img === 'string' && img.trim() !== ''); if (modalImages.length === 0) modalImages.push('https://placehold.co/400x500/F8E9EA/423133');
     const track = document.getElementById('modal-carousel-track'), thumbContainer = document.getElementById('modal-thumbnails'); 
     track.style.transition = 'none'; let html = '';
-    modalImages.forEach(imgSrc => { html += `<div class="w-full h-full flex-shrink-0 flex items-center justify-center relative bg-transparent" onclick="window.openLightboxFromCarousel()"><img loading="lazy" decoding="async" src="${imgSrc}" class="w-full h-full object-contain"></div>`; }); 
+    modalImages.forEach(imgSrc => { html += `<div class="w-full h-full flex-shrink-0 flex items-center justify-center relative bg-transparent" onclick="window.openLightboxFromCarousel()"><img loading="lazy" decoding="async" src="${imgSrc}" class="w-full max-h-full object-contain"></div>`; }); 
     track.innerHTML = html; currentSlideIndex = 0; track.style.transform = `translateX(0)`;
     thumbContainer.innerHTML = ''; 
     if (modalImages.length > 1) { 
-        modalImages.forEach((imgSrc, index) => { 
-            const thumb = document.createElement('img'); thumb.src = imgSrc; thumb.className = `w-12 h-12 object-cover rounded-md border-2 transition-all cursor-pointer ${index === 0 ? 'border-luxury-rose scale-105 opacity-100' : 'border-transparent opacity-60 hover:opacity-100'}`; thumb.id = `thumb-${index}`; thumb.onclick = () => { window.goToSlide(index); }; thumbContainer.appendChild(thumb); 
-        }); 
+        modalImages.forEach((imgSrc, index) => { const thumb = document.createElement('img'); thumb.src = imgSrc; thumb.className = `w-12 h-12 object-cover rounded-md border-2 transition-all cursor-pointer ${index === 0 ? 'border-luxury-rose scale-105 opacity-100' : 'border-transparent opacity-60 hover:opacity-100'}`; thumb.id = `thumb-${index}`; thumb.onclick = () => { window.goToSlide(index); }; thumbContainer.appendChild(thumb); }); 
     } 
-    document.getElementById('modal-wishlist-toggle-btn').onclick = (e) => window.th_toggleWishlistProduct(p.id, e);
-    updateWishlistUIElements(p.id, localWishlist.includes(p.id.toString()));
+    document.getElementById('modal-wishlist-toggle-btn').onclick = (e) => window.th_toggleWishlistProduct(p.id, e); updateWishlistUIElements(p.id, localWishlist.includes(p.id.toString()));
 
     if(document.getElementById('modal-title')) document.getElementById('modal-title').textContent = p.name; 
     if(document.getElementById('modal-main-category')) document.getElementById('modal-main-category').textContent = p.mainCategory; 
@@ -266,7 +225,7 @@ function closeProductPage() { document.getElementById('product-view')?.classList
 function updateProductButtons(id) {
     const actionContainer = document.getElementById('modal-action-buttons'); if(!actionContainer) return;
     const cartItem = cart.find(item => item.id === id); const qty = cartItem ? parseInt(cartItem.qty || 1) : 0;
-    if(qty > 0) { actionContainer.innerHTML = `<div class="flex items-center justify-between w-full h-full bg-white border border-luxury-rose rounded-full px-2 sm:px-4 py-3 shadow-sm min-h-[44px]"><button type="button" onclick="window.th_updateCartQty('${id}', -1, event)" class="w-8 h-8 rounded-full bg-luxury-bg hover:bg-luxury-blush border border-luxury-blush text-luxury-dark active:scale-90 flex items-center justify-center shrink-0"><i class="fas fa-minus text-xs"></i></button><span class="text-base sm:text-lg font-bold text-luxury-rose font-poppins min-w-[20px] text-center">${qty}</span><button type="button" onclick="window.th_updateCartQty('${id}', 1, event)" class="w-8 h-8 rounded-full bg-luxury-bg hover:bg-luxury-blush border border-luxury-blush text-luxury-dark active:scale-90 flex items-center justify-center shrink-0"><i class="fas fa-plus text-xs"></i></button></div><button type="button" onclick="window.openCheckoutBase()" class="w-full bg-luxury-dark text-white hover:bg-[#D9778A] font-bold px-2 py-3.5 sm:px-4 rounded-full flex items-center justify-center gap-2 text-[11px] sm:text-[12px] uppercase tracking-wider shadow-md active:scale-[0.98] transition-colors min-h-[44px]"><i class="fas fa-bolt text-luxury-gold"></i> Checkout</button>`; } 
+    if(qty > 0) { actionContainer.innerHTML = `<div class="flex items-center justify-between w-full h-full bg-white border border-luxury-rose rounded-full px-2 sm:px-4 py-3 shadow-sm min-h-[44px]"><button type="button" onclick="window.th_updateCartQty('${id}', -1, event)" class="w-8 h-8 rounded-full bg-luxury-bg hover:bg-luxury-blush border border-luxury-blush flex items-center justify-center shrink-0"><i class="fas fa-minus text-xs"></i></button><span class="text-base sm:text-lg font-bold text-luxury-rose font-poppins min-w-[20px] text-center">${qty}</span><button type="button" onclick="window.th_updateCartQty('${id}', 1, event)" class="w-8 h-8 rounded-full bg-luxury-bg hover:bg-luxury-blush border border-luxury-blush flex items-center justify-center shrink-0"><i class="fas fa-plus text-xs"></i></button></div><button type="button" onclick="window.openCheckoutBase()" class="w-full bg-luxury-dark text-white hover:bg-[#D9778A] font-bold px-2 py-3.5 sm:px-4 rounded-full flex items-center justify-center gap-2 text-[11px] sm:text-[12px] uppercase tracking-wider shadow-md active:scale-[0.98] transition-colors min-h-[44px]"><i class="fas fa-bolt text-luxury-gold"></i> Checkout</button>`; } 
     else { actionContainer.innerHTML = `<button type="button" onclick="window.th_updateCartQty('${id}', 1, event)" class="w-full bg-white border border-luxury-dark text-luxury-dark hover:bg-luxury-bg font-bold px-2 py-3.5 sm:px-4 rounded-full flex items-center justify-center gap-2 text-[11px] sm:text-[12px] uppercase tracking-wider transition-colors shadow-sm active:scale-[0.98] min-h-[44px]"><i class="fas fa-shopping-bag"></i> Add to Bag</button><button type="button" onclick="window.routeCheckoutFromModal('${id}', event)" class="w-full bg-luxury-dark text-white hover:bg-[#D9778A] font-bold px-2 py-3.5 sm:px-4 rounded-full flex items-center justify-center gap-2 text-[11px] sm:text-[12px] uppercase tracking-wider shadow-md active:scale-[0.98] transition-colors min-h-[44px]"><i class="fas fa-bolt text-luxury-gold"></i> Buy Now</button>`; }
 }
 
@@ -280,8 +239,8 @@ function renderRelatedProducts(currentId, mainCategory, subCategory) {
 function renderCheckoutItems() {
     const container = document.getElementById('checkout-items-list'); if(!container) return; let itemsHTML = '';
     cart.forEach(item => {
-        const cleanPrice = Number(item.price.toString().replace(/[^0-9.,]/g, '')); const discountPercent = getDiscountPercent(item.id.toString()); const originalPrice = Math.round(cleanPrice * (1 + (discountPercent / 100))); const itemImg = (item.image1 || item.image) ? (item.image1 || item.image) : 'https://placehold.co/150/F8E9EA/423133'; const qty = parseInt(item.qty || 1);
-        itemsHTML += `<div class="flex flex-col sm:flex-row gap-4 border border-luxury-blush bg-white p-4 rounded-2xl shadow-sm"><img src="${itemImg}" class="w-20 h-24 sm:w-24 sm:h-28 object-cover rounded-xl border border-luxury-blush shrink-0 bg-luxury-bg"><div class="flex flex-col justify-between w-full"><div><h4 class="font-bitter text-[14px] sm:text-[15px] font-semibold text-luxury-dark mb-1 leading-snug">${item.name}</h4><p class="text-[10px] uppercase tracking-widest font-bold text-gray-400 mb-3">${item.mainCategory || item.category || 'Handcrafted Art'}</p><div class="flex items-baseline gap-2 mb-4"><span class="font-poppins text-luxury-dark font-bold text-[16px] sm:text-[18px]">₹${cleanPrice}</span><span class="font-poppins text-gray-400 text-[11px] line-through">₹${originalPrice}</span><span class="text-green-600 font-bold text-[10px] ml-1">${discountPercent}% Off</span></div></div><div class="flex items-center gap-3"><div class="flex items-center bg-white border border-luxury-blush rounded-full h-[36px] overflow-hidden shadow-sm"><button type="button" onclick="window.updateCheckoutQty('${item.id}', -1)" class="w-10 h-full flex items-center justify-center text-luxury-dark hover:bg-luxury-blush transition-colors"><i class="fas fa-minus text-[10px]"></i></button><div class="w-10 h-full flex items-center justify-center border-l border-r border-luxury-blush text-[12px] font-bold text-luxury-rose bg-luxury-bg">${qty}</div><button type="button" onclick="window.updateCheckoutQty('${item.id}', 1)" class="w-10 h-full flex items-center justify-center text-luxury-dark hover:bg-luxury-blush transition-colors"><i class="fas fa-plus text-[10px]"></i></button></div></div></div></div>`;
+        const cleanPrice = Number((item.price || 0).toString().replace(/[^0-9.,]/g, '')); const discountPercent = getDiscountPercent(item.id.toString()); const originalPrice = Math.round(cleanPrice * (1 + (discountPercent / 100))); const itemImg = (item.image1 || item.image) ? (item.image1 || item.image) : 'https://placehold.co/150/F8E9EA/423133'; const qty = parseInt(item.qty || 1);
+        itemsHTML += `<div class="flex flex-col sm:flex-row gap-4 border border-luxury-blush bg-white p-4 rounded-2xl shadow-sm"><img src="${itemImg}" class="w-20 h-24 sm:w-24 sm:h-28 object-cover rounded-xl border border-luxury-blush shrink-0 bg-luxury-bg"><div class="flex flex-col justify-between w-full"><div><h4 class="font-bitter text-[14px] sm:text-[15px] font-semibold text-luxury-dark mb-1 leading-snug">${item.name}</h4><p class="text-[10px] uppercase tracking-widest font-bold text-gray-400 mb-3">${item.mainCategory || item.category || 'Handcrafted Art'}</p><div class="flex items-baseline gap-2 mb-4"><span class="font-poppins text-luxury-dark font-bold text-[16px] sm:text-[18px]">₹${cleanPrice}</span><span class="font-poppins text-gray-400 text-[11px] line-through">₹${originalPrice}</span><span class="text-green-600 font-bold text-[10px] ml-1">${discountPercent}% Off</span></div></div><div class="flex items-center gap-3"><div class="flex items-center bg-white border border-luxury-blush rounded-full h-[36px] overflow-hidden shadow-sm"><button type="button" onclick="window.th_updateCartQty('${item.id}', -1, event)" class="w-10 h-full flex items-center justify-center text-luxury-dark hover:bg-luxury-blush transition-colors"><i class="fas fa-minus text-[10px]"></i></button><div class="w-10 h-full flex items-center justify-center border-l border-r border-luxury-blush text-[12px] font-bold text-luxury-rose bg-luxury-bg">${qty}</div><button type="button" onclick="window.th_updateCartQty('${item.id}', 1, event)" class="w-10 h-full flex items-center justify-center text-luxury-dark hover:bg-luxury-blush transition-colors"><i class="fas fa-plus text-[10px]"></i></button></div></div></div></div>`;
     });
     let hasCustomizable = cart.some(item => item.isCustomizable); const dimWrapper = document.getElementById('comm-dimensions-wrapper'); if (hasCustomizable) dimWrapper?.classList.remove('hidden'); else dimWrapper?.classList.add('hidden'); container.innerHTML = itemsHTML;
 }
@@ -308,18 +267,15 @@ function editAddress(index, event) { event.stopPropagation(); editingAddressInde
 async function saveAddressFromForm() {
     const addr = { first_name: document.getElementById('prof-fname').value.trim(), last_name: document.getElementById('prof-lname').value.trim(), email: document.getElementById('prof-email').value.trim(), phone: document.getElementById('prof-phone').value.trim(), address_1: document.getElementById('prof-add1').value.trim(), address_2: document.getElementById('prof-add2').value.trim(), city: document.getElementById('prof-city').value.trim(), state: document.getElementById('prof-state').value.trim(), pincode: document.getElementById('prof-pin').value.trim() };
     if(!addr.first_name || !addr.phone || !addr.address_1 || !addr.city || !addr.pincode) { showToast("Please fill all required fields", "fa-exclamation-circle", "text-red-500"); return false; }
-    
     showInteractionLoader("Saving Address...");
     if (currentSessionUser) {
         try {
             addr.user_id = currentSessionUser.id;
-            if (editingAddressIndex !== null) { await _supabase.from('addresses').update(addr).eq('id', savedAddresses[editingAddressIndex].id); } 
-            else { await _supabase.from('addresses').insert([addr]); }
+            if (editingAddressIndex !== null) { await _supabase.from('addresses').update(addr).eq('id', savedAddresses[editingAddressIndex].id); } else { await _supabase.from('addresses').insert([addr]); }
             await syncCloudAddresses();
         } catch (err) { alert("Failed to save address to Cloud: " + err.message); hideInteractionLoader(); return false; }
     } else {
-        if (editingAddressIndex !== null) { savedAddresses[editingAddressIndex] = addr; selectedAddressIndex = editingAddressIndex; } 
-        else { savedAddresses.push(addr); selectedAddressIndex = savedAddresses.length - 1; }
+        if (editingAddressIndex !== null) { savedAddresses[editingAddressIndex] = addr; selectedAddressIndex = editingAddressIndex; } else { savedAddresses.push(addr); selectedAddressIndex = savedAddresses.length - 1; }
         localStorage.setItem('th_saved_addresses', JSON.stringify(savedAddresses));
     }
     editingAddressIndex = null; renderAddressBook(); hideInteractionLoader(); showToast("Address Saved", "fa-check"); return true;
@@ -352,7 +308,7 @@ function updateCheckoutUI() {
     if(!fill) return;
 
     let trueSubtotal = 0, sellingSubtotal = 0, totalItems = 0; 
-    cart.forEach((item) => { const cleanPrice = Number(item.price.toString().replace(/[^0-9.,]/g, '')); const qty = parseInt(item.qty || 1); const discountPercent = getDiscountPercent(item.id.toString()); trueSubtotal += (Math.round(cleanPrice * (1 + (discountPercent / 100))) * qty); sellingSubtotal += (cleanPrice * qty); totalItems += qty; });
+    cart.forEach((item) => { const cleanPrice = Number((item.price || 0).toString().replace(/[^0-9.,]/g, '')); const qty = parseInt(item.qty || 1); const discountPercent = getDiscountPercent(item.id.toString()); trueSubtotal += (Math.round(cleanPrice * (1 + (discountPercent / 100))) * qty); sellingSubtotal += (cleanPrice * qty); totalItems += qty; });
 
     let currentPin = ''; const form = document.getElementById('checkout-profile-form');
     if (form && !form.classList.contains('hidden') && document.getElementById('prof-pin')) currentPin = document.getElementById('prof-pin').value.trim(); else if (savedAddresses.length > 0 && selectedAddressIndex !== -1) currentPin = savedAddresses[selectedAddressIndex].pincode;
@@ -424,7 +380,7 @@ function preparePaymentGateway() {
     const type = document.getElementById('comm-type') ? document.getElementById('comm-type').value : 'Standard Order', colors = document.getElementById('comm-colors') ? document.getElementById('comm-colors').value.trim() : 'No notes', dims = document.getElementById('comm-dimensions') ? document.getElementById('comm-dimensions').value.trim() : '';
     showInteractionLoader("Securing Order Engine...");
     let sellingSubtotal = 0, totalPrepTime = "", itemsToSave = [];
-    cart.forEach((item) => { const cleanPrice = Number(item.price.toString().replace(/[^0-9.,]/g, '')); const qty = parseInt(item.qty || 1); sellingSubtotal += (cleanPrice * qty); itemsToSave.push({ id: item.id, name: item.name, price: cleanPrice, qty: qty, image: item.image }); });
+    cart.forEach((item) => { const cleanPrice = Number((item.price || 0).toString().replace(/[^0-9.,]/g, '')); const qty = parseInt(item.qty || 1); sellingSubtotal += (cleanPrice * qty); itemsToSave.push({ id: item.id, name: item.name, price: cleanPrice, qty: qty, image: item.image }); });
     totalPrepTime = calculateTotalPrepTime(cart);
     const targetAddress = savedAddresses[selectedAddressIndex]; currentDeliveryFee = calculateDynamicDelivery(sellingSubtotal, targetAddress.pincode, cart);
     const { discount: vipDiscount } = calculateCartDiscount(sellingSubtotal); 
@@ -458,8 +414,7 @@ function preparePaymentGateway() {
 }
 
 async function confirmPaymentAndOrder() {
-    if(!pendingOrderPayload) return;
-    const btn = document.getElementById('btn-confirm-payment'); if(btn) { btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Securing Order...'; btn.disabled = true; }
+    if(!pendingOrderPayload) return; const btn = document.getElementById('btn-confirm-payment'); if(btn) { btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Securing Order...'; btn.disabled = true; }
     pendingOrderPayload.order_id = currentOrderReference; 
     const { error } = await _supabase.from('orders').insert([pendingOrderPayload]);
     if (error) { showToast("Network error. Please try again.", "fa-times", "text-red-500"); if(btn) { btn.innerHTML = 'I Have Completed Payment <i class="fas fa-check-circle"></i>'; btn.disabled = false; } return; }
@@ -494,7 +449,7 @@ async function handleTrackOrder(e) {
         const resContainer = document.getElementById('track-result-container'), resStatus = document.getElementById('track-result-status'), resDesc = document.getElementById('track-result-desc');
         if(data && data.length > 0) {
             const status = data[0].status; resContainer.classList.remove('hidden');
-            if(status === 'new') { resStatus.textContent = "Verifying Payment"; resStatus.className = "font-poppins font-bold text-yellow-600 text-lg tracking-wide mb-2"; resDesc.textContent = "We have received your request and are verifying the transaction with our bank. We will begin crafting shortly!"; } 
+            if(status === 'new' || status === 'pending') { resStatus.textContent = "Verifying Payment"; resStatus.className = "font-poppins font-bold text-yellow-600 text-lg tracking-wide mb-2"; resDesc.textContent = "We have received your request and are verifying the transaction with our bank. We will begin crafting shortly!"; } 
             else if (status === 'curating') { resStatus.textContent = "Artisan is Crafting"; resStatus.className = "font-poppins font-bold text-luxury-gold text-lg tracking-wide mb-2"; resDesc.textContent = "Your payment is verified and our artisan is currently pouring love into your handcrafted piece."; } 
             else if (status === 'ready') { resStatus.textContent = "Ready for Dispatch"; resStatus.className = "font-poppins font-bold text-purple-600 text-lg tracking-wide mb-2"; resDesc.textContent = "Your masterpiece is complete, securely packaged, and awaiting courier pickup via Shiprocket."; } 
             else if (status === 'completed') { resStatus.textContent = "Elegantly Delivered"; resStatus.className = "font-poppins font-bold text-green-600 text-lg tracking-wide mb-2"; resDesc.textContent = "Your order has been successfully delivered. Thank you for curating your space with Twisted Happiness!"; }
@@ -503,13 +458,5 @@ async function handleTrackOrder(e) {
     btn.innerHTML = originalText; btn.disabled = false;
 }
 
-function syncSearch(val) { currentSearchQuery = val; if(document.getElementById('searchInputDesk') && document.getElementById('searchInputDesk').value !== val) document.getElementById('searchInputDesk').value = val; if(document.getElementById('searchInputMob') && document.getElementById('searchInputMob').value !== val) document.getElementById('searchInputMob').value = val; clearTimeout(searchTimeout); searchTimeout = setTimeout(() => { requestAnimationFrame(() => renderProducts(val)); }, 250); }
-function setSortMode(val) { currentSortMode = val; if(document.getElementById('sortInputDesk')) document.getElementById('sortInputDesk').value = val; if(document.getElementById('sortInputMob')) document.getElementById('sortInputMob').value = val; renderProducts(currentSearchQuery); }
-function filterMainCategory(cat) { currentMainCategory = cat; activeSubCategories = []; renderFilters(); renderProducts(currentSearchQuery); }
-function filterSubCategory(cat) { activeSubCategories = cat === 'All' ? [] : [cat]; renderFilters(); renderProducts(currentSearchQuery); }
-
-// GLOBALLY BIND 
-window.openCheckoutBase = openCheckoutBase; window.closeCheckout = closeCheckout; window.handleCheckoutAction = handleCheckoutAction; window.handleMobileStickyAction = handleMobileStickyAction; window.openLightboxFromCarousel = openLightboxFromCarousel; window.moveLightboxSlide = moveLightboxSlide; window.goToSlide = goToSlide; window.th_toggleSubCategory = th_toggleSubCategory; window.routeCheckoutFromModal = routeCheckoutFromModal; window.th_updateCartQty = updateCartQty; window.updateCheckoutQty = updateCheckoutQty; window.goToCheckoutStep = goToCheckoutStep; window.confirmPaymentAndOrder = confirmPaymentAndOrder; window.showAddressForm = showAddressForm; window.hideAddressForm = hideAddressForm; window.saveAddressFromForm = saveAddressFromForm; window.selectAddress = selectAddress; window.editAddress = editAddress; window.openPolicyModal = openPolicyModal; window.closePolicyModal = closePolicyModal; window.closeProductPage = closeProductPage; window.handleAccountHeaderClick = handleAccountHeaderClick; window.closeCustomerProfile = closeCustomerProfile; window.handleCustomerLogout = handleCustomerLogout; window.toggleAuthViewMode = toggleAuthViewMode; window.closeCustomerAuthModal = closeCustomerAuthModal; window.handleGoogleOAuthLogin = handleGoogleOAuthLogin; window.th_toggleWishlistProduct = toggleWishlistProduct; window.th_applyCouponCode = applyCouponCode;
-
-function showToast(msg, icon = 'fa-check', color = 'text-luxury-rose') { const t = document.getElementById('toast'); document.getElementById('toast-msg').textContent = msg; document.getElementById('toast-icon').className = `fas ${icon} ${color} text-sm drop-shadow-sm`; requestAnimationFrame(() => { t.classList.remove('opacity-0', 'translate-y-10'); setTimeout(() => t.classList.add('opacity-0', 'translate-y-10'), 3000); }); }
-function setupScrollReveal() { const observer = new IntersectionObserver((entries) => { entries.forEach(entry => { if(entry.isIntersecting) { requestAnimationFrame(() => { entry.target.classList.remove('opacity-0', 'translate-y-4'); observer.unobserve(entry.target); }); } }); }, { threshold: 0.05, rootMargin: '50px' }); document.querySelectorAll('.scroll-reveal').forEach(el => observer.observe(el)); }
+// 🚨 GLOBALLY BIND ALL LIFECYCLE CHANNELS (Fully Synchronized) 🚨
+window.openCheckoutBase = openCheckoutBase; window.closeCheckout = closeCheckout; window.handleCheckoutAction = handleCheckoutAction; window.handleMobileStickyAction = handleMobileStickyAction; window.openLightboxFromCarousel = openLightboxFromCarousel; window.moveLightboxSlide = moveLightboxSlide; window.goToSlide = goToSlide; window.th_toggleSubCategory = th_toggleSubCategory; window.th_updateCartQty = updateCartQty; window.updateCheckoutQty = updateCheckoutQty; window.goToCheckoutStep = goToCheckoutStep; window.confirmPaymentAndOrder = confirmPaymentAndOrder; window.showAddressForm = showAddressForm; window.hideAddressForm = hideAddressForm; window.saveAddressFromForm = saveAddressFromForm; window.selectAddress = selectAddress; window.editAddress = editAddress; window.openPolicyModal = openPolicyModal; window.closePolicyModal = closePolicyModal; window.closeProductPage = closeProductPage; window.handleAccountHeaderClick = handleAccountHeaderClick; window.closeCustomerProfile = closeCustomerProfile; window.handleCustomerLogout = handleCustomerLogout; window.toggleAuthViewMode = toggleAuthViewMode; window.closeCustomerAuthModal = closeCustomerAuthModal; window.handleGoogleOAuthLogin = handleGoogleOAuthLogin; window.th_toggleWishlistProduct = toggleWishlistProduct; window.th_applyCouponCode = applyCouponCode; window.openTrackOrderModal = openTrackOrderModal; window.closeTrackOrderModal = closeTrackOrderModal;

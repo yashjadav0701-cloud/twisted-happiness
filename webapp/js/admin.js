@@ -1,6 +1,6 @@
 /**
  * Twisted Happiness - Studio Admin Engine
- * Version: 10.0.0
+ * Version: 11.0.0
  */
 
 const SUPABASE_URL = "https://gvrfucjtnyqfkdynrmqs.supabase.co"; 
@@ -8,6 +8,15 @@ const SUPABASE_ANON_KEY = "sb_publishable_8jru2BqvTdE9bcwNOLIHAA_dx6aUCM0";
 let _supabase;
 
 const countryCodeMapping = { "+91": "🇮🇳 IN (+91)", "+1": "🇺🇸 US (+1)", "+44": "🇬🇧 UK (+44)" };
+
+function safeJSONParse(key, fallback) { 
+    try { 
+        const item = localStorage.getItem(key); 
+        const parsed = item ? JSON.parse(item) : fallback; 
+        if (Array.isArray(fallback) && !Array.isArray(parsed)) return fallback;
+        return parsed;
+    } catch (e) { localStorage.removeItem(key); return fallback; } 
+}
 
 let settings = safeJSONParse('th_settings', { storeName: "Twisted Happiness", instagram: "", whatsapp: "9909310501", upiId: "khushisj315@oksbi", countryCode: "+91" });
 let products = []; let allOrders = []; let selectedFilesData = []; let editModeId = null; let mainImageIndex = 0;
@@ -19,15 +28,25 @@ document.addEventListener('DOMContentLoaded', () => {
     checkSession();
 });
 
-function safeJSONParse(key, fallback) { try { const item = localStorage.getItem(key); return item ? JSON.parse(item) : fallback; } catch (e) { localStorage.removeItem(key); return fallback; } }
-function populateCountryCodes() { const select = document.getElementById('admin-country-code'); if (!select) return; for (const [code, label] of Object.entries(countryCodeMapping)) { const option = document.createElement('option'); option.value = code; option.textContent = label; select.appendChild(option); } }
+function populateCountryCodes() {
+    const select = document.getElementById('admin-country-code'); if (!select) return;
+    for (const [code, label] of Object.entries(countryCodeMapping)) {
+        const option = document.createElement('option'); option.value = code; option.textContent = label; select.appendChild(option);
+    }
+}
 
-async function checkSession() { const { data: { session } } = await _supabase.auth.getSession(); if (session) unlockDashboard(); else document.getElementById('login-view').classList.remove('hidden'); }
+async function checkSession() {
+    const { data: { session } } = await _supabase.auth.getSession();
+    if (session) unlockDashboard(); else document.getElementById('login-view').classList.remove('hidden');
+}
+
 async function attemptLogin(e) { 
-    e.preventDefault(); const email = document.getElementById('admin-user').value.trim(); const pass = document.getElementById('admin-pass').value.trim(); const btn = document.getElementById('login-btn'); if(!email || !pass) return; btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Verifying...'; btn.disabled = true; 
+    e.preventDefault(); const email = document.getElementById('admin-user').value.trim(), pass = document.getElementById('admin-pass').value.trim(), btn = document.getElementById('login-btn'); 
+    if(!email || !pass) return; btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Verifying...'; btn.disabled = true; 
     try { const { data, error } = await _supabase.auth.signInWithPassword({ email: email, password: pass }); if (error) throw error; if (data.session) unlockDashboard(); } 
     catch (err) { alert("Access Denied: Check your credentials."); btn.innerHTML = 'Enter Studio'; btn.disabled = false; }
 }
+
 async function logoutAdmin() { await _supabase.auth.signOut(); window.location.href = '/'; }
 
 function unlockDashboard() {
@@ -83,7 +102,7 @@ function renderAdminProducts() {
     if(products.length === 0) { list.innerHTML = '<div class="text-center text-gray-400 py-10 text-[10px] uppercase tracking-[0.2em] font-medium">No creations in gallery.</div>'; return; } 
     const fragment = document.createDocumentFragment();
     [...products].forEach(p => { 
-        const cleanPrice = p.price.toString().replace(/[^0-9.,]/g, ''); const adminImg = p.image1 || 'https://placehold.co/100/F8E9EA/423133';
+        const cleanPrice = Number((p.price || 0).toString().replace(/[^0-9.,]/g, '')); const adminImg = p.image1 || 'https://placehold.co/100/F8E9EA/423133';
         const item = document.createElement('div'); item.className = "flex justify-between bg-white p-4 hover:bg-luxury-bg transition-colors duration-400";
         item.innerHTML = `<div class="flex gap-3 items-center"><img loading="lazy" decoding="async" src="${adminImg}" alt="${p.name}" class="w-12 h-12 object-cover bg-luxury-bg border border-luxury-blush rounded-lg"><div class="flex flex-col justify-center"><h4 class="font-bitter text-[12px] font-semibold text-luxury-dark leading-tight w-36 sm:w-48 truncate mb-0.5">${p.name}</h4><p class="font-poppins text-[10px] text-luxury-rose font-bold">₹${cleanPrice}</p></div></div><div class="flex gap-4 items-center pr-2"><button type="button" onclick="window.th_triggerEdit('${p.id}')" class="text-gray-400 hover:text-luxury-rose text-sm cursor-pointer w-8 h-8 rounded-full bg-white border border-luxury-blush flex items-center justify-center"><i class="fas fa-pen text-[10px]"></i></button><button type="button" onclick="window.th_triggerDelete('${p.id}')" class="text-gray-400 hover:text-red-500 text-sm cursor-pointer w-8 h-8 rounded-full bg-white border border-luxury-blush flex items-center justify-center"><i class="fas fa-trash text-[10px]"></i></button></div>`;
         fragment.appendChild(item);
@@ -246,7 +265,7 @@ function renderActiveOrders() {
 
         if (order.status === 'new' || order.status === 'pending') {
             statusBadge = `<span class="bg-yellow-100 text-yellow-700 text-[8px] font-bold uppercase tracking-widest px-2.5 py-1 rounded-md">Awaiting Verification</span>`;
-            actionButton = `<button type="button" onclick="window.th_rejectOrder('${order.id}')" class="px-4 py-2.5 rounded-full text-gray-400 border hover:text-red-500 font-bold text-[9px] uppercase tracking-widest">Deny (No Payment)</button><button type="button" onclick="window.th_startCrafting('${order.id}')" class="px-5 py-2.5 rounded-full bg-green-600 text-white font-bold text-[9px] uppercase tracking-widest hover:bg-white hover:text-green-600 transition-colors shadow-sm"><i class="fas fa-magic mr-1"></i> Start Crafting</button>`;
+            actionButton = `<button type="button" onclick="window.th_rejectOrder('${order.id}')" class="px-4 py-2.5 rounded-full text-gray-400 border hover:text-red-500 font-bold text-[9px] uppercase tracking-widest">Deny (No Payment)</button><button type="button" onclick="window.th_startCrafting('${order.id}')" class="px-5 py-2.5 rounded-full bg-green-600 text-white font-bold text-[9px] uppercase tracking-widest hover:bg-white hover:text-green-600 transition-colors shadow-sm"><i class="fas fa-magic mr-1"></i> Verify & Start Crafting</button>`;
         } else if (order.status === 'curating') {
             statusBadge = `<span class="bg-blue-100 text-blue-700 text-[8px] font-bold uppercase tracking-widest px-2.5 py-1 rounded-md">Artisan At Work</span>`;
             actionButton = `<button type="button" onclick="window.th_markOrderReady('${order.id}')" class="px-5 py-2.5 rounded-full bg-luxury-gold text-white font-bold text-[9px] uppercase tracking-widest hover:bg-white hover:text-luxury-gold shadow-sm"><i class="fas fa-paint-brush mr-2"></i> ✨ Masterpiece Crafted</button>`;
@@ -293,7 +312,7 @@ async function rejectOrder(id) {
         const customerData = extractCustomerData(order.customer_reqs);
         if (customerData.phone) {
             let cleanPhone = customerData.phone.replace(/\D/g, ''); 
-            const denyMsg = `✨ Dear ${customerData.name},\n\nWe are reaching out regarding your recent order attempt at *${settings.storeName || 'Twisted Happiness'}*.\n\nUnfortunately, we were unable to verify your UPI payment. As a result, your order reservation has been cancelled.\n\nIf the amount was deducted from your account, it will automatically be refunded by your bank within 2-3 business days.\n\nIf you would still like to secure your handcrafted piece, please reply to this message and we will gladly assist you! 🕊️`;
+            const denyMsg = `✨ Dear ${customerData.name},\n\nWe are reaching out regarding your recent order attempt at *${settings.storeName || 'Twisted Happiness'}*.\n\nUnfortunately, we were unable to verify your UPI payment. As a result, your order reservation has been cancelled.\n\nIf the amount was deducted from your account, it will automatically be refunded by your bank within 2-3 business days.\n\nIf you would like to secure your handcrafted piece, please reply to this message and we will assist you! 🕊️`;
             window.open(`https://wa.me/${cleanPhone}?text=${encodeURIComponent(denyMsg)}`, '_blank');
         }
     } catch(e) { showToast("Error", "fa-times", "text-red-500"); } 
