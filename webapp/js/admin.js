@@ -1,6 +1,6 @@
 /**
- * Twisted Happiness - Studio Admin Engine
- * Version: 13.0.0 - Fully Stable Code
+ * Khushiified Art - Studio Admin Engine
+ * Version: 14.0.0 - Fully Stable Safe Build
  */
 
 const SUPABASE_URL = "https://gvrfucjtnyqfkdynrmqs.supabase.co"; 
@@ -9,17 +9,37 @@ let _supabase;
 
 const countryCodeMapping = { "+91": "🇮🇳 IN (+91)", "+1": "🇺🇸 US (+1)", "+44": "🇬🇧 UK (+44)" };
 
+// 🛡️ DEFENSIVE CACHE PARSER
 function safeJSONParse(key, fallback) { 
     try { 
         const item = localStorage.getItem(key); 
         const parsed = item ? JSON.parse(item) : fallback; 
         if (Array.isArray(fallback) && !Array.isArray(parsed)) return fallback;
         return parsed;
-    } catch (e) { localStorage.removeItem(key); return fallback; } 
+    } catch (e) { 
+        localStorage.removeItem(key); 
+        return fallback; 
+    } 
 }
 
-let settings = safeJSONParse('th_settings', { storeName: "Khushiified Art", instagram: "https://www.instagram.com/khushiified_art?igsh=aW1vZ2N4cTl2OWo=", whatsapp: "9909310501", upiId: "khushisj315@oksbi", countryCode: "+91" });
-let products = []; let allOrders = []; let selectedFilesData = []; let editModeId = null; let mainImageIndex = 0;
+// 📦 GLOBAL STATE (Forced Update to Khushiified Art)
+let settings = safeJSONParse('th_settings', null);
+if (!settings || settings.storeName === "Twisted Happiness" || !settings.upiId) {
+    settings = { 
+        storeName: "Khushiified Art", 
+        instagram: "https://www.instagram.com/khushiified_art?igsh=aW1vZ2N4cTl2OWo=", 
+        whatsapp: "9909310501", 
+        upiId: "khushisj315@oksbi", 
+        countryCode: "+91" 
+    };
+    localStorage.setItem('th_settings', JSON.stringify(settings));
+}
+
+let products = []; 
+let allOrders = []; 
+let selectedFilesData = []; 
+let editModeId = null; 
+let mainImageIndex = 0;
 
 // 🚀 BULLETPROOF INITIALIZATION
 function initApp() {
@@ -33,39 +53,73 @@ function initApp() {
     }
 }
 
-if (document.readyState === 'loading') { document.addEventListener('DOMContentLoaded', initApp); } 
-else { initApp(); }
+if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', initApp);
+} else {
+    initApp();
+}
 
 function populateCountryCodes() {
-    const select = document.getElementById('admin-country-code'); if (!select) return;
+    const select = document.getElementById('admin-country-code'); 
+    if (!select) return;
     for (const [code, label] of Object.entries(countryCodeMapping)) {
-        const option = document.createElement('option'); option.value = code; option.textContent = label; select.appendChild(option);
+        const option = document.createElement('option'); 
+        option.value = code; 
+        option.textContent = label; 
+        select.appendChild(option);
     }
 }
 
 async function checkSession() {
     const { data: { session } } = await _supabase.auth.getSession();
-    if (session) unlockDashboard(); else document.getElementById('login-view').classList.remove('hidden');
+    if (session) {
+        unlockDashboard(); 
+    } else {
+        document.getElementById('login-view').classList.remove('hidden');
+    }
 }
 
 async function attemptLogin(e) { 
-    e.preventDefault(); const email = document.getElementById('admin-user').value.trim(), pass = document.getElementById('admin-pass').value.trim(), btn = document.getElementById('login-btn'); 
-    if(!email || !pass) return; btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Verifying...'; btn.disabled = true; 
-    try { const { data, error } = await _supabase.auth.signInWithPassword({ email: email, password: pass }); if (error) throw error; if (data.session) unlockDashboard(); } 
-    catch (err) { alert("Access Denied: Check your credentials."); btn.innerHTML = 'Enter Studio'; btn.disabled = false; }
+    e.preventDefault(); 
+    const email = document.getElementById('admin-user').value.trim();
+    const pass = document.getElementById('admin-pass').value.trim();
+    const btn = document.getElementById('login-btn'); 
+    
+    if(!email || !pass) return; 
+    btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Verifying...'; 
+    btn.disabled = true; 
+    
+    try { 
+        const { data, error } = await _supabase.auth.signInWithPassword({ email: email, password: pass }); 
+        if (error) throw error; 
+        if (data.session) unlockDashboard(); 
+    } catch (err) { 
+        alert("Access Denied: Check your credentials."); 
+        btn.innerHTML = 'Enter Studio'; 
+        btn.disabled = false; 
+    }
 }
 
-async function logoutAdmin() { await _supabase.auth.signOut(); window.location.href = '/'; }
+async function logoutAdmin() { 
+    await _supabase.auth.signOut(); 
+    window.location.href = '/'; 
+}
 
 function unlockDashboard() {
-    document.getElementById('login-view').classList.add('hidden'); document.getElementById('admin-dashboard').classList.remove('hidden');
+    document.getElementById('login-view').classList.add('hidden'); 
+    document.getElementById('admin-dashboard').classList.remove('hidden');
     requestAnimationFrame(() => {
         document.getElementById('admin-dashboard').classList.remove('opacity-0');
-        document.getElementById('admin-wa').value = settings.whatsapp || ''; document.getElementById('admin-country-code').value = settings.countryCode || '+91'; 
+        
+        document.getElementById('admin-wa').value = settings.whatsapp || ''; 
+        document.getElementById('admin-country-code').value = settings.countryCode || '+91'; 
         if(document.getElementById('admin-upi-id')) document.getElementById('admin-upi-id').value = settings.upiId || 'khushisj315@oksbi';
         if(document.getElementById('admin-store-name')) document.getElementById('admin-store-name').value = settings.storeName || 'Khushiified Art';
         if(document.getElementById('admin-ig')) document.getElementById('admin-ig').value = settings.instagram || 'https://www.instagram.com/khushiified_art?igsh=aW1vZ2N4cTl2OWo=';
-        fetchDatabase(); fetchOrders(); showToast('Studio Unlocked', 'fa-unlock'); 
+        
+        fetchDatabase(); 
+        fetchOrders(); 
+        showToast('Studio Unlocked', 'fa-unlock'); 
     });
 }
 
@@ -84,49 +138,115 @@ function bindAdminEvents() {
 }
 
 function saveSettings(e) { 
-    e.preventDefault(); settings.whatsapp = document.getElementById('admin-wa').value; settings.countryCode = document.getElementById('admin-country-code').value; 
+    e.preventDefault(); 
+    settings.whatsapp = document.getElementById('admin-wa').value; 
+    settings.countryCode = document.getElementById('admin-country-code').value; 
     if(document.getElementById('admin-upi-id')) settings.upiId = document.getElementById('admin-upi-id').value.trim(); 
     if(document.getElementById('admin-store-name')) settings.storeName = document.getElementById('admin-store-name').value.trim();
     if(document.getElementById('admin-ig')) settings.instagram = document.getElementById('admin-ig').value.trim();
-    localStorage.setItem('th_settings', JSON.stringify(settings)); showToast('Settings Saved', 'fa-check'); 
+    
+    localStorage.setItem('th_settings', JSON.stringify(settings)); 
+    showToast('Settings Saved', 'fa-check'); 
 }
 
+// 🚨 INVENTORY DATABASE FETCHING 🚨
 async function fetchDatabase() { 
     try { 
-        const { data, error } = await _supabase.from('creations').select('*').order('created_at', { ascending: false }); if (error) throw error;
+        const { data, error } = await _supabase.from('creations').select('*').order('created_at', { ascending: false }); 
+        if (error) throw error;
+        
         products = (data || []).map(row => {
-            let parsedImages = []; try { parsedImages = JSON.parse(row.image_url) || []; } catch(e) {}
+            let parsedImages = []; 
+            try { parsedImages = JSON.parse(row.image_url) || []; } catch(e) {}
             return {
-                id: row.id, name: row.name, category: row.category, mainCategory: row.main_category || 'Pipe Cleaner Crafts', price: row.price, prepTime: row.prep_time, specs: row.specs, dimensions: row.dimensions || '', isCustomizable: row.is_customizable || false,
-                image1: parsedImages[0] ? parsedImages[0].data : '', image2: parsedImages[1] ? parsedImages[1].data : '', image3: parsedImages[2] ? parsedImages[2].data : '', image4: parsedImages[3] ? parsedImages[3].data : '', image5: parsedImages[4] ? parsedImages[4].data : ''
+                id: row.id, 
+                name: row.name || 'Untitled Art', 
+                category: row.category || '', 
+                mainCategory: row.main_category || 'Pipe Cleaner Crafts', 
+                price: row.price || 0, 
+                prepTime: row.prep_time || '3-5', 
+                specs: row.specs || '', 
+                dimensions: row.dimensions || '', 
+                isCustomizable: row.is_customizable || false,
+                image1: parsedImages.length > 0 ? parsedImages[0].data : '', 
+                image2: parsedImages.length > 1 ? parsedImages[1].data : '', 
+                image3: parsedImages.length > 2 ? parsedImages[2].data : '', 
+                image4: parsedImages.length > 3 ? parsedImages[3].data : '', 
+                image5: parsedImages.length > 4 ? parsedImages[4].data : ''
             };
         });
-        renderAdminProducts(); renderAdminCategories();
-    } catch (error) { console.error("Admin DB Fetch Error:", error); } 
+        
+        renderAdminProducts(); 
+        renderAdminCategories();
+    } catch (error) { 
+        console.error("Admin DB Fetch Error:", error); 
+    } 
 }
 
 function renderAdminProducts() { 
-    const list = document.getElementById('admin-product-list'); list.innerHTML = ''; 
-    if(products.length === 0) { list.innerHTML = '<div class="text-center text-gray-400 py-10 text-[10px] uppercase tracking-[0.2em] font-medium"><i class="fas fa-box-open text-2xl block mb-2 opacity-30"></i> No creations in gallery.</div>'; return; } 
+    const list = document.getElementById('admin-product-list'); 
+    list.innerHTML = ''; 
+    
+    if(products.length === 0) { 
+        list.innerHTML = '<div class="text-center text-gray-400 py-10 text-[10px] uppercase tracking-[0.2em] font-medium"><i class="fas fa-box-open text-2xl block mb-2 opacity-30"></i> No creations in gallery.</div>'; 
+        return; 
+    } 
+    
     const fragment = document.createDocumentFragment();
     [...products].forEach(p => { 
-        const cleanPrice = Number((p.price || 0).toString().replace(/[^0-9.,]/g, '')); const adminImg = p.image1 || 'https://placehold.co/100/F8E9EA/423133';
-        const item = document.createElement('div'); item.className = "flex justify-between bg-white p-4 hover:bg-luxury-bg transition-colors duration-400";
-        item.innerHTML = `<div class="flex gap-3 items-center"><img loading="lazy" decoding="async" src="${adminImg}" alt="${p.name}" class="w-12 h-12 object-cover bg-luxury-bg border border-luxury-blush rounded-lg"><div class="flex flex-col justify-center"><h4 class="font-bitter text-[12px] font-semibold text-luxury-dark leading-tight w-36 sm:w-48 truncate mb-0.5">${p.name}</h4><p class="font-poppins text-[10px] text-luxury-rose font-bold">₹${cleanPrice}</p></div></div><div class="flex gap-4 items-center pr-2"><button type="button" onclick="window.th_triggerEdit('${p.id}')" class="text-gray-400 hover:text-luxury-rose text-sm cursor-pointer w-8 h-8 rounded-full bg-white border border-luxury-blush flex items-center justify-center"><i class="fas fa-pen text-[10px]"></i></button><button type="button" onclick="window.th_triggerDelete('${p.id}')" class="text-gray-400 hover:text-red-500 text-sm cursor-pointer w-8 h-8 rounded-full bg-white border border-luxury-blush flex items-center justify-center"><i class="fas fa-trash text-[10px]"></i></button></div>`;
+        const cleanPrice = Number(String(p.price || 0).replace(/[^0-9.,]/g, '')); 
+        const adminImg = (typeof p.image1 === 'string' && p.image1.trim() !== '') ? p.image1 : 'https://placehold.co/100/F8E9EA/423133';
+        
+        const item = document.createElement('div'); 
+        item.className = "flex justify-between bg-white p-4 hover:bg-luxury-bg transition-colors duration-400";
+        item.innerHTML = `
+            <div class="flex gap-3 items-center">
+                <img loading="lazy" decoding="async" src="${adminImg}" alt="${p.name}" class="w-12 h-12 object-cover bg-luxury-bg border border-luxury-blush rounded-lg">
+                <div class="flex flex-col justify-center">
+                    <h4 class="font-bitter text-[12px] font-semibold text-luxury-dark leading-tight w-36 sm:w-48 truncate mb-0.5">${p.name}</h4>
+                    <p class="font-poppins text-[10px] text-luxury-rose font-bold">₹${cleanPrice}</p>
+                </div>
+            </div>
+            <div class="flex gap-4 items-center pr-2">
+                <button type="button" onclick="window.th_triggerEdit('${p.id}')" class="text-gray-400 hover:text-luxury-rose text-sm cursor-pointer w-8 h-8 rounded-full bg-white border border-luxury-blush flex items-center justify-center"><i class="fas fa-pen text-[10px]"></i></button>
+                <button type="button" onclick="window.th_triggerDelete('${p.id}')" class="text-gray-400 hover:text-red-500 text-sm cursor-pointer w-8 h-8 rounded-full bg-white border border-luxury-blush flex items-center justify-center"><i class="fas fa-trash text-[10px]"></i></button>
+            </div>`;
         fragment.appendChild(item);
     }); 
     list.appendChild(fragment);
 }
 
 function togglePaintingFields() {
-    const val = document.getElementById('p-main-category').value, container = document.getElementById('painting-fields-container');
-    if(val === 'Canvas Paintings' || val === 'Clay Art Paintings') { container.classList.remove('hidden'); } else { container.classList.add('hidden'); document.getElementById('p-dimensions').value = ''; document.getElementById('p-customizable').checked = false; }
-    document.getElementById('p-category').value = ''; renderAdminCategories(); 
+    const val = document.getElementById('p-main-category').value;
+    const container = document.getElementById('painting-fields-container');
+    
+    if(val === 'Canvas Paintings' || val === 'Clay Art Paintings') { 
+        container.classList.remove('hidden'); 
+    } else { 
+        container.classList.add('hidden'); 
+        document.getElementById('p-dimensions').value = ''; 
+        document.getElementById('p-customizable').checked = false; 
+    }
+    
+    document.getElementById('p-category').value = ''; 
+    renderAdminCategories(); 
 }
 
 function renderAdminCategories() {
-    const datalist = document.getElementById('category-list'), mainCat = document.getElementById('p-main-category').value;
-    if(datalist) { const relevantProducts = products.filter(p => p.mainCategory === mainCat); const allSubs = [...new Set(relevantProducts.map(p => p.category).filter(c => c))]; datalist.innerHTML = ''; allSubs.forEach(cat => { const option = document.createElement('option'); option.value = cat; datalist.appendChild(option); }); }
+    const datalist = document.getElementById('category-list');
+    const mainCat = document.getElementById('p-main-category').value;
+    
+    if(datalist) { 
+        const relevantProducts = products.filter(p => p.mainCategory === mainCat); 
+        const allSubs = [...new Set(relevantProducts.map(p => p.category).filter(c => c))]; 
+        
+        datalist.innerHTML = ''; 
+        allSubs.forEach(cat => { 
+            const option = document.createElement('option'); 
+            option.value = cat; 
+            datalist.appendChild(option); 
+        }); 
+    }
 }
 
 function compressImageToBlob(file, maxSize = 1600) { 
@@ -135,9 +255,12 @@ function compressImageToBlob(file, maxSize = 1600) {
         reader.onload = (e) => { 
             const img = new Image(); img.src = e.target.result; 
             img.onload = () => { 
-                const canvas = document.createElement('canvas'); let w = img.width, h = img.height; 
-                if (w > h && w > maxSize) { h *= maxSize / w; w = maxSize; } else if (h > maxSize) { w *= maxSize / h; h = maxSize; } 
-                canvas.width = w; canvas.height = h; canvas.getContext('2d').drawImage(img, 0, 0, w, h); 
+                const canvas = document.createElement('canvas'); 
+                let w = img.width, h = img.height; 
+                if (w > h && w > maxSize) { h *= maxSize / w; w = maxSize; } 
+                else if (h > maxSize) { w *= maxSize / h; h = maxSize; } 
+                canvas.width = w; canvas.height = h; 
+                canvas.getContext('2d').drawImage(img, 0, 0, w, h); 
                 canvas.toBlob((blob) => { resolve(blob); }, 'image/webp', 0.85); 
             }; 
         }; 
@@ -145,31 +268,82 @@ function compressImageToBlob(file, maxSize = 1600) {
 }
 
 async function handleFileSelection(e) { 
-    const files = e.target.files; if (files.length === 0) return; 
-    if (selectedFilesData.length + files.length > 5) { alert("Maximum 5 images allowed."); e.target.value = ""; return; } 
-    const btn = document.getElementById('btn-save-product'); btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Processing...'; btn.disabled = true; 
-    for (let i = 0; i < files.length; i++) { const file = files[i]; const blob = await compressImageToBlob(file); const tempUrl = URL.createObjectURL(blob); selectedFilesData.push({ name: file.name, blob: blob, data: tempUrl, isNew: true }); } 
-    renderImagePreviews(); btn.innerHTML = editModeId ? 'Update Product' : 'Publish to Collection'; btn.disabled = false; e.target.value = ""; 
+    const files = e.target.files; 
+    if (files.length === 0) return; 
+    if (selectedFilesData.length + files.length > 5) { 
+        alert("Maximum 5 images allowed."); e.target.value = ""; return; 
+    } 
+    
+    const btn = document.getElementById('btn-save-product'); 
+    btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Processing...'; 
+    btn.disabled = true; 
+    
+    for (let i = 0; i < files.length; i++) { 
+        const file = files[i]; 
+        const blob = await compressImageToBlob(file); 
+        const tempUrl = URL.createObjectURL(blob); 
+        selectedFilesData.push({ name: file.name, blob: blob, data: tempUrl, isNew: true }); 
+    } 
+    
+    renderImagePreviews(); 
+    btn.innerHTML = editModeId ? 'Update Product' : 'Publish to Collection'; 
+    btn.disabled = false; 
+    e.target.value = ""; 
 }
 
 function renderImagePreviews() {
-    const pContainer = document.getElementById('image-preview-container'), helpText = document.getElementById('image-help-text'); pContainer.innerHTML = '';
-    if (selectedFilesData.length === 0) { pContainer.classList.add('hidden'); helpText.classList.add('hidden'); return; }
-    pContainer.classList.remove('hidden'); helpText.classList.remove('hidden');
+    const pContainer = document.getElementById('image-preview-container');
+    const helpText = document.getElementById('image-help-text'); 
+    pContainer.innerHTML = '';
+    
+    if (selectedFilesData.length === 0) { 
+        pContainer.classList.add('hidden'); helpText.classList.add('hidden'); return; 
+    }
+    
+    pContainer.classList.remove('hidden'); 
+    helpText.classList.remove('hidden');
+    
     if(mainImageIndex >= selectedFilesData.length) mainImageIndex = 0;
-    selectedFilesData.forEach((fileObj, i) => { pContainer.innerHTML += `<div onclick="window.th_setMainImage(${i})" class="relative aspect-[4/5] bg-luxury-bg rounded-xl overflow-hidden border-2 cursor-pointer transition-all ${i === mainImageIndex ? 'border-luxury-rose shadow-md scale-105 z-10' : 'border-luxury-blush opacity-60'}">${i === mainImageIndex ? '<span class="absolute top-2 left-2 bg-luxury-rose text-white text-[7px] px-1.5 py-0.5 rounded-sm z-10 shadow-sm">COVER</span>' : ''}<button type="button" onclick="window.th_removeSelectedImage(${i}, event)" class="absolute top-2 right-2 bg-white/90 text-luxury-dark w-6 h-6 rounded-full flex items-center justify-center z-20"><i class="fas fa-times text-[10px]"></i></button><img src="${fileObj.data}" class="w-full h-full object-cover"></div>`; });
+    
+    selectedFilesData.forEach((fileObj, i) => { 
+        pContainer.innerHTML += `
+        <div onclick="window.th_setMainImage(${i})" class="relative aspect-[4/5] bg-luxury-bg rounded-xl overflow-hidden border-2 cursor-pointer transition-all ${i === mainImageIndex ? 'border-luxury-rose shadow-md scale-105 z-10' : 'border-luxury-blush opacity-60'}">
+            ${i === mainImageIndex ? '<span class="absolute top-2 left-2 bg-luxury-rose text-white text-[7px] px-1.5 py-0.5 rounded-sm z-10 shadow-sm">COVER</span>' : ''}
+            <button type="button" onclick="window.th_removeSelectedImage(${i}, event)" class="absolute top-2 right-2 bg-white/90 text-luxury-dark w-6 h-6 rounded-full flex items-center justify-center z-20"><i class="fas fa-times text-[10px]"></i></button>
+            <img src="${fileObj.data}" class="w-full h-full object-cover">
+        </div>`; 
+    });
 }
 
-function setMainImage(index) { if (index === 0) return; const selectedImage = selectedFilesData.splice(index, 1)[0]; selectedFilesData.unshift(selectedImage); mainImageIndex = 0; renderImagePreviews(); }
-function removeSelectedImage(index, event) { event.stopPropagation(); selectedFilesData.splice(index, 1); mainImageIndex = 0; renderImagePreviews(); }
+window.th_setMainImage = function(index) { 
+    if (index === 0) return; 
+    const selectedImage = selectedFilesData.splice(index, 1)[0]; 
+    selectedFilesData.unshift(selectedImage); 
+    mainImageIndex = 0; 
+    renderImagePreviews(); 
+};
+
+window.th_removeSelectedImage = function(index, event) { 
+    event.stopPropagation(); 
+    selectedFilesData.splice(index, 1); 
+    mainImageIndex = 0; 
+    renderImagePreviews(); 
+};
 
 async function saveProduct(e) { 
     e.preventDefault();
-    const btn = document.getElementById('btn-save-product'), name = document.getElementById('p-name').value; 
-    if(!editModeId && selectedFilesData.length === 0) return alert("Provide at least one image."); 
-    btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Uploading...'; btn.disabled = true; 
+    const btn = document.getElementById('btn-save-product');
+    const name = document.getElementById('p-name').value; 
     
-    if (mainImageIndex !== 0 && selectedFilesData.length > 1) { const mainImg = selectedFilesData.splice(mainImageIndex, 1)[0]; selectedFilesData.unshift(mainImg); }
+    if(!editModeId && selectedFilesData.length === 0) return alert("Provide at least one image."); 
+    
+    btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Uploading...'; 
+    btn.disabled = true; 
+    
+    if (mainImageIndex !== 0 && selectedFilesData.length > 1) { 
+        const mainImg = selectedFilesData.splice(mainImageIndex, 1)[0]; 
+        selectedFilesData.unshift(mainImg); 
+    }
 
     let uploadedUrls = [];
     for(let i=0; i<selectedFilesData.length; i++) {
@@ -178,43 +352,102 @@ async function saveProduct(e) {
             const fileName = `${Date.now()}_${Math.random().toString(36).substring(7)}.webp`;
             const { error } = await _supabase.storage.from('art-images').upload(fileName, item.blob, { contentType: 'image/webp' });
             if(error) { alert("Upload failed!"); btn.innerHTML = 'Publish to Collection'; btn.disabled = false; return; }
-            const { data: publicUrlData } = _supabase.storage.from('art-images').getPublicUrl(fileName); uploadedUrls.push({ data: publicUrlData.publicUrl });
-        } else { uploadedUrls.push({ data: item.data }); }
+            const { data: publicUrlData } = _supabase.storage.from('art-images').getPublicUrl(fileName); 
+            uploadedUrls.push({ data: publicUrlData.publicUrl });
+        } else { 
+            uploadedUrls.push({ data: item.data }); 
+        }
     }
 
-    const cleanNumericPrice = parseFloat(document.getElementById('p-price').value) || 0, mainCat = document.getElementById('p-main-category').value;
-    const payload = { name: name, main_category: mainCat, category: document.getElementById('p-category').value || 'General', price: cleanNumericPrice, prep_time: document.getElementById('p-prep').value || '3-5', specs: document.getElementById('p-specs').value || '', dimensions: (mainCat !== 'Pipe Cleaner Crafts') ? document.getElementById('p-dimensions').value : '', is_customizable: (mainCat !== 'Pipe Cleaner Crafts') ? document.getElementById('p-customizable').checked : false, image_url: uploadedUrls.length > 0 ? JSON.stringify(uploadedUrls) : undefined };
+    const cleanNumericPrice = parseFloat(document.getElementById('p-price').value) || 0;
+    const mainCat = document.getElementById('p-main-category').value;
+    
+    const payload = { 
+        name: name, 
+        main_category: mainCat, 
+        category: document.getElementById('p-category').value || 'General', 
+        price: cleanNumericPrice, 
+        prep_time: document.getElementById('p-prep').value || '3-5', 
+        specs: document.getElementById('p-specs').value || '', 
+        dimensions: (mainCat !== 'Pipe Cleaner Crafts') ? document.getElementById('p-dimensions').value : '', 
+        is_customizable: (mainCat !== 'Pipe Cleaner Crafts') ? document.getElementById('p-customizable').checked : false, 
+        image_url: uploadedUrls.length > 0 ? JSON.stringify(uploadedUrls) : undefined 
+    };
 
     let err;
-    if (editModeId) { if (uploadedUrls.length === 0) delete payload.image_url; const { error } = await _supabase.from('creations').update(payload).eq('id', editModeId); err = error; } 
-    else { const { error } = await _supabase.from('creations').insert([payload]); err = error; }
+    if (editModeId) { 
+        if (uploadedUrls.length === 0) delete payload.image_url; 
+        const { error } = await _supabase.from('creations').update(payload).eq('id', editModeId); 
+        err = error; 
+    } else { 
+        const { error } = await _supabase.from('creations').insert([payload]); 
+        err = error; 
+    }
 
-    if(!err) { showToast("Added to Collection!", "fa-check"); cancelEdit(); fetchDatabase(); } else { showToast("Error saving", "fa-times", "text-red-500"); console.error(err); }
-    btn.innerHTML = editModeId ? 'Update Product' : 'Publish to Collection'; btn.disabled = false; 
+    if(!err) { 
+        showToast("Added to Collection!", "fa-check"); 
+        cancelEdit(); 
+        fetchDatabase(); 
+    } else { 
+        showToast("Error saving", "fa-times", "text-red-500"); 
+        console.error(err); 
+    }
+    btn.innerHTML = editModeId ? 'Update Product' : 'Publish to Collection'; 
+    btn.disabled = false; 
 }
 
-function triggerEdit(id) { 
-    const p = products.find(x => x.id === id); if(!p) return; editModeId = p.id; 
+window.th_triggerEdit = function(id) { 
+    const p = products.find(x => x.id === id); if(!p) return; 
+    editModeId = p.id; 
+    
     document.getElementById('p-main-category').value = p.mainCategory || 'Pipe Cleaner Crafts'; togglePaintingFields();
-    document.getElementById('p-name').value = p.name; document.getElementById('p-category').value = p.category; document.getElementById('p-price').value = p.price; document.getElementById('p-prep').value = p.prepTime || ''; document.getElementById('p-specs').value = p.specs; document.getElementById('p-dimensions').value = p.dimensions || ''; document.getElementById('p-customizable').checked = p.isCustomizable || false; document.getElementById('p-image-file').value = ''; 
+    document.getElementById('p-name').value = p.name; 
+    document.getElementById('p-category').value = p.category; 
+    document.getElementById('p-price').value = p.price; 
+    document.getElementById('p-prep').value = p.prepTime || ''; 
+    document.getElementById('p-specs').value = p.specs; 
+    document.getElementById('p-dimensions').value = p.dimensions || ''; 
+    document.getElementById('p-customizable').checked = p.isCustomizable || false; 
+    document.getElementById('p-image-file').value = ''; 
+    
     selectedFilesData = [];
-    if(p.image1) selectedFilesData.push({name: 'img1', data: p.image1, isNew: false}); if(p.image2) selectedFilesData.push({name: 'img2', data: p.image2, isNew: false});
-    if(p.image3) selectedFilesData.push({name: 'img3', data: p.image3, isNew: false}); if(p.image4) selectedFilesData.push({name: 'img4', data: p.image4, isNew: false}); if(p.image5) selectedFilesData.push({name: 'img5', data: p.image5, isNew: false});
-    mainImageIndex = 0; renderImagePreviews();
-    document.getElementById('form-title').innerHTML = `Editing: <span class="text-luxury-rose">${p.name}</span>`; document.getElementById('cancel-edit-btn').classList.remove('hidden'); document.getElementById('btn-save-product').innerHTML = 'Update Product'; window.scrollTo({top: 0, behavior: 'smooth'}); 
-}
+    if(p.image1) selectedFilesData.push({name: 'img1', data: p.image1, isNew: false}); 
+    if(p.image2) selectedFilesData.push({name: 'img2', data: p.image2, isNew: false});
+    if(p.image3) selectedFilesData.push({name: 'img3', data: p.image3, isNew: false}); 
+    if(p.image4) selectedFilesData.push({name: 'img4', data: p.image4, isNew: false}); 
+    if(p.image5) selectedFilesData.push({name: 'img5', data: p.image5, isNew: false});
+    
+    mainImageIndex = 0; 
+    renderImagePreviews();
+    
+    document.getElementById('form-title').innerHTML = `Editing: <span class="text-luxury-rose">${p.name}</span>`; 
+    document.getElementById('cancel-edit-btn').classList.remove('hidden'); 
+    document.getElementById('btn-save-product').innerHTML = 'Update Product'; 
+    window.scrollTo({top: 0, behavior: 'smooth'}); 
+};
 
 function cancelEdit() { 
-    editModeId = null; mainImageIndex = 0; document.getElementById('inventory-form').reset(); document.getElementById('p-main-category').value = 'Pipe Cleaner Crafts'; togglePaintingFields();
-    selectedFilesData = []; renderImagePreviews(); document.getElementById('form-title').textContent = 'Add New Art Piece'; document.getElementById('cancel-edit-btn').classList.add('hidden'); document.getElementById('btn-save-product').innerHTML = 'Publish to Collection'; 
+    editModeId = null; 
+    mainImageIndex = 0; 
+    document.getElementById('inventory-form').reset(); 
+    document.getElementById('p-main-category').value = 'Pipe Cleaner Crafts'; togglePaintingFields();
+    selectedFilesData = []; 
+    renderImagePreviews(); 
+    document.getElementById('form-title').textContent = 'Add New Art Piece'; 
+    document.getElementById('cancel-edit-btn').classList.add('hidden'); 
+    document.getElementById('btn-save-product').innerHTML = 'Publish to Collection'; 
 }
 
-async function triggerDelete(id) { 
-    const p = products.find(x => x.id === id); if(!confirm(`Remove "${p.name}"?`)) return; showToast("Removing...", "fa-spinner fa-spin"); 
+window.th_triggerDelete = async function(id) { 
+    const p = products.find(x => x.id === id); 
+    if(!confirm(`Remove "${p.name}"?`)) return; 
+    
+    showToast("Removing...", "fa-spinner fa-spin"); 
     const { error } = await _supabase.from('creations').delete().eq('id', id);
     if(!error) { showToast("Piece Removed", "fa-trash"); fetchDatabase(); } else { showToast("Error removing piece", "fa-times", "text-red-500"); }
-}
+};
 
+// 🚨 TAB MANAGEMENT
 function switchAdminTab(tab) {
     const invBtn = document.getElementById('tab-inventory'), ordBtn = document.getElementById('tab-orders'), invSec = document.getElementById('admin-inventory-section'), ordSec = document.getElementById('admin-orders-section');
     if(tab === 'inventory') {
@@ -241,16 +474,19 @@ function switchOrderTab(tab) {
     }
 }
 
+// 🚨 ORDER MANAGEMENT ENGINE
 async function fetchOrders() {
     try {
-        const { data, error } = await _supabase.from('orders').select('*').order('created_at', { ascending: false }); if (error) throw error; allOrders = data;
-        const pendingCount = allOrders.filter(o => o.status === 'new' || o.status === 'pending').length; const badge = document.getElementById('admin-order-badge');
+        const { data, error } = await _supabase.from('orders').select('*').order('created_at', { ascending: false }); 
+        if (error) throw error; 
+        allOrders = data;
+        const pendingCount = allOrders.filter(o => o.status === 'new' || o.status === 'pending').length; 
+        const badge = document.getElementById('admin-order-badge');
         if (pendingCount > 0) { badge.textContent = pendingCount; badge.classList.remove('hidden'); } else { badge.classList.add('hidden'); }
         requestAnimationFrame(() => { renderActiveOrders(); renderCompletedOrders(); });
     } catch (err) { console.error("Error fetching orders", err); }
 }
 
-// 🛡️ Safe Regex Parser
 function extractCustomerData(reqsString) { 
     const safeStr = reqsString || "";
     const nameMatch = safeStr.match(/Patron:\s*([^|]+)/); 
@@ -268,8 +504,13 @@ function extractCustomerData(reqsString) {
 function buildOrderItemsVisual(orderDetailsData) {
     let items = [], html = "";
     try { 
-        items = JSON.parse(orderDetailsData); html = `<div class="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-3">`;
-        items.forEach(i => { const img = i.image || 'https://placehold.co/100/F8E9EA/423133'; html += `<div class="flex items-center gap-3 bg-white p-2 rounded-lg border border-luxury-blush shadow-sm"><img src="${img}" class="w-12 h-12 object-cover rounded-md border border-luxury-blush bg-luxury-bg"><div><p class="text-[11px] font-bitter font-semibold text-luxury-dark line-clamp-1">${i.name}</p><p class="text-[9px] font-poppins font-bold text-luxury-rose">${i.qty}x <span class="text-gray-400 font-medium">₹${i.price}</span></p></div></div>`; }); html += `</div>`;
+        items = JSON.parse(orderDetailsData); 
+        html = `<div class="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-3">`;
+        items.forEach(i => { 
+            const img = i.image || 'https://placehold.co/100/F8E9EA/423133'; 
+            html += `<div class="flex items-center gap-3 bg-white p-2 rounded-lg border border-luxury-blush shadow-sm"><img src="${img}" class="w-12 h-12 object-cover rounded-md border border-luxury-blush bg-luxury-bg"><div><p class="text-[11px] font-bitter font-semibold text-luxury-dark line-clamp-1">${i.name}</p><p class="text-[9px] font-poppins font-bold text-luxury-rose">${i.qty}x <span class="text-gray-400 font-medium">₹${i.price}</span></p></div></div>`; 
+        }); 
+        html += `</div>`;
     } catch { html = `<p class="font-bitter text-luxury-dark text-[13px] whitespace-pre-wrap font-semibold mb-2 leading-relaxed">${(orderDetailsData || '').trim()}</p>`; }
     return html;
 }
@@ -308,7 +549,7 @@ function renderCompletedOrders() {
     });
 }
 
-async function startCrafting(id) {
+window.th_startCrafting = async function(id) {
     const order = allOrders.find(o => o.id === id); if(!order) return; showToast("Verifying & Starting...", "fa-spinner fa-spin");
     try {
         await _supabase.from('orders').update({ status: 'curating' }).eq('id', id); showToast("Crafting Started", "fa-check"); fetchOrders(); 
@@ -319,12 +560,12 @@ async function startCrafting(id) {
             window.open(`https://wa.me/${cleanPhone}?text=${encodeURIComponent(acceptMsg)}`, '_blank');
         }
     } catch(e) { showToast("Error processing order", "fa-times", "text-red-500"); console.error(e); }
-}
+};
 
-async function markOrderReady(id) { showToast("Updating status...", "fa-spinner fa-spin"); try { await _supabase.from('orders').update({ status: 'ready' }).eq('id', id); showToast("Marked as Curated", "fa-check"); fetchOrders(); } catch(e) { showToast("Error", "fa-times", "text-red-500"); } }
-async function markOrderDelivered(id) { showToast("Archiving commission...", "fa-spinner fa-spin"); try { await _supabase.from('orders').update({ status: 'completed' }).eq('id', id); showToast("Commission Archived", "fa-check"); fetchOrders(); } catch(e) { showToast("Error", "fa-times", "text-red-500"); } }
+window.th_markOrderReady = async function(id) { showToast("Updating status...", "fa-spinner fa-spin"); try { await _supabase.from('orders').update({ status: 'ready' }).eq('id', id); showToast("Marked as Curated", "fa-check"); fetchOrders(); } catch(e) { showToast("Error", "fa-times", "text-red-500"); } };
+window.th_markOrderDelivered = async function(id) { showToast("Archiving commission...", "fa-spinner fa-spin"); try { await _supabase.from('orders').update({ status: 'completed' }).eq('id', id); showToast("Commission Archived", "fa-check"); fetchOrders(); } catch(e) { showToast("Error", "fa-times", "text-red-500"); } };
 
-async function rejectOrder(id) { 
+window.th_rejectOrder = async function(id) { 
     const order = allOrders.find(o => o.id === id); if(!order) return;
     if(!confirm("Deny this order? Customer will receive a WhatsApp message stating failure.")) return; 
     showToast("Declining...", "fa-spinner fa-spin"); 
@@ -337,9 +578,9 @@ async function rejectOrder(id) {
             window.open(`https://wa.me/${cleanPhone}?text=${encodeURIComponent(denyMsg)}`, '_blank');
         }
     } catch(e) { showToast("Error", "fa-times", "text-red-500"); } 
-}
+};
 
-async function pushToShiprocket(orderId, event) {
+window.th_pushToShiprocket = async function(orderId, event) {
     const btn = event.currentTarget; const originalHtml = btn.innerHTML; btn.innerHTML = '<i class="fas fa-spinner fa-spin mr-1.5"></i> Syncing...'; btn.disabled = true;
     try {
         const { data, error } = await _supabase.functions.invoke('shiprocket', { body: { order_id: orderId } });
@@ -347,8 +588,15 @@ async function pushToShiprocket(orderId, event) {
         showToast("Pushed to Shiprocket 🚀", "fa-rocket", "text-[#22c55e]");
     } catch (err) { console.error("Shiprocket API Error:", err); showToast("Failed to sync", "fa-times", "text-red-500"); }
     btn.innerHTML = originalHtml; btn.disabled = false;
+};
+
+function showToast(msg, icon = 'fa-check', color = 'text-luxury-rose') { 
+    const t = document.getElementById('toast'); 
+    document.getElementById('toast-msg').textContent = msg; 
+    document.getElementById('toast-icon').className = `fas ${icon} ${color} text-sm drop-shadow-sm`; 
+    requestAnimationFrame(() => { 
+        t.classList.remove('opacity-0', 'translate-y-10'); 
+        setTimeout(() => t.classList.add('opacity-0', 'translate-y-10'), 3000); 
+    }); 
 }
-
-window.th_triggerEdit = triggerEdit; window.th_triggerDelete = triggerDelete; window.th_setMainImage = setMainImage; window.th_removeSelectedImage = removeSelectedImage; window.th_rejectOrder = rejectOrder; window.th_startCrafting = startCrafting; window.th_markOrderReady = markOrderReady; window.th_markOrderDelivered = markOrderDelivered; window.th_pushToShiprocket = pushToShiprocket;
-
-function showToast(msg, icon = 'fa-check', color = 'text-luxury-rose') { const t = document.getElementById('toast'); document.getElementById('toast-msg').textContent = msg; document.getElementById('toast-icon').className = `fas ${icon} ${color} text-sm drop-shadow-sm`; requestAnimationFrame(() => { t.classList.remove('opacity-0', 'translate-y-10'); setTimeout(() => t.classList.add('opacity-0', 'translate-y-10'), 3000); }); }
+// --- END OF FILE ---
