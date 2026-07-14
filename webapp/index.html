@@ -26,7 +26,7 @@
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet" media="print" onload="this.media='all'">
     <link href="https://fonts.googleapis.com/css2?family=Marcellus&family=Bitter:ital,wght@0,400;0,500;0,600;1,400&family=Poppins:wght@500;600;700;800&family=Montserrat:wght@300;400;500;600&display=swap" rel="stylesheet">
 
-    <!-- Deferred Scripts to prevent render blocking -->
+    <!-- Deferred Scripts -->
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2" defer></script>
     <script src="./js/app.js" defer></script>
 
@@ -81,10 +81,7 @@
 
                     <!-- User Actions -->
                     <nav class="flex items-center shrink-0 gap-3">
-                        <button type="button" id="btn-profile-header" class="text-luxury-dark hover:text-luxury-rose transition-colors p-2 min-w-[44px] min-h-[44px] flex items-center justify-center" aria-label="User Profile">
-                            <i class="far fa-user text-lg" aria-hidden="true"></i>
-                        </button>
-                        <button type="button" id="btn-toggle-cart" class="relative flex items-center justify-center p-2 min-w-[44px] min-h-[44px] text-luxury-dark hover:text-luxury-rose transition-colors" aria-label="Shopping Cart">
+                        <button type="button" onclick="window.openCheckoutBase()" class="relative flex items-center justify-center p-2 min-w-[44px] min-h-[44px] text-luxury-dark hover:text-luxury-rose transition-colors" aria-label="Shopping Bag">
                             <i class="fas fa-shopping-bag text-xl" aria-hidden="true"></i> 
                             <span id="cart-count" class="absolute top-1 right-1 font-bold text-[8px] bg-luxury-rose text-white w-[16px] h-[16px] flex items-center justify-center rounded-full border border-white shadow-sm font-poppins">0</span>
                         </button>
@@ -208,7 +205,7 @@
         <!-- Sticky Header -->
         <header class="sticky top-0 w-full bg-white/95 backdrop-blur-md border-b border-luxury-blush px-4 py-3 flex items-center justify-between shadow-sm z-[999]">
             <button id="btn-close-product" class="flex items-center gap-2 text-luxury-dark font-bold text-[10px] uppercase tracking-widest hover:text-luxury-rose transition-colors min-h-[44px]"><i class="fas fa-arrow-left text-sm"></i> Gallery</button>
-            <button id="btn-toggle-cart-product" class="relative flex items-center justify-center p-2 min-w-[44px] min-h-[44px] text-luxury-dark hover:text-luxury-rose transition-colors" aria-label="Shopping Cart">
+            <button type="button" onclick="window.openCheckoutBase()" class="relative flex items-center justify-center p-2 min-w-[44px] min-h-[44px] text-luxury-dark hover:text-luxury-rose transition-colors" aria-label="Shopping Cart">
                 <i class="fas fa-shopping-bag text-xl"></i> 
                 <span id="product-page-cart-count" class="absolute top-1 right-1 font-bold text-[8px] bg-luxury-rose text-white w-[16px] h-[16px] flex items-center justify-center rounded-full border border-white shadow-sm font-poppins">0</span>
             </button>
@@ -216,7 +213,7 @@
 
         <div class="w-full max-w-[1100px] mx-auto flex flex-col md:flex-row items-start pt-4 md:pt-10 px-4 sm:px-6 lg:px-8 gap-4 md:gap-12 relative">
             
-            <!-- LEFT: IMAGE GALLERY (Perfect 1:1 Object-Contain for mobile) -->
+            <!-- LEFT: IMAGE GALLERY -->
             <div class="w-full md:w-[350px] shrink-0 flex flex-col md:sticky md:top-[100px] z-10 mx-auto md:mx-0">
                 <div class="relative w-full aspect-square md:aspect-auto md:h-[400px] bg-luxury-bg border border-luxury-blush rounded-2xl cursor-zoom-in shadow-sm overflow-hidden flex items-center justify-center group">
                     <button id="btn-slide-prev" class="absolute left-3 top-1/2 -translate-y-1/2 z-20 bg-white/95 shadow-sm text-luxury-dark hover:text-luxury-rose w-10 h-10 rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-300" aria-label="Previous Image"><i class="fas fa-chevron-left text-sm"></i></button>
@@ -267,7 +264,7 @@
                     <div id="modal-action-buttons" class="grid grid-cols-2 gap-3 w-full max-w-[450px] mx-auto md:mx-0"></div>
                 </div>
                 
-                <!-- Trust Badges (Scrolls naturally) -->
+                <!-- Trust Badges -->
                 <div class="flex items-center justify-center md:justify-start gap-5 mt-4 md:mt-3 text-[9px] sm:text-[10px] text-gray-500 font-sans font-medium">
                     <span class="flex items-center gap-1.5"><i class="fas fa-lock text-gray-400"></i> Secure Checkout</span>
                     <span class="flex items-center gap-1.5"><i class="fas fa-gem text-gray-400"></i> Authentic Handcrafted</span>
@@ -296,7 +293,7 @@
             </div>
         </div>
 
-        <!-- Curated For You (Dynamic Sub-category Logic) -->
+        <!-- Curated For You -->
         <section id="related-products-section" class="w-full border-t border-luxury-blush bg-luxury-bg pt-10 pb-16 mt-8 hidden">
             <div class="max-w-[1600px] mx-auto px-4 sm:px-8">
                 <h3 class="font-logo text-2xl sm:text-3xl text-luxury-dark mb-6 border-b border-luxury-rose/30 pb-2 inline-block">Curated For You</h3>
@@ -305,7 +302,7 @@
         </section>
     </article>
 
-    <!-- 🚨 UNIFIED MULTI-STEP CHECKOUT ENGINE 🚨 -->
+    <!-- 🚨 UNIFIED MASTER CHECKOUT ENGINE 🚨 -->
     <div id="checkout-overlay" class="fixed inset-0 bg-[#FFF0F2] z-[3000] hidden overflow-y-auto custom-scroll transition-opacity duration-300 opacity-0">
         <!-- Checkout Header -->
         <header class="w-full bg-white border-b border-luxury-blush px-4 py-4 flex items-center justify-between sticky top-0 z-50 shadow-sm">
@@ -314,7 +311,7 @@
                 <span class="font-logo text-xl text-luxury-dark">Secure Checkout</span>
             </div>
             <button type="button" onclick="window.closeCheckout()" class="text-luxury-dark text-[10px] font-bold uppercase tracking-widest hover:text-luxury-rose transition-colors flex items-center gap-2 min-h-[44px]">
-                Cancel <i class="fas fa-times text-sm"></i>
+                Close <i class="fas fa-times text-sm"></i>
             </button>
         </header>
 
@@ -323,20 +320,20 @@
             <!-- LEFT COLUMN: The Stepper & Content -->
             <div class="lg:col-span-8 flex flex-col gap-6 md:gap-8">
                 
-                <!-- Progress Stepper (Clickable to go backwards) -->
+                <!-- Progress Stepper (Clickable to jump back) -->
                 <div class="flex items-center justify-between w-full relative mb-2 md:mb-4">
                     <div class="absolute left-0 top-1/2 -translate-y-1/2 w-full h-[2px] bg-luxury-blush z-0"></div>
                     <div id="progress-bar-fill" class="absolute left-0 top-1/2 -translate-y-1/2 h-[2px] bg-luxury-rose z-0 transition-all duration-500 w-0"></div>
                     
                     <!-- Step 1 Indicator -->
                     <button type="button" onclick="window.goToCheckoutStep(1)" class="relative z-10 flex flex-col items-center gap-2 cursor-pointer group outline-none">
-                        <div id="step-indicator-1" class="w-8 h-8 rounded-full flex items-center justify-center text-[12px] font-bold transition-colors bg-luxury-rose text-white shadow-md border-2 border-white group-hover:scale-105">1</div>
-                        <span class="text-[9px] font-bold uppercase tracking-widest text-luxury-dark">Address</span>
+                        <div id="step-indicator-1" class="w-8 h-8 rounded-full flex items-center justify-center text-[12px] font-bold transition-colors bg-[#D9778A] text-white shadow-md border-2 border-white group-hover:scale-105">1</div>
+                        <span class="text-[9px] font-bold uppercase tracking-widest text-luxury-dark" id="step-label-1">Your Bag</span>
                     </button>
                     <!-- Step 2 Indicator -->
                     <button type="button" onclick="window.goToCheckoutStep(2)" class="relative z-10 flex flex-col items-center gap-2 cursor-pointer group outline-none">
                         <div id="step-indicator-2" class="w-8 h-8 rounded-full flex items-center justify-center text-[12px] font-bold transition-colors bg-white text-gray-400 border-2 border-luxury-blush group-hover:scale-105">2</div>
-                        <span class="text-[9px] font-bold uppercase tracking-widest text-gray-400" id="step-label-2">Review</span>
+                        <span class="text-[9px] font-bold uppercase tracking-widest text-gray-400" id="step-label-2">Delivery</span>
                     </button>
                     <!-- Step 3 Indicator -->
                     <div class="relative z-10 flex flex-col items-center gap-2">
@@ -345,22 +342,54 @@
                     </div>
                 </div>
 
-                <!-- STEP 1: PATRON PROFILE / ADDRESS -->
-                <div id="checkout-step-1" class="w-full bg-white border border-luxury-blush rounded-3xl p-5 md:p-8 shadow-sm animate-fade-in">
-                    <div class="flex justify-between items-center mb-6">
-                        <h2 class="font-logo text-2xl text-luxury-dark">Delivery Address</h2>
-                        <button type="button" id="btn-edit-address" class="hidden text-luxury-rose text-[9px] font-bold uppercase tracking-widest border border-luxury-rose/30 px-3 py-1.5 rounded-full hover:bg-luxury-rose hover:text-white transition-colors">Edit</button>
+                <!-- STEP 1: REVIEW ITEMS & CUSTOMIZE -->
+                <div id="checkout-step-1" class="w-full bg-white border border-luxury-blush rounded-3xl p-5 md:p-8 shadow-sm animate-fade-in flex flex-col">
+                    <h2 class="font-logo text-2xl text-luxury-dark border-b border-luxury-blush pb-4 mb-6">Review Your Bag</h2>
+                    
+                    <div id="checkout-items-list" class="flex flex-col gap-4 mb-8">
+                        <!-- Items injected via JS -->
                     </div>
 
-                    <!-- Read-Only Display -->
-                    <div id="address-display" class="hidden bg-[#FFF0F2] border border-[#f4c6ce] rounded-xl p-5">
-                        <p class="font-bold text-luxury-dark text-[13px] mb-2" id="display-name"></p>
-                        <p class="text-luxury-dark/80 text-[12px] leading-relaxed mb-3" id="display-full-address"></p>
-                        <p class="text-luxury-dark font-medium text-[12px]"><i class="fas fa-phone-alt text-luxury-rose/70 mr-1.5 text-[10px]"></i> <span id="display-phone"></span></p>
+                    <div class="bg-luxury-bg border border-luxury-blush rounded-2xl p-5 md:p-6 space-y-4 mb-8">
+                        <h4 class="font-bold text-[10px] text-luxury-dark uppercase tracking-widest mb-2"><i class="fas fa-paint-brush text-luxury-rose mr-1.5"></i> Customization Notes</h4>
+                        <div>
+                            <label class="block text-[9px] font-bold text-gray-500 uppercase tracking-widest mb-1.5 pl-1">Intended Purpose</label>
+                            <select id="comm-type" class="w-full px-4 py-3 bg-white border border-luxury-blush rounded-xl outline-none text-[11px] font-medium text-luxury-dark focus:ring-2 focus:ring-luxury-rose/30">
+                                <option value="Standard Order (No Framing)">Standard Order / As Displayed</option>
+                                <option value="A gift for someone special">A gift for someone special</option>
+                                <option value="Include framing options if available">Include framing options (if available)</option>
+                            </select>
+                        </div>
+                        <div id="comm-dimensions-wrapper" class="hidden">
+                            <label class="block text-[9px] font-bold text-luxury-gold uppercase tracking-widest mb-1.5 pl-1">Requested Size</label>
+                            <input type="text" id="comm-dimensions" placeholder="e.g. 24x36 inches" class="w-full px-4 py-3 bg-white border border-luxury-gold/30 rounded-xl outline-none text-[11px] font-medium text-luxury-dark focus:ring-2 focus:ring-luxury-rose/30">
+                        </div>
+                        <div>
+                            <label class="block text-[9px] font-bold text-gray-500 uppercase tracking-widest mb-1.5 pl-1">Notes / Inspiration</label>
+                            <textarea id="comm-colors" placeholder="Any specific colors or requests?" class="w-full px-4 py-3 bg-white border border-luxury-blush rounded-xl outline-none text-[11px] font-medium text-luxury-dark h-24 resize-none focus:ring-2 focus:ring-luxury-rose/30"></textarea>
+                        </div>
+                    </div>
+                    
+                    <div class="mt-auto border-t border-luxury-blush pt-5">
+                         <button type="button" onclick="window.handleCheckoutAction()" class="w-full sm:w-auto sm:ml-auto bg-[#D9778A] text-white hover:bg-luxury-rose py-4 px-8 rounded-xl font-bold text-[11px] uppercase tracking-[0.15em] transition-all shadow-float flex items-center justify-center gap-2">
+                             Continue to Delivery <i class="fas fa-arrow-right"></i>
+                         </button>
+                    </div>
+                </div>
+
+                <!-- STEP 2: ADDRESS BOOK / DELIVERY -->
+                <div id="checkout-step-2" class="w-full bg-white border border-luxury-blush rounded-3xl p-5 md:p-8 shadow-sm hidden flex-col animate-fade-in">
+                    <h2 class="font-logo text-2xl text-luxury-dark border-b border-luxury-blush pb-4 mb-6">Delivery Address</h2>
+
+                    <!-- Address Book (List of saved addresses) -->
+                    <div id="address-book-container" class="flex flex-col gap-4 mb-4">
+                        <!-- Address cards injected via JS -->
                     </div>
 
-                    <!-- Form -->
-                    <form id="checkout-profile-form" class="space-y-4 font-sans">
+                    <button type="button" id="btn-show-add-address" onclick="window.showAddressForm()" class="text-[#D9778A] text-[10px] font-bold uppercase tracking-widest flex items-center gap-2 mb-6 w-max hidden hover:text-luxury-dark transition-colors"><i class="fas fa-plus"></i> Add New Address</button>
+
+                    <!-- Address Form -->
+                    <form id="checkout-profile-form" class="space-y-4 font-sans hidden">
                         <div class="grid grid-cols-2 gap-4">
                             <div>
                                 <label class="block text-[9px] font-bold text-gray-400 uppercase tracking-widest mb-1.5 pl-1">First Name *</label>
@@ -408,35 +437,16 @@
                                 <input type="text" id="prof-state" required class="w-full px-4 py-3 bg-luxury-bg border border-luxury-blush rounded-xl outline-none text-[12px] font-medium text-luxury-dark focus:ring-2 focus:ring-luxury-rose/30 focus:border-luxury-rose transition-all">
                             </div>
                         </div>
+                        <div class="flex gap-3 pt-3 mb-4">
+                            <button type="button" onclick="window.saveAddressFromForm()" class="bg-luxury-dark text-white hover:bg-[#D9778A] px-6 py-3 rounded-xl font-bold text-[10px] uppercase tracking-widest transition-colors shadow-sm">Save Address</button>
+                            <button type="button" id="btn-cancel-address" onclick="window.hideAddressForm()" class="border border-luxury-blush text-gray-500 hover:text-luxury-dark px-6 py-3 rounded-xl font-bold text-[10px] uppercase tracking-widest transition-colors hidden">Cancel</button>
+                        </div>
                     </form>
-                </div>
 
-                <!-- STEP 2: REVIEW ITEMS & CUSTOMIZE -->
-                <div id="checkout-step-2" class="w-full bg-white border border-luxury-blush rounded-3xl p-5 md:p-8 shadow-sm hidden flex-col animate-fade-in">
-                    <h2 class="font-logo text-2xl text-luxury-dark border-b border-luxury-blush pb-4 mb-6">Review Items & Customize</h2>
-                    
-                    <div id="checkout-items-list" class="flex flex-col gap-4 mb-8">
-                        <!-- Items injected via JS -->
-                    </div>
-
-                    <div class="bg-luxury-bg border border-luxury-blush rounded-2xl p-5 md:p-6 space-y-4">
-                        <h4 class="font-bold text-[10px] text-luxury-dark uppercase tracking-widest mb-2"><i class="fas fa-paint-brush text-luxury-rose mr-1.5"></i> Customization Notes</h4>
-                        <div>
-                            <label class="block text-[9px] font-bold text-gray-500 uppercase tracking-widest mb-1.5 pl-1">Intended Purpose</label>
-                            <select id="comm-type" class="w-full px-4 py-3 bg-white border border-luxury-blush rounded-xl outline-none text-[11px] font-medium text-luxury-dark focus:ring-2 focus:ring-luxury-rose/30">
-                                <option value="Standard Order (No Framing)">Standard Order / As Displayed</option>
-                                <option value="A gift for someone special">A gift for someone special</option>
-                                <option value="Include framing options if available">Include framing options (if available)</option>
-                            </select>
-                        </div>
-                        <div id="comm-dimensions-wrapper" class="hidden">
-                            <label class="block text-[9px] font-bold text-luxury-gold uppercase tracking-widest mb-1.5 pl-1">Requested Size</label>
-                            <input type="text" id="comm-dimensions" placeholder="e.g. 24x36 inches" class="w-full px-4 py-3 bg-white border border-luxury-gold/30 rounded-xl outline-none text-[11px] font-medium text-luxury-dark focus:ring-2 focus:ring-luxury-rose/30">
-                        </div>
-                        <div>
-                            <label class="block text-[9px] font-bold text-gray-500 uppercase tracking-widest mb-1.5 pl-1">Notes / Inspiration</label>
-                            <textarea id="comm-colors" placeholder="Any specific colors or requests?" class="w-full px-4 py-3 bg-white border border-luxury-blush rounded-xl outline-none text-[11px] font-medium text-luxury-dark h-24 resize-none focus:ring-2 focus:ring-luxury-rose/30"></textarea>
-                        </div>
+                    <div class="mt-auto border-t border-luxury-blush pt-5">
+                         <button type="button" onclick="window.handleCheckoutAction()" class="w-full sm:w-auto sm:ml-auto bg-[#D9778A] text-white hover:bg-luxury-rose py-4 px-8 rounded-xl font-bold text-[11px] uppercase tracking-[0.15em] transition-all shadow-float flex items-center justify-center gap-2">
+                             Proceed to Secure Payment <i class="fas fa-lock"></i>
+                         </button>
                     </div>
                 </div>
 
@@ -485,11 +495,13 @@
                     </div>
                 </div>
 
+                <!-- Mobile Scroll Spacer -->
+                <div class="h-20 lg:hidden block w-full"></div>
             </div>
 
-            <!-- RIGHT COLUMN: Price Details / Quotation Sidebar -->
+            <!-- RIGHT COLUMN: Price Details Sidebar -->
             <div id="checkout-price-sidebar" class="hidden lg:block lg:col-span-4 w-full">
-                <!-- Flipkart style pricing breakdown -->
+                <!-- Pricing breakdown -->
                 <div class="bg-white border border-luxury-blush rounded-3xl p-6 shadow-float lg:sticky lg:top-[100px] flex flex-col z-10">
                     <h3 class="font-bold text-[12px] text-gray-500 uppercase tracking-widest border-b border-luxury-blush pb-4 mb-5">Price Details</h3>
                     
@@ -511,7 +523,7 @@
 
                         <div class="flex justify-between items-center border-t border-dashed border-luxury-blush pt-4">
                             <span class="flex items-center gap-1.5">Delivery Charges</span>
-                            <span id="qo-delivery-fee" class="text-luxury-dark font-poppins">₹0</span>
+                            <span id="qo-delivery-fee" class="text-luxury-dark font-poppins text-right">₹0</span>
                         </div>
                     </div>
 
@@ -528,7 +540,7 @@
                     <!-- Dynamic Action Button (Will stick to bottom on Mobile) -->
                     <div class="fixed bottom-0 left-0 w-full p-4 bg-white/95 backdrop-blur-md border-t border-luxury-blush z-[100] lg:relative lg:bg-transparent lg:border-none lg:p-0 lg:z-auto">
                         <button type="button" id="checkout-action-btn" onclick="window.handleCheckoutAction()" class="w-full bg-luxury-dark text-white hover:bg-[#D9778A] py-4 rounded-xl font-bold text-[11px] uppercase tracking-[0.15em] transition-all shadow-float flex items-center justify-center gap-2">
-                            Deliver Here <i class="fas fa-arrow-right"></i>
+                            Continue to Delivery <i class="fas fa-arrow-right"></i>
                         </button>
                     </div>
                     
@@ -545,7 +557,7 @@
     <!-- Return Policy Modal (Upgraded Realistic Text) -->
     <div id="return-policy-modal" role="dialog" aria-modal="true" class="hidden transition-opacity duration-200 opacity-0 fixed inset-0 bg-luxury-dark/70 p-4 flex items-center justify-center z-[4000]">
         <div class="transform scale-95 translate-y-2 transition-all duration-300 bg-white rounded-3xl w-full max-w-md p-6 sm:p-8 shadow-2xl relative border border-luxury-rose" id="return-policy-box">
-            <button type="button" id="btn-close-return-policy" class="absolute top-4 right-4 text-gray-400 w-8 h-8 bg-luxury-bg rounded-full flex items-center justify-center border border-luxury-blush hover:text-luxury-dark"><i class="fas fa-times text-xs"></i></button>
+            <button type="button" onclick="window.closePolicyModal('return-policy-modal', 'return-policy-box')" class="absolute top-4 right-4 text-gray-400 w-8 h-8 bg-luxury-bg rounded-full flex items-center justify-center border border-luxury-blush hover:text-luxury-dark"><i class="fas fa-times text-xs"></i></button>
             <div class="w-12 h-12 bg-[#FFF0F2] rounded-full flex items-center justify-center mx-auto mb-5 border border-[#f4c6ce]"><i class="fas fa-ban text-[#D9778A] text-xl"></i></div>
             <h2 class="font-logo font-normal text-2xl text-center text-luxury-dark mb-4">Strict Return Policy</h2>
             <div class="text-[12px] text-gray-600 leading-relaxed font-body space-y-4 max-h-[60vh] overflow-y-auto custom-scroll pr-2">
@@ -564,7 +576,7 @@
     <!-- Privacy Policy Modal (Upgraded Realistic Text) -->
     <div id="privacy-policy-modal" role="dialog" aria-modal="true" class="hidden transition-opacity duration-200 opacity-0 fixed inset-0 bg-luxury-dark/70 p-4 flex items-center justify-center z-[4000]">
         <div class="transform scale-95 translate-y-2 transition-all duration-300 bg-white rounded-3xl w-full max-w-lg p-6 sm:p-8 shadow-2xl relative border border-luxury-blush" id="privacy-policy-box">
-            <button type="button" id="btn-close-privacy-policy" class="absolute top-4 right-4 text-gray-400 w-8 h-8 bg-luxury-bg rounded-full flex items-center justify-center border border-luxury-blush hover:text-luxury-dark"><i class="fas fa-times text-xs"></i></button>
+            <button type="button" onclick="window.closePolicyModal('privacy-policy-modal', 'privacy-policy-box')" class="absolute top-4 right-4 text-gray-400 w-8 h-8 bg-luxury-bg rounded-full flex items-center justify-center border border-luxury-blush hover:text-luxury-dark"><i class="fas fa-times text-xs"></i></button>
             <h2 class="font-logo font-normal text-2xl text-center text-luxury-dark mb-6">Privacy Policy</h2>
             <div class="text-[11px] text-gray-600 leading-relaxed font-body space-y-4 max-h-[65vh] overflow-y-auto custom-scroll pr-2">
                 <p><strong>1. Information Collection:</strong> When you commission a piece or interact with Twisted Happiness, we collect necessary fulfillment data: your full name, shipping address, email, and phone number. We do not collect non-essential tracking metrics.</p>
