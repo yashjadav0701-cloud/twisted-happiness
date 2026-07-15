@@ -71,20 +71,26 @@ async function fetchRuntimeSettings() {
     try {
         const { data } = await _supabase.from('store_config').select('*').limit(1);
         if(data && data.length > 0) {
-            const cloud = data[0]; settings = { promoText: cloud.promo_text, instagram: cloud.instagram_url, whatsapp: cloud.whatsapp_num, upiId: cloud.upi_id, countryCode: cloud.country_code || "+91" };
+            const cloud = data[0]; settings = { promoText: cloud.promo_text, promoCodes: cloud.promo_codes, instagram: cloud.instagram_url, whatsapp: cloud.whatsapp_num, upiId: cloud.upi_id, countryCode: cloud.country_code || "+91" };
             localStorage.setItem('th_settings', JSON.stringify(settings));
         }
     } catch(e) { console.warn("Failed to fetch settings, using cache."); }
     
-    if(!settings) settings = {}; // Failsafe
+    if(!settings) settings = {}; 
 
     const container = document.getElementById('promo-lines-container');
     if(container) {
-        container.innerHTML = '';
-        let lines = [];
+        container.innerHTML = ''; let lines = [];
         try { lines = JSON.parse(settings.promoText || '[]'); } catch(e) { lines = [settings.promoText]; }
         if (!Array.isArray(lines) || lines.length === 0) lines = [""];
         lines.forEach(l => window.th_addPromoLine(l));
+    }
+
+    const codeContainer = document.getElementById('promo-codes-container');
+    if(codeContainer) {
+        codeContainer.innerHTML = ''; let codes = [];
+        try { codes = JSON.parse(settings.promoCodes || '[]'); } catch(e) {}
+        if (Array.isArray(codes)) codes.forEach(c => window.th_addPromoCode(c.code, c.val));
     }
 
     if(document.getElementById('admin-wa')) document.getElementById('admin-wa').value = settings.whatsapp || ''; 
@@ -99,14 +105,23 @@ async function saveSettings(e) {
     const pArray = Array.from(inputs).map(inp => inp.value.trim()).filter(val => val !== "");
     const pStr = JSON.stringify(pArray);
 
+    const cInputs = document.querySelectorAll('.coupon-row');
+    let codesArr = [];
+    cInputs.forEach(row => {
+        let cCode = row.querySelector('.coupon-code-input').value.trim().toUpperCase();
+        let cVal = row.querySelector('.coupon-val-input').value.trim();
+        if(cCode && cVal) codesArr.push({code: cCode, val: parseInt(cVal)});
+    });
+    const cStr = JSON.stringify(codesArr);
+
     const i = document.getElementById('admin-ig').value.trim(), w = document.getElementById('admin-wa').value.trim(), c = document.getElementById('admin-country-code').value, u = document.getElementById('admin-upi-id').value.trim();
-    const payload = { id: 1, promo_text: pStr, instagram_url: i, whatsapp_num: w, country_code: c, upi_id: u };
+    const payload = { id: 1, promo_text: pStr, promo_codes: cStr, instagram_url: i, whatsapp_num: w, country_code: c, upi_id: u };
     
     try {
         const { error } = await _supabase.from('store_config').upsert([payload]); if (error) throw error;
-        settings = { promoText: pStr, instagram: i, whatsapp: w, countryCode: c, upiId: u };
+        settings = { promoText: pStr, promoCodes: cStr, instagram: i, whatsapp: w, countryCode: c, upiId: u };
         localStorage.setItem('th_settings', JSON.stringify(settings)); showToast('Settings Saved & Synced to Cloud', 'fa-check'); 
-    } catch(err) { showToast('Failed to sync settings', 'fa-times', 'text-red-500'); }
+    } catch(err) { showToast('Failed to sync settings', 'fa-times', 'text-red-500'); console.error(err); }
 }
 
 function bindAdminEvents() {

@@ -45,7 +45,7 @@ async function fetchRuntimeSettings() {
         const { data } = await _supabase.from('store_config').select('*').limit(1);
         if(data && data.length > 0) {
             const cloud = data[0];
-            settings = { promoText: cloud.promo_text, storeName: cloud.store_name, instagram: cloud.instagram_url, whatsapp: cloud.whatsapp_num, upiId: cloud.upi_id, countryCode: cloud.country_code || "+91" };
+            settings = { promoText: cloud.promo_text, promoCodes: cloud.promo_codes, storeName: cloud.store_name, instagram: cloud.instagram_url, whatsapp: cloud.whatsapp_num, upiId: cloud.upi_id, countryCode: cloud.country_code || "+91" };
             localStorage.setItem('th_settings', JSON.stringify(settings));
         }
     } catch(e) { console.warn("Local storage fallback active"); }
@@ -324,8 +324,11 @@ function calculateEDDBracket(pt) {
 
 window.applyCouponCode = function() {
     const i = document.getElementById('checkout-promo-input'), f = document.getElementById('checkout-promo-feedback'); if(!i || !f) return; const c = i.value.trim().toUpperCase();
-    if (c === "WELCOME10") { activeCouponValue = 10; activeCouponCode = "WELCOME10"; f.textContent = "WELCOME10 applied! Extra 10% OFF."; f.className = "text-[9px] font-bold uppercase tracking-wide mt-1.5 text-green-600 block"; } 
-    else if (c === "ARTISAN30") { activeCouponValue = 30; activeCouponCode = "ARTISAN30"; f.textContent = "ARTISAN30 applied! Extra 30% OFF."; f.className = "text-[9px] font-bold uppercase tracking-wide mt-1.5 text-green-600 block"; } 
+    let validCodes = [];
+    try { validCodes = JSON.parse(settings.promoCodes || '[]'); } catch(e) {}
+    
+    const matched = validCodes.find(x => x.code === c);
+    if (matched) { activeCouponValue = matched.val; activeCouponCode = matched.code; f.textContent = `${matched.code} applied! Extra ${matched.val}% OFF.`; f.className = "text-[9px] font-bold uppercase tracking-wide mt-1.5 text-green-600 block"; } 
     else { activeCouponValue = 0; activeCouponCode = ""; f.textContent = "Invalid Coupon Code."; f.className = "text-[9px] font-bold uppercase tracking-wide mt-1.5 text-red-500 block"; }
     updateCheckoutUI();
 };
@@ -588,6 +591,12 @@ function updateCheckoutUI() {
     
     if(!f) return;
     
+    const mobBar = document.getElementById('mobile-sticky-checkout-bar');
+    if (mobBar) {
+        if (checkoutStep === 3) mobBar.classList.add('hidden');
+        else mobBar.classList.remove('hidden');
+    }
+
     if(mb) { 
         if(checkoutStep === 1) { mb.innerHTML = `Next: Delivery <i class="fas fa-arrow-right ml-1"></i>`; mb.disabled = cart.length===0; mb.className=`w-full bg-luxury-dark text-white hover:bg-[#D9778A] py-4 rounded-xl font-bold text-[11px] uppercase tracking-[0.15em] transition-all shadow-float flex items-center justify-center gap-2 ${cart.length===0?'opacity-50 cursor-not-allowed':''}`; } 
         else if (checkoutStep === 2) { mb.innerHTML = `Next: Secure Payment <i class="fas fa-lock ml-1"></i>`; mb.disabled = false; mb.className="w-full bg-luxury-dark text-white hover:bg-[#D9778A] py-4 rounded-xl font-bold text-[11px] uppercase tracking-[0.15em] transition-all shadow-float flex items-center justify-center gap-2"; } 
@@ -596,6 +605,7 @@ function updateCheckoutUI() {
     if(db) { 
         if(checkoutStep === 1) { db.innerHTML = `Next: Delivery <i class="fas fa-arrow-right ml-1"></i>`; db.disabled = cart.length===0; db.className=`hidden lg:flex w-full bg-luxury-dark text-white hover:bg-[#D9778A] py-4 rounded-xl font-bold text-[11px] uppercase tracking-[0.15em] transition-all shadow-float items-center justify-center gap-2 mt-2 ${cart.length===0?'opacity-50 cursor-not-allowed':''}`; } 
         else if (checkoutStep === 2) { db.innerHTML = `Next: Secure Payment <i class="fas fa-lock ml-1"></i>`; db.disabled = false; db.className="hidden lg:flex w-full bg-luxury-dark text-white hover:bg-[#D9778A] py-4 rounded-xl font-bold text-[11px] uppercase tracking-[0.15em] transition-all shadow-float items-center justify-center gap-2 mt-2"; } 
+        else if (checkoutStep === 3) { db.className = "hidden"; }
     }
     
     if(sb) { 
