@@ -67,6 +67,16 @@ window.th_addPromoLine = function(val) {
     } catch(e) { console.error("Error adding promo line", e); }
 };
 
+window.th_addPromoCode = function(code, type, val) {
+    try {
+        const container = document.getElementById('promo-codes-container'); if(!container) return;
+        const div = document.createElement('div'); div.className = "flex items-center gap-2 coupon-row";
+        const t = type || 'percent';
+        div.innerHTML = `<input type="text" value="${code || ''}" placeholder="PROMO CODE" class="coupon-code-input w-full bg-white border border-luxury-blush rounded-lg px-3 py-2 text-[11px] font-bold outline-none uppercase"><select class="coupon-type-input bg-white border border-luxury-blush rounded-lg px-2 py-2 text-[11px] font-medium outline-none cursor-pointer"><option value="percent" ${t==='percent'?'selected':''}>% Off</option><option value="flat" ${t==='flat'?'selected':''}>₹ Off</option></select><input type="number" value="${val || ''}" placeholder="Value" class="coupon-val-input w-24 bg-white border border-luxury-blush rounded-lg px-3 py-2 text-[11px] font-medium outline-none"><button type="button" onclick="this.parentElement.remove()" class="text-red-400 hover:text-red-600 w-8 h-8 flex items-center justify-center shrink-0 border border-luxury-blush rounded-lg bg-white shadow-sm"><i class="fas fa-times"></i></button>`;
+        container.appendChild(div);
+    } catch(e) { console.error("Error adding code", e); }
+};
+
 async function fetchRuntimeSettings() {
     try {
         const { data } = await _supabase.from('store_config').select('*').limit(1);
@@ -90,7 +100,7 @@ async function fetchRuntimeSettings() {
     if(codeContainer) {
         codeContainer.innerHTML = ''; let codes = [];
         try { codes = JSON.parse(settings.promoCodes || '[]'); } catch(e) {}
-        if (Array.isArray(codes)) codes.forEach(c => window.th_addPromoCode(c.code, c.val));
+        if (Array.isArray(codes)) codes.forEach(c => window.th_addPromoCode(c.code, c.type, c.val));
     }
 
     if(document.getElementById('admin-wa')) document.getElementById('admin-wa').value = settings.whatsapp || ''; 
@@ -109,8 +119,9 @@ async function saveSettings(e) {
     let codesArr = [];
     cInputs.forEach(row => {
         let cCode = row.querySelector('.coupon-code-input').value.trim().toUpperCase();
+        let cType = row.querySelector('.coupon-type-input').value;
         let cVal = row.querySelector('.coupon-val-input').value.trim();
-        if(cCode && cVal) codesArr.push({code: cCode, val: parseInt(cVal)});
+        if(cCode && cVal) codesArr.push({code: cCode, type: cType, val: parseInt(cVal)});
     });
     const cStr = JSON.stringify(codesArr);
 
@@ -394,9 +405,10 @@ window.th_pushToShiprocket = async function(orderId, event) {
     const btn = event.currentTarget; const originalHtml = btn.innerHTML; btn.innerHTML = '<i class="fas fa-spinner fa-spin mr-1.5"></i> Syncing...'; btn.disabled = true;
     try {
         const { data, error } = await _supabase.functions.invoke('shiprocket', { body: { order_id: orderId } });
-        if(error) throw error; if(data && data.success === false) { alert("Shiprocket Error:\n" + data.error); throw new Error(data.error); }
+        if(error) { alert("Supabase Edge Function Error: " + error.message); throw error; }
+        if(data && data.success === false) { alert("Shiprocket API Rejected the Sync:\n" + JSON.stringify(data.error || data.message || "Unknown error")); throw new Error(data.error); }
         showToast("Pushed to Shiprocket 🚀", "fa-rocket", "text-[#22c55e]");
-    } catch (err) { console.error("Shiprocket API Error:", err); showToast("Failed to sync", "fa-times", "text-red-500"); }
+    } catch (err) { console.error("Shiprocket API Error:", err); alert("Sync Failed: " + err.message); showToast("Failed to sync", "fa-times", "text-red-500"); }
     btn.innerHTML = originalHtml; btn.disabled = false;
 };
 

@@ -714,7 +714,7 @@ async function renderCustomerOrdersPipeline() {
             const dt = new Date(o.created_at).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' }); 
             let step = 1; let statusText = "Verifying Payment";
             if (o.status === 'curating') { step = 2; statusText = "Artisan is Crafting"; }
-            else if (o.status === 'ready') { step = 3; statusText = "Dispatched"; }
+            else if (o.status === 'ready') { step = 3; statusText = "Shipped"; }
             else if (o.status === 'completed') { step = 4; statusText = "Delivered"; }
             else if (o.status === 'cancelled') { step = 0; statusText = "Cancelled / Denied"; }
 
