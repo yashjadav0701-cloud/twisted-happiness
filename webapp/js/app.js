@@ -693,7 +693,6 @@ window.confirmPaymentAndOrder = async function() {
         if (error) throw error;
         document.getElementById('payment-gateway-view')?.classList.add('hidden'); document.getElementById('payment-gateway-view')?.classList.remove('flex'); if(document.getElementById('success-ref-note')) document.getElementById('success-ref-note').textContent = currentOrderReference; document.getElementById('payment-success-view')?.classList.remove('hidden'); document.getElementById('payment-success-view')?.classList.add('flex');
         
-        // ONLY clear the cart if the user didn't use the isolated "Buy Now" button
         if (!window.buyNowPayload) {
             cart = []; localStorage.setItem('th_cart', JSON.stringify(cart)); updateCartCount(); 
         }
