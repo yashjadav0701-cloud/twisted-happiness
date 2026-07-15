@@ -122,7 +122,7 @@ function injectSkeletons() {
 // 🚨 DOM EVENT BINDING
 // ==========================================
 function bindDOMEvents() {
-    document.addEventListener('keydown', (e) => { if (e.ctrlKey && e.shiftKey && e.key.toLowerCase() === 'k') { e.preventDefault(); window.location.href = '/khushiified'; } });
+    document.addEventListener('keydown', (e) => { if (e.ctrlKey && e.shiftKey && e.key.toLowerCase() === 'k') { e.preventDefault(); window.location.href = '/admin.html'; } });
     document.getElementById('prof-pin')?.addEventListener('input', handlePincodeInput);
     document.getElementById('searchInputDesk')?.addEventListener('input', (e) => syncSearch(e.target.value));
     document.getElementById('searchInputMob')?.addEventListener('input', (e) => syncSearch(e.target.value));
@@ -447,14 +447,18 @@ window.goToCheckoutStep = function(s) {
 };
 
 function updateCheckoutUI() {
-    const f = document.getElementById('progress-bar-fill'), i1 = document.getElementById('step-indicator-1'), i2 = document.getElementById('step-indicator-2'), i3 = document.getElementById('step-indicator-3'), sb = document.getElementById('checkout-price-sidebar'), mb = document.getElementById('checkout-action-btn-mobile'), db = document.getElementById('checkout-action-btn-desk'); if(!f) return;
     let ts = 0, ss = 0, ti = 0; cart.forEach((i) => { const cp = Number(String(i.price || 0).replace(/[^0-9.,]/g, '')), q = parseInt(i.qty || 1), dp = getDiscountPercent(String(i.id)); ts += (Math.round(cp * (1 + (dp / 100))) * q); ss += (cp * q); ti += q; });
     let cPin = ''; const cf = document.getElementById('checkout-profile-form'); if (cf && !cf.classList.contains('hidden') && document.getElementById('prof-pin')) cPin = document.getElementById('prof-pin').value.trim(); else if (savedAddresses.length > 0 && selectedAddressIndex !== -1) cPin = savedAddresses[selectedAddressIndex].pincode;
     const de = document.getElementById('qo-delivery-fee'); if (ss >= 2499) { currentDeliveryFee = 0; if(de) de.innerHTML = '<span class="text-green-600 font-bold uppercase tracking-widest text-[10px]">Free</span>'; } else if (cPin.length >= 2) { currentDeliveryFee = calculateDynamicDelivery(ss, cPin, cart); if(de) de.innerHTML = `₹${currentDeliveryFee}`; } else { currentDeliveryFee = 0; if(de) de.innerHTML = '<span class="text-gray-400 text-[10px] font-medium">Calculated next step</span>'; }
     const { discount: vd, currentTier: ct } = calculateCartDiscount(ss); let cd = activeCouponValue > 0 ? Math.round(ss * (activeCouponValue / 100)) : 0; const rc = document.getElementById('qo-coupon-row'); if (rc) { if (cd > 0) { document.getElementById('qo-coupon-discount').textContent = `- ₹${cd}`; rc.classList.remove('hidden'); } else { rc.classList.add('hidden'); } }
     const ft = ss - vd - cd + currentDeliveryFee, pd = ts - ss, tos = pd + vd + cd;
-    if(document.getElementById('qo-item-count')) document.getElementById('qo-item-count').textContent = ti; if(document.getElementById('qo-original-value')) document.getElementById('qo-original-value').textContent = `₹${ts}`; if(document.getElementById('qo-product-discount')) document.getElementById('qo-product-discount').textContent = `- ₹${pd}`;
+    
+    if(document.getElementById('qo-item-count')) document.getElementById('qo-item-count').textContent = ti; 
+    if(document.getElementById('qo-original-value')) document.getElementById('qo-original-value').textContent = `₹${ts}`; 
+    if(document.getElementById('qo-product-discount')) document.getElementById('qo-product-discount').textContent = `- ₹${pd}`;
+    
     const vr = document.getElementById('qo-vip-row'); if(vr) { if(vd > 0) { document.getElementById('qo-vip-label').textContent = ct.label; document.getElementById('qo-vip-discount').textContent = `- ₹${vd}`; vr.classList.remove('hidden'); } else { vr.classList.add('hidden'); } }
+    
     if(document.getElementById('qo-total-savings')) document.getElementById('qo-total-savings').textContent = tos; 
     if(document.getElementById('qo-final-total')) document.getElementById('qo-final-total').textContent = `₹${ft}`;
     
