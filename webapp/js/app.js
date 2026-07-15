@@ -32,7 +32,7 @@ let products = []; let currentMainCategory = 'All'; let activeSubCategories = []
 let searchTimeout = null; let modalImages = []; let currentSlideIndex = 0; let isAnimating = false; let currentLightboxIndex = 0; let isLightboxAnimating = false; let currentModalLevel = 0; let statePushed = false;
 let checkoutStep = 1; let pendingOrderPayload = null; let currentOrderReference = null; let currentDeliveryFee = 0; let activeCouponValue = 0; let activeCouponCode = "";
 let selectedAddressIndex = savedAddresses.length > 0 ? 0 : -1; let editingAddressIndex = null; let currentSessionUser = null; let authModalMode = "login"; 
-let activeBuild = { flowers: [], wrapping: 'Classic Kraft' }; 
+let activeBuild = { flowers: [], fillers: [], wrapping: 'Vintage Kraft', ribbon: 'Satin Bow' }; 
 
 // ==========================================
 // 🚀 INITIALIZATION & SETTINGS
@@ -163,14 +163,57 @@ async function handleAuthFormSubmit(e) {
     } catch(err) { alert(err.message); } finally { b.innerHTML = authModalMode === "login" ? "Sign In" : "Register Account"; b.disabled = false; }
 }
 
-window.handleGoogleOAuthLogin = async function() { try { const { error } = await _supabase.auth.signInWithOAuth({ provider: 'google', options: { redirectTo: window.location.origin } }); if (error) throw error; } catch (err) { alert(err.message); } };
+window.handleGoogleOAuthLogin = async function() { try { const { error } = await _supabase.auth.signInWithOAuth({ provider: 'google', options: { queryParams: { prompt: 'select_account' }, redirectTo: window.location.origin } }); if (error) throw error; } catch (err) { alert(err.message); } };
 
 window.openCustomerProfile = async function() { 
     if(!currentSessionUser) return; currentModalLevel = 1; window.safePushState(1); 
     const o = document.getElementById('customer-profile-overlay'); document.getElementById('profile-meta-email').textContent = currentSessionUser.email; 
     document.getElementById('track-order-id').value = ''; document.getElementById('track-result-container').classList.add('hidden');
-    o.classList.remove('hidden'); document.body.classList.add('overflow-hidden'); renderCustomerOrdersPipeline(); 
+    o.classList.remove('hidden'); document.body.classList.add('overflow-hidden'); 
+    
+    // Fetch data
+    await syncCloudAddresses();
+    renderProfileAddressBook();
+    renderCustomerOrdersPipeline(); 
+    
     requestAnimationFrame(() => { o.classList.remove('opacity-0'); o.classList.add('opacity-100'); }); 
+};
+
+function renderProfileAddressBook() {
+    const container = document.getElementById('profile-address-list');
+    if (!container) return;
+    
+    if (savedAddresses.length === 0) {
+        container.innerHTML = '<p class="text-[11px] text-gray-500 font-medium">No addresses saved yet. Add one during checkout.</p>';
+        return;
+    }
+    
+    let html = '';
+    savedAddresses.forEach((a) => { 
+        html += `
+        <div class="bg-white border border-luxury-blush rounded-xl p-4 shadow-sm flex justify-between items-center">
+            <div>
+                <p class="font-bold text-luxury-dark text-[11px] uppercase tracking-wider mb-1">${a.first_name} ${a.last_name || ''}</p>
+                <p class="text-gray-500 text-[10px] leading-relaxed">${a.address_1}${a.address_2 ? ', ' + a.address_2 : ''}<br>${a.city}, ${a.state} - <span class="font-bold text-luxury-dark">${a.pincode}</span></p>
+            </div>
+            <button type="button" onclick="window.th_deleteAddress('${a.id}')" class="text-red-400 hover:text-red-600 bg-red-50 w-8 h-8 rounded-full flex items-center justify-center transition-colors"><i class="fas fa-trash-alt text-[10px]"></i></button>
+        </div>`; 
+    });
+    container.innerHTML = html;
+}
+
+window.th_deleteAddress = async function(addressId) {
+    if(!confirm("Delete this saved address?")) return;
+    showInteractionLoader("Deleting...");
+    try {
+        await _supabase.from('addresses').delete().eq('id', addressId);
+        await syncCloudAddresses();
+        renderProfileAddressBook();
+        window.showToast("Address deleted", "fa-trash");
+    } catch(e) {
+        window.showToast("Error deleting address", "fa-times", "text-red-500");
+    }
+    hideInteractionLoader();
 };
 
 window.closeCustomerProfile = function() { const o = document.getElementById('customer-profile-overlay'); requestAnimationFrame(() => { o.classList.remove('opacity-100'); o.classList.add('opacity-0'); setTimeout(() => { o.classList.add('hidden'); document.body.classList.remove('overflow-hidden'); }, 300); }); };
@@ -298,8 +341,8 @@ window.th_updateCartQty = function(id, d, e) {
         if(p) { 
             // Capture visual builder specs
             let customSpecsStr = "";
-            if (p.mainCategory === 'Pipe Cleaner Crafts' && activeBuild.flowers.length > 0) {
-                 customSpecsStr = `Elements: ${activeBuild.flowers.join(', ')} | Wrap: ${activeBuild.wrapping}`;
+            if (p.mainCategory === 'Pipe Cleaner Crafts' && p.name.toLowerCase().includes('bouquet')) {
+                 customSpecsStr = `Flowers: ${activeBuild.flowers.length > 0 ? activeBuild.flowers.join(', ') : 'Standard'} | Fillers: ${activeBuild.fillers.length > 0 ? activeBuild.fillers.join(', ') : 'None'} | Wrap: ${activeBuild.wrapping} | Ribbon: ${activeBuild.ribbon}`;
             }
             
             cart.push({ 
@@ -401,7 +444,7 @@ window.goToCheckoutStep = function(s) {
 };
 
 function updateCheckoutUI() {
-    const f = document.getElementById('progress-bar-fill'), i1 = document.getElementById('step-indicator-1'), i2 = document.getElementById('step-indicator-2'), i3 = document.getElementById('step-indicator-3'), sb = document.getElementById('checkout-price-sidebar'), mb = document.getElementById('checkout-action-btn-mobile'); if(!f) return;
+    const f = document.getElementById('progress-bar-fill'), i1 = document.getElementById('step-indicator-1'), i2 = document.getElementById('step-indicator-2'), i3 = document.getElementById('step-indicator-3'), sb = document.getElementById('checkout-price-sidebar'), mb = document.getElementById('checkout-action-btn-mobile'), db = document.getElementById('checkout-action-btn-desk'); if(!f) return;
     let ts = 0, ss = 0, ti = 0; cart.forEach((i) => { const cp = Number(String(i.price || 0).replace(/[^0-9.,]/g, '')), q = parseInt(i.qty || 1), dp = getDiscountPercent(String(i.id)); ts += (Math.round(cp * (1 + (dp / 100))) * q); ss += (cp * q); ti += q; });
     let cPin = ''; const cf = document.getElementById('checkout-profile-form'); if (cf && !cf.classList.contains('hidden') && document.getElementById('prof-pin')) cPin = document.getElementById('prof-pin').value.trim(); else if (savedAddresses.length > 0 && selectedAddressIndex !== -1) cPin = savedAddresses[selectedAddressIndex].pincode;
     const de = document.getElementById('qo-delivery-fee'); if (ss >= 2499) { currentDeliveryFee = 0; if(de) de.innerHTML = '<span class="text-green-600 font-bold uppercase tracking-widest text-[10px]">Free</span>'; } else if (cPin.length >= 2) { currentDeliveryFee = calculateDynamicDelivery(ss, cPin, cart); if(de) de.innerHTML = `₹${currentDeliveryFee}`; } else { currentDeliveryFee = 0; if(de) de.innerHTML = '<span class="text-gray-400 text-[10px] font-medium">Calculated next step</span>'; }
@@ -410,7 +453,8 @@ function updateCheckoutUI() {
     if(document.getElementById('qo-item-count')) document.getElementById('qo-item-count').textContent = ti; if(document.getElementById('qo-original-value')) document.getElementById('qo-original-value').textContent = `₹${ts}`; if(document.getElementById('qo-product-discount')) document.getElementById('qo-product-discount').textContent = `- ₹${pd}`;
     const vr = document.getElementById('qo-vip-row'); if(vr) { if(vd > 0) { document.getElementById('qo-vip-label').textContent = ct.label; document.getElementById('qo-vip-discount').textContent = `- ₹${vd}`; vr.classList.remove('hidden'); } else { vr.classList.add('hidden'); } }
     if(document.getElementById('qo-total-savings')) document.getElementById('qo-total-savings').textContent = tos; if(document.getElementById('qo-final-total')) document.getElementById('qo-final-total').textContent = `₹${ft}`;
-    if(mb) { if(checkoutStep === 1) { mb.innerHTML = `Next: Delivery <i class="fas fa-arrow-right ml-1"></i>`; mb.disabled = cart.length===0; mb.className=`w-full bg-luxury-dark text-white hover:bg-[#D9778A] py-4 rounded-xl font-bold text-[11px] uppercase tracking-[0.15em] transition-all shadow-float flex items-center justify-center gap-2 ${cart.length===0?'opacity-50 cursor-not-allowed':''}`; } else if (checkoutStep === 2) { mb.innerHTML = `Next: Secure Payment <i class="fas fa-lock ml-1"></i>`; mb.disabled = false; mb.className="w-full bg-luxury-dark text-white hover:bg-[#D9778A] py-4 rounded-xl font-bold text-[11px] uppercase tracking-[0.15em] transition-all shadow-float flex items-center justify-center gap-2"; } }
+    const f = document.getElementById('progress-bar-fill'), i1 = document.getElementById('step-indicator-1'), i2 = document.getElementById('step-indicator-2'), i3 = document.getElementById('step-indicator-3'), sb = document.getElementById('checkout-price-sidebar'), mb = document.getElementById('checkout-action-btn-mobile'), db = document.getElementById('checkout-action-btn-if(mb) { if(checkoutStep === 1) { mb.innerHTML = `Next: Delivery <i class="fas fa-arrow-right ml-1"></i>`; mb.disabled = cart.length===0; mb.className=`w-full bg-luxury-dark text-white hover:bg-[#D9778A] py-4 rounded-xl font-bold text-[11px] uppercase tracking-[0.15em] transition-all shadow-float flex items-center justify-center gap-2 ${cart.length===0?'opacity-50 cursor-not-allowed':''}`; } else if (checkoutStep === 2) { mb.innerHTML = `Next: Secure Payment <i class="fas fa-lock ml-1"></i>`; mb.disabled = false; mb.className="w-full bg-luxury-dark text-white hover:bg-[#D9778A] py-4 rounded-xl font-bold text-[11px] uppercase tracking-[0.15em] transition-all shadow-float flex items-center justify-center gap-2"; } }
+    if(db) { if(checkoutStep === 1) { db.innerHTML = `Next: Delivery <i class="fas fa-arrow-right ml-1"></i>`; db.disabled = cart.length===0; db.className=`hidden lg:flex w-full bg-luxury-dark text-white hover:bg-[#D9778A] py-4 rounded-xl font-bold text-[11px] uppercase tracking-[0.15em] transition-all shadow-float items-center justify-center gap-2 mt-2 ${cart.length===0?'opacity-50 cursor-not-allowed':''}`; } else if (checkoutStep === 2) { db.innerHTML = `Next: Secure Payment <i class="fas fa-lock ml-1"></i>`; db.disabled = false; db.className="hidden lg:flex w-full bg-luxury-dark text-white hover:bg-[#D9778A] py-4 rounded-xl font-bold text-[11px] uppercase tracking-[0.15em] transition-all shadow-float items-center justify-center gap-2 mt-2"; } }desk'); if(!f) return;
     if(sb) { if(window.innerWidth < 1024) { sb.className = (checkoutStep === 1) ? "block w-full mt-2" : "hidden w-full mt-2"; } else { sb.className = (checkoutStep === 1 || checkoutStep === 2) ? "block lg:col-span-4 w-full lg:mt-0" : "hidden lg:block lg:col-span-4 w-full lg:mt-0"; } }
     const aCl = "w-8 h-8 rounded-full flex items-center justify-center text-[12px] font-bold transition-colors bg-[#D9778A] text-white shadow-md border-2 border-white group-hover:scale-105", iCl = "w-8 h-8 rounded-full flex items-center justify-center text-[12px] font-bold transition-colors bg-white text-gray-400 border-2 border-luxury-blush group-hover:scale-105";
     if (checkoutStep === 1) { document.getElementById('checkout-step-1')?.classList.remove('hidden'); document.getElementById('checkout-step-2')?.classList.add('hidden'); document.getElementById('checkout-step-3')?.classList.add('hidden'); f.style.width = '0%'; if(i1) i1.className = aCl; if(i2) i2.className = iCl; if(i3) i3.className = iCl; } 
@@ -723,54 +767,63 @@ function renderVisualCustomizer(product) {
     const vc = document.getElementById('visual-customizer-studio');
     if (!vc) return;
 
-    // Only show the visual builder for Pipe Cleaner Crafts
-    if (product.mainCategory !== 'Pipe Cleaner Crafts') {
+    const isBouquet = product.name.toLowerCase().includes('bouquet');
+    if (product.mainCategory !== 'Pipe Cleaner Crafts' || !isBouquet) {
         vc.classList.add('hidden');
         return;
     }
 
-    const flowerOptions = ['Crimson rose', 'Blush tulip', 'Ivory lily', 'Golden sunflower', 'Azure daisy', 'Lavender sprig'];
-    const wrapOptions = ['Classic Kraft', 'Midnight black', 'Silk ribbon', 'Vintage print'];
+    const flowerOptions = ['Crimson Rose', 'Blush Peony', 'Ivory Lily', 'Golden Sunflower', 'Lilac Tulip', 'Blue Hydrangea', 'Sunset Carnation', 'Classic Daisy'];
+    const fillerOptions = ['Baby\'s Breath', 'Eucalyptus Leaves', 'Lavender Sprigs', 'Golden Fern', 'Pearl Branches'];
+    const wrapOptions = ['Vintage Kraft', 'Midnight Matte', 'Frosted Pearl', 'Blushing Silk', 'Holographic Clear'];
+    const ribbonOptions = ['Satin Bow', 'Lace Ribbon', 'Rustic Twine', 'Velvet Ribbon'];
 
-    let flowerHtml = flowerOptions.map(f => {
-        const isSelected = activeBuild.flowers.includes(f);
-        return `<button type="button" onclick="window.th_toggleBuildFlower('${f}')" class="px-3 py-1.5 rounded-full text-[10px] font-bold border transition-all ${isSelected ? 'bg-luxury-rose text-white border-luxury-rose shadow-sm' : 'bg-white text-gray-500 border-luxury-blush hover:border-luxury-rose'}">${f}</button>`;
-    }).join('');
-
-    let wrapHtml = wrapOptions.map(w => {
-        const isSelected = activeBuild.wrapping === w;
-        return `<button type="button" onclick="window.th_setBuildWrapping('${w}')" class="px-3 py-1.5 rounded-full text-[10px] font-bold border transition-all ${isSelected ? 'bg-luxury-dark text-white border-luxury-dark shadow-sm' : 'bg-white text-gray-500 border-luxury-blush hover:border-luxury-dark'}">${w}</button>`;
-    }).join('');
+    const generateChips = (options, activeArrayOrString, toggleFunc, isMulti) => {
+        return options.map(opt => {
+            const isSelected = isMulti ? activeArrayOrString.includes(opt) : activeArrayOrString === opt;
+            const activeClass = isMulti ? 'bg-luxury-rose text-white border-luxury-rose shadow-sm' : 'bg-luxury-dark text-white border-luxury-dark shadow-sm';
+            const inactiveClass = isMulti ? 'bg-white text-gray-500 border-luxury-blush hover:border-luxury-rose' : 'bg-white text-gray-500 border-luxury-blush hover:border-luxury-dark';
+            return `<button type="button" onclick="window.${toggleFunc}('${opt.replace(/'/g, "\\'")}')" class="px-3 py-1.5 rounded-full text-[10px] font-bold border transition-all ${isSelected ? activeClass : inactiveClass}">${opt}</button>`;
+        }).join('');
+    };
 
     vc.innerHTML = `
-        <h4 class="font-bold text-[10px] uppercase tracking-widest text-luxury-dark mb-3"><i class="fas fa-magic text-luxury-rose mr-1"></i> Custom Bouquet Studio</h4>
-        <div class="mb-4">
-            <span class="block text-[9px] font-bold text-gray-400 uppercase tracking-widest mb-2">Tap to add elements</span>
-            <div class="flex flex-wrap gap-2">${flowerHtml}</div>
+        <h4 class="font-bold text-[11px] uppercase tracking-widest text-luxury-dark mb-4 border-b border-luxury-blush pb-2"><i class="fas fa-magic text-luxury-rose mr-1"></i> Custom Bouquet Studio</h4>
+        
+        <div class="mb-5">
+            <span class="block text-[9px] font-bold text-gray-400 uppercase tracking-widest mb-2">1. Primary Flowers (Select multiple)</span>
+            <div class="flex flex-wrap gap-2">${generateChips(flowerOptions, activeBuild.flowers, 'th_toggleBuildArray("flowers", ', true)}</div>
         </div>
+        
+        <div class="mb-5">
+            <span class="block text-[9px] font-bold text-gray-400 uppercase tracking-widest mb-2">2. Filler Foliage (Select multiple)</span>
+            <div class="flex flex-wrap gap-2">${generateChips(fillerOptions, activeBuild.fillers, 'th_toggleBuildArray("fillers", ', true)}</div>
+        </div>
+        
+        <div class="mb-5">
+            <span class="block text-[9px] font-bold text-gray-400 uppercase tracking-widest mb-2">3. Wrapping Style</span>
+            <div class="flex flex-wrap gap-2">${generateChips(wrapOptions, activeBuild.wrapping, 'th_setBuildString("wrapping", ', false)}</div>
+        </div>
+        
         <div>
-            <span class="block text-[9px] font-bold text-gray-400 uppercase tracking-widest mb-2">Select wrapping aesthetic</span>
-            <div class="flex flex-wrap gap-2">${wrapHtml}</div>
+            <span class="block text-[9px] font-bold text-gray-400 uppercase tracking-widest mb-2">4. Ribbon Accent</span>
+            <div class="flex flex-wrap gap-2">${generateChips(ribbonOptions, activeBuild.ribbon, 'th_setBuildString("ribbon", ', false)}</div>
         </div>
     `;
     vc.classList.remove('hidden');
 }
 
-window.th_toggleBuildFlower = function(flower) {
-    const idx = activeBuild.flowers.indexOf(flower);
-    if (idx > -1) activeBuild.flowers.splice(idx, 1);
-    else activeBuild.flowers.push(flower);
-    
-    // Re-render the visual customizer to update active states
-    const pid = document.getElementById('product-view').getAttribute('data-current-id');
-    const p = products.find(x => x.id == pid);
+window.th_toggleBuildArray = function(category, value) {
+    const idx = activeBuild[category].indexOf(value);
+    if (idx > -1) activeBuild[category].splice(idx, 1);
+    else activeBuild[category].push(value);
+    const p = products.find(x => x.id == document.getElementById('product-view').getAttribute('data-current-id'));
     if(p) renderVisualCustomizer(p);
 };
 
-window.th_setBuildWrapping = function(wrap) {
-    activeBuild.wrapping = wrap;
-    const pid = document.getElementById('product-view').getAttribute('data-current-id');
-    const p = products.find(x => x.id == pid);
+window.th_setBuildString = function(category, value) {
+    activeBuild[category] = value;
+    const p = products.find(x => x.id == document.getElementById('product-view').getAttribute('data-current-id'));
     if(p) renderVisualCustomizer(p);
 };
 
