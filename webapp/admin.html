@@ -108,7 +108,7 @@
                 <div class="bg-white p-5 shadow-sm border border-luxury-blush rounded-2xl">
                     <h3 class="font-bold text-[10px] text-luxury-dark uppercase tracking-[0.1em] mb-4 flex items-center gap-2"><i class="fas fa-cog text-luxury-rose"></i> Global Settings</h3>
                     <form id="settings-form" class="space-y-4">
-                        <div><label class="block font-bold mb-1.5 text-gray-400 text-[8px] uppercase tracking-[0.1em]">Store Name</label><input type="text" id="admin-store-name" required class="w-full bg-luxury-bg border border-luxury-blush rounded-lg px-3 py-2.5 text-[11px] font-medium outline-none focus:ring-2 focus:ring-luxury-rose/30"></div>
+                        <div><label class="block font-bold mb-1.5 text-gray-400 text-[8px] uppercase tracking-[0.1em]">Promo Marquee Text</label><input type="text" id="admin-promo-text" placeholder="e.g. Free shipping on all orders over ₹2499" class="w-full bg-luxury-bg border border-luxury-blush rounded-lg px-3 py-2.5 text-[11px] font-medium outline-none focus:ring-2 focus:ring-luxury-rose/30"></div>
                         <div><label class="block font-bold mb-1.5 text-gray-400 text-[8px] uppercase tracking-[0.1em]">Instagram URL</label><input type="url" id="admin-ig" placeholder="https://instagram.com/..." class="w-full bg-luxury-bg border border-luxury-blush rounded-lg px-3 py-2.5 text-[11px] font-medium outline-none focus:ring-2 focus:ring-luxury-rose/30"></div>
                         <div><label class="block font-bold mb-1.5 text-gray-400 text-[8px] uppercase tracking-[0.1em]">Default Country Code</label><select id="admin-country-code" class="w-full bg-luxury-bg border border-luxury-blush rounded-lg px-3 py-2.5 text-[11px] font-medium outline-none focus:ring-2 focus:ring-luxury-rose/30 cursor-pointer"></select></div>
                         <div><label class="block font-bold mb-1.5 text-gray-400 text-[8px] uppercase tracking-[0.1em]">WhatsApp Number</label><input type="text" id="admin-wa" required class="w-full bg-luxury-bg border border-luxury-blush rounded-lg px-3 py-2.5 text-[11px] font-medium outline-none focus:ring-2 focus:ring-luxury-rose/30"></div>
@@ -127,9 +127,35 @@
 
         <!-- Orders Management Section -->
         <section id="admin-orders-section" class="w-full hidden">
-            <div class="max-w-4xl mx-auto mt-4 mb-6 flex justify-center gap-3">
-                <button type="button" id="subtab-active" class="text-white bg-luxury-dark font-bold text-[9px] uppercase tracking-[0.1em] px-6 py-3 rounded-full border border-luxury-dark transition-colors shadow-sm">Active Commissions</button>
-                <button type="button" id="subtab-completed" class="text-gray-500 bg-luxury-bg hover:text-luxury-dark font-bold text-[9px] uppercase tracking-[0.1em] px-6 py-3 rounded-full border border-luxury-blush transition-colors shadow-sm">The Archives</button>
+            
+            <!-- Analytics Dashboard -->
+            <div class="max-w-4xl mx-auto mt-2 mb-8 grid grid-cols-2 md:grid-cols-4 gap-3 sm:gap-4">
+                <div class="bg-white border border-luxury-blush rounded-2xl p-4 sm:p-5 shadow-sm flex flex-col justify-center items-center text-center transition-transform hover:-translate-y-1">
+                    <span class="text-[8px] sm:text-[9px] font-bold text-gray-400 uppercase tracking-widest mb-1">Total Revenue</span>
+                    <span class="font-poppins font-black text-xl sm:text-2xl text-luxury-dark tracking-tight" id="analytics-revenue">₹0</span>
+                </div>
+                <div class="bg-white border border-luxury-blush rounded-2xl p-4 sm:p-5 shadow-sm flex flex-col justify-center items-center text-center transition-transform hover:-translate-y-1">
+                    <span class="text-[8px] sm:text-[9px] font-bold text-luxury-rose uppercase tracking-widest mb-1">This Month</span>
+                    <span class="font-poppins font-black text-xl sm:text-2xl text-luxury-dark tracking-tight" id="analytics-month">₹0</span>
+                </div>
+                <div class="bg-white border border-luxury-blush rounded-2xl p-4 sm:p-5 shadow-sm flex flex-col justify-center items-center text-center transition-transform hover:-translate-y-1">
+                    <span class="text-[8px] sm:text-[9px] font-bold text-gray-400 uppercase tracking-widest mb-1">Active</span>
+                    <span class="font-poppins font-black text-xl sm:text-2xl text-luxury-rose tracking-tight" id="analytics-active">0</span>
+                </div>
+                <div class="bg-white border border-luxury-blush rounded-2xl p-4 sm:p-5 shadow-sm flex flex-col justify-center items-center text-center transition-transform hover:-translate-y-1">
+                    <span class="text-[8px] sm:text-[9px] font-bold text-gray-400 uppercase tracking-widest mb-1">Archived</span>
+                    <span class="font-poppins font-black text-xl sm:text-2xl text-green-600 tracking-tight" id="analytics-completed">0</span>
+                </div>
+            </div>
+
+            <div class="max-w-4xl mx-auto mt-4 mb-6 flex flex-col sm:flex-row justify-between items-center gap-4">
+                <div class="flex gap-3">
+                    <button type="button" id="subtab-active" class="text-white bg-luxury-dark font-bold text-[9px] uppercase tracking-[0.1em] px-6 py-3 rounded-full border border-luxury-dark transition-colors shadow-sm">Active Commissions</button>
+                    <button type="button" id="subtab-completed" class="text-gray-500 bg-luxury-bg hover:text-luxury-dark font-bold text-[9px] uppercase tracking-[0.1em] px-6 py-3 rounded-full border border-luxury-blush transition-colors shadow-sm">The Archives</button>
+                </div>
+                <button type="button" onclick="window.exportOrdersCSV()" class="text-luxury-dark bg-white hover:bg-luxury-bg font-bold text-[9px] uppercase tracking-[0.1em] px-5 py-3 rounded-full border border-luxury-blush transition-colors shadow-sm flex items-center gap-2">
+                    <i class="fas fa-file-csv text-green-600"></i> Export to CSV
+                </button>
             </div>
             <div class="max-w-4xl mx-auto bg-white p-5 sm:p-8 shadow-sm border border-luxury-blush rounded-2xl h-fit">
                 <h2 id="order-section-title" class="font-logo font-normal text-2xl text-luxury-dark border-b border-luxury-blush pb-3 mb-5">Concierge Desk: Active Workspace</h2>

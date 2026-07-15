@@ -81,15 +81,15 @@ async function fetchRuntimeSettings() {
         const { data } = await _supabase.from('store_config').select('*').limit(1);
         if(data && data.length > 0) {
             const cloud = data[0];
-            settings = { storeName: cloud.store_name, instagram: cloud.instagram_url, whatsapp: cloud.whatsapp_num, upiId: cloud.upi_id, countryCode: cloud.country_code || "+91" };
+            settings = { promoText: cloud.promo_text, instagram: cloud.instagram_url, whatsapp: cloud.whatsapp_num, upiId: cloud.upi_id, countryCode: cloud.country_code || "+91" };
             localStorage.setItem('th_settings', JSON.stringify(settings));
         }
     } catch(e) {}
     
+    if(document.getElementById('admin-promo-text')) document.getElementById('admin-promo-text').value = settings.promoText || '';
     document.getElementById('admin-wa').value = settings.whatsapp || ''; 
     document.getElementById('admin-country-code').value = settings.countryCode || '+91'; 
     if(document.getElementById('admin-upi-id')) document.getElementById('admin-upi-id').value = settings.upiId || 'khushisj315@oksbi';
-    if(document.getElementById('admin-store-name')) document.getElementById('admin-store-name').value = settings.storeName || 'Twisted Happiness';
     if(document.getElementById('admin-ig')) document.getElementById('admin-ig').value = settings.instagram || 'https://www.instagram.com/khushiified_art?igsh=aW1vZ2N4cTl2OWo=';
 }
 
@@ -109,18 +109,18 @@ function bindAdminEvents() {
 
 async function saveSettings(e) { 
     e.preventDefault(); 
-    const n = document.getElementById('admin-store-name').value.trim();
+    const p = document.getElementById('admin-promo-text').value.trim();
     const i = document.getElementById('admin-ig').value.trim();
     const w = document.getElementById('admin-wa').value.trim();
     const c = document.getElementById('admin-country-code').value;
     const u = document.getElementById('admin-upi-id').value.trim();
     
-    const payload = { id: 1, store_name: n, instagram_url: i, whatsapp_num: w, country_code: c, upi_id: u };
+    const payload = { id: 1, promo_text: p, instagram_url: i, whatsapp_num: w, country_code: c, upi_id: u };
     
     try {
         const { error } = await _supabase.from('store_config').upsert([payload]);
         if (error) throw error;
-        settings = { storeName: n, instagram: i, whatsapp: w, countryCode: c, upiId: u };
+        settings = { promoText: p, instagram: i, whatsapp: w, countryCode: c, upiId: u };
         localStorage.setItem('th_settings', JSON.stringify(settings)); 
         showToast('Settings Saved & Synced to Cloud', 'fa-check'); 
     } catch(err) {
@@ -312,11 +312,72 @@ function switchOrderTab(tab) {
 // 🚨 ORDER MANAGEMENT ENGINE
 async function fetchOrders() {
     try {
-        const { data, error } = await _supabase.from('orders').select('*').order('created_at', { ascending: false }); if (error) throw error; allOrders = data;
-        const pendingCount = allOrders.filter(o => o.status === 'new' || o.status === 'pending').length; const badge = document.getElementById('admin-order-badge');
-        if (pendingCount > 0) { badge.textContent = pendingCount; badge.classList.remove('hidden'); } else { badge.classList.add('hidden'); }
-        requestAnimationFrame(() => { renderActiveOrders(); renderCompletedOrders(); });
-    } catch (err) { console.error("Error fetching orders", err); }
+        const { data, error } = await _supabase.from('orders').select('*').order('created_at', { ascending: false }); 
+        if (error) throw error; 
+        allOrders = data;
+        
+        const pendingCount = allOrders.filter(o => o.status === 'new' || o.status === 'pending').length; 
+        const badge = document.getElementById('admin-order-badge');
+        
+        if (pendingCount > 0) { 
+            badge.textContent = pendingCount; 
+            badge.classList.remove('hidden'); 
+        } else { 
+            badge.classList.add('hidden'); 
+        }
+        
+        // Trigger Analytics Calculation
+        updateAnalyticsDashboard();
+
+        requestAnimationFrame(() => { 
+            renderActiveOrders(); 
+            renderCompletedOrders(); 
+        });
+    } catch (err) { 
+        console.error("Error fetching orders", err); 
+    }
+}
+
+function updateAnalyticsDashboard() {
+    let totalRevenue = 0;
+    let currentMonthRevenue = 0;
+    let activeCount = 0;
+    let completedCount = 0;
+
+    const now = new Date();
+    const currentMonth = now.getMonth();
+    const currentYear = now.getFullYear();
+
+    allOrders.forEach(o => {
+        if (o.status === 'completed') {
+            completedCount++;
+            const orderTotal = parseFloat(o.total) || 0;
+            totalRevenue += orderTotal;
+
+            const orderDate = new Date(o.created_at);
+            if (orderDate.getMonth() === currentMonth && orderDate.getFullYear() === currentYear) {
+                currentMonthRevenue += orderTotal;
+            }
+        } else if (['new', 'pending', 'curating', 'ready'].includes(o.status) || o.status === 'cancelled') {
+            // Include cancelled in active array if you want to track them, otherwise exclude
+            if (o.status !== 'cancelled') {
+                activeCount++;
+            }
+        }
+    });
+
+    const formattedRevenue = totalRevenue.toLocaleString('en-IN');
+    const formattedMonth = currentMonthRevenue.toLocaleString('en-IN');
+
+    const revEl = document.getElementById('analytics-revenue');
+    const monthEl = document.getElementById('analytics-month');
+    const actEl = document.getElementById('analytics-active');
+    const compEl = document.getElementById('analytics-completed');
+
+    if (revEl) revEl.textContent = `₹${formattedRevenue}`;
+    if (monthEl) monthEl.textContent = `₹${formattedMonth}`;
+    if (actEl) actEl.textContent = activeCount;
+    if (compEl) compEl.textContent = completedCount;
 }
 
 function extractCustomerData(reqsString) { 
@@ -371,11 +432,13 @@ function renderCompletedOrders() {
 window.th_startCrafting = async function(id) {
     const order = allOrders.find(o => o.id === id); if(!order) return; showToast("Verifying & Starting...", "fa-spinner fa-spin");
     try {
-        await _supabase.from('orders').update({ status: 'curating' }).eq('id', id); showToast("Crafting Started", "fa-check"); fetchOrders(); 
+        await _supabase.from('orders').update({ status: 'curating' }).eq('id', id); 
+        showToast("Crafting Started", "fa-check"); 
+        fetchOrders(); 
         const customerData = extractCustomerData(order.customer_reqs);
         if (customerData.phone) {
             let cleanPhone = customerData.phone.replace(/\D/g, ''); 
-            const acceptMsg = `✨ Dear ${customerData.name},\n\nWe have successfully received your payment! 🎉\n\nYour exquisite commission from *${settings.storeName || 'Twisted Happiness'}* has been embraced. Our artisan has officially begun handcrafting your masterpiece.\n\nIt will take approximately *${customerData.prepTime}* to perfectly curate and prepare for dispatch.\n\nThank you for trusting us to curate your space! 🕊️`;
+            const acceptMsg = `Dear ${customerData.name},\n\nWe have successfully received your payment for your order. Your exquisite commission from *Twisted Happiness* has been embraced, and our artisan has officially begun handcrafting your piece.\n\nIt will take approximately *${customerData.prepTime}* to prepare for dispatch.\n\nThank you for trusting us.`;
             window.open(`https://wa.me/${cleanPhone}?text=${encodeURIComponent(acceptMsg)}`, '_blank');
         }
     } catch(e) { showToast("Error processing order", "fa-times", "text-red-500"); console.error(e); }
@@ -389,11 +452,13 @@ window.th_rejectOrder = async function(id) {
     if(!confirm("Deny this order? Customer will receive a WhatsApp message stating failure.")) return; 
     showToast("Declining...", "fa-spinner fa-spin"); 
     try { 
-        await _supabase.from('orders').delete().eq('id', id); showToast("Commission Denied", "fa-trash"); fetchOrders(); 
+        await _supabase.from('orders').update({ status: 'cancelled' }).eq('id', id); 
+        showToast("Commission Denied", "fa-trash"); 
+        fetchOrders(); 
         const customerData = extractCustomerData(order.customer_reqs);
         if (customerData.phone) {
             let cleanPhone = customerData.phone.replace(/\D/g, ''); 
-            const denyMsg = `✨ Dear ${customerData.name},\n\nWe are reaching out regarding your recent order attempt at *${settings.storeName || 'Twisted Happiness'}*.\n\nUnfortunately, we were unable to verify your UPI payment. As a result, your order reservation has been cancelled.\n\nIf the amount was deducted from your account, it will automatically be refunded by your bank within 2-3 business days.\n\nIf you would like to secure your handcrafted piece, please reply to this message and we will assist you! 🕊️`;
+            const denyMsg = `Dear ${customerData.name},\n\nWe are reaching out regarding your recent order attempt at *Twisted Happiness*.\n\nUnfortunately, we were unable to verify your UPI payment. As a result, your order reservation has been canceled.\n\nIf the amount was deducted from your account, it will automatically be refunded by your bank within 2-3 business days.\n\nIf you would like to secure your handcrafted piece, please reply to this message.`;
             window.open(`https://wa.me/${cleanPhone}?text=${encodeURIComponent(denyMsg)}`, '_blank');
         }
     } catch(e) { showToast("Error", "fa-times", "text-red-500"); } 
@@ -407,6 +472,58 @@ window.th_pushToShiprocket = async function(orderId, event) {
         showToast("Pushed to Shiprocket 🚀", "fa-rocket", "text-[#22c55e]");
     } catch (err) { console.error("Shiprocket API Error:", err); showToast("Failed to sync", "fa-times", "text-red-500"); }
     btn.innerHTML = originalHtml; btn.disabled = false;
+};
+
+// ==========================================
+// 🚨 DATA EXPORT ENGINE
+// ==========================================
+window.exportOrdersCSV = function() {
+    if (!allOrders || allOrders.length === 0) {
+        return window.showToast("No orders available to export", "fa-times", "text-red-500");
+    }
+    
+    // Define Headers
+    const headers = ["Order ID", "Date", "Status", "Customer Name", "Phone", "Total Amount (INR)", "Order Items"];
+    
+    // Map data to rows
+    const rows = allOrders.map(o => {
+        const date = new Date(o.created_at).toLocaleDateString('en-IN');
+        
+        // Extract customer details safely
+        const safeReqs = o.customer_reqs || "";
+        const nameMatch = safeReqs.match(/Patron:\s*([^|]+)/); 
+        const phoneMatch = safeReqs.match(/Ph:\s*([^|]+)/);
+        const customerName = nameMatch ? nameMatch[1].trim() : "N/A";
+        const customerPhone = phoneMatch ? phoneMatch[1].trim() : "N/A";
+
+        // Parse JSON items safely
+        let itemsString = "";
+        try {
+            const items = JSON.parse(o.order_details);
+            itemsString = items.map(i => `${i.qty}x ${i.name}`).join('; ');
+        } catch(e) { 
+            itemsString = "Custom Request / Parsing Error"; 
+        }
+        
+        // Escape quotes and commas for clean CSV formatting
+        return `"${o.id}","${date}","${o.status.toUpperCase()}","${customerName}","${customerPhone}","${o.total}","${itemsString}"`;
+    });
+    
+    // Construct Blob and Trigger Download
+    const csvContent = [headers.join(','), ...rows].join('\n');
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const link = document.createElement("a");
+    const url = URL.createObjectURL(blob);
+    
+    link.setAttribute("href", url);
+    link.setAttribute("download", `TH_Orders_Export_${new Date().toISOString().slice(0,10)}.csv`);
+    link.style.visibility = 'hidden';
+    
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    
+    window.showToast("Data Exported Successfully", "fa-file-download", "text-green-500");
 };
 
 function showToast(msg, icon = 'fa-check', color = 'text-luxury-rose') { 

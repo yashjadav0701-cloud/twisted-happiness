@@ -2,7 +2,11 @@
  * Twisted Happiness - Core Storefront Engine
  * Version: 15.5.0 - 100% Complete, Stable, & Globally Bound
  */
-
+let products = []; let currentMainCategory = 'All'; let activeSubCategories = []; let currentSortMode = 'newest'; let currentSearchQuery = ''; 
+let searchTimeout = null; let modalImages = []; let currentSlideIndex = 0; let isAnimating = false; let currentLightboxIndex = 0; let isLightboxAnimating = false; let currentModalLevel = 0; let statePushed = false;
+let checkoutStep = 1; let pendingOrderPayload = null; let currentOrderReference = null; let currentDeliveryFee = 0; let activeCouponValue = 0; let activeCouponCode = "";
+let selectedAddressIndex = savedAddresses.length > 0 ? 0 : -1; let editingAddressIndex = null; let currentSessionUser = null; let authModalMode = "login";
+let activeBuild = { flowers: [], wrapping: 'Classic Kraft' };
 const SUPABASE_URL = "https://gvrfucjtnyqfkdynrmqs.supabase.co"; 
 const SUPABASE_ANON_KEY = "sb_publishable_8jru2BqvTdE9bcwNOLIHAA_dx6aUCM0";
 let _supabase;
@@ -50,7 +54,7 @@ async function fetchRuntimeSettings() {
         const { data } = await _supabase.from('store_config').select('*').limit(1);
         if(data && data.length > 0) {
             const cloud = data[0];
-            settings = { storeName: cloud.store_name, instagram: cloud.instagram_url, whatsapp: cloud.whatsapp_num, upiId: cloud.upi_id, countryCode: cloud.country_code || "+91" };
+            settings = { promoText: cloud.promo_text, storeName: cloud.store_name, instagram: cloud.instagram_url, whatsapp: cloud.whatsapp_num, upiId: cloud.upi_id, countryCode: cloud.country_code || "+91" };
             localStorage.setItem('th_settings', JSON.stringify(settings));
         }
     } catch(e) { console.warn("Local storage fallback active"); }
@@ -58,12 +62,18 @@ async function fetchRuntimeSettings() {
 }
 
 function applyDynamicSettings() {
-    const name = settings.storeName || "Twisted Happiness";
+    const name = "Twisted Happiness";
     document.title = `${name} | Fine Art & Handcrafted Gifts`;
     ['dynamic-store-name', 'footer-dynamic-name', 'preloader-brand'].forEach(id => {
         if(document.getElementById(id)) document.getElementById(id).textContent = name;
     });
     if(document.getElementById('current-year')) document.getElementById('current-year').textContent = new Date().getFullYear();
+
+    // Inject Dynamic Promo Text
+    const defaultPromo = "✨ 100% Handcrafted Fine Art & Gifts ✨ Bespoke Canvas & Textured Clay Paintings ✨ Custom Sizing Up To 40x24\" ✨ Unlock VIP Discounts Up To 15% Off";
+    const promoToDisplay = settings.promoText ? settings.promoText : defaultPromo;
+    if(document.getElementById('promo-marquee-1')) document.getElementById('promo-marquee-1').textContent = promoToDisplay;
+    if(document.getElementById('promo-marquee-2')) document.getElementById('promo-marquee-2').textContent = promoToDisplay;
 }
 
 function setupSocialLinks() {
@@ -116,7 +126,7 @@ function injectSkeletons() {
 // ==========================================
 function bindDOMEvents() {
     document.addEventListener('keydown', (e) => { if (e.ctrlKey && e.shiftKey && e.key.toLowerCase() === 'k') { e.preventDefault(); window.location.href = '/khushiified'; } });
-    document.getElementById('prof-pin')?.addEventListener('input', () => { if (document.getElementById('checkout-overlay') && !document.getElementById('checkout-overlay').classList.contains('hidden')) updateCheckoutUI(); });
+    document.getElementById('prof-pin')?.addEventListener('input', handlePincodeInput);
     document.getElementById('searchInputDesk')?.addEventListener('input', (e) => syncSearch(e.target.value));
     document.getElementById('searchInputMob')?.addEventListener('input', (e) => syncSearch(e.target.value));
     document.getElementById('sortInputMob')?.addEventListener('change', (e) => setSortMode(e.target.value));
@@ -244,6 +254,8 @@ function generateProductCardHTML(p) {
 // ==========================================
 window.openProductPage = function(id) { 
     const p = products.find(x => x.id == id); if(!p) return; document.getElementById('product-view').setAttribute('data-current-id', p.id);
+    activeBuild = { flowers: [], wrapping: 'Classic Kraft' }; // Reset the visual builder
+    renderVisualCustomizer(p); // Render the visual studio if applicable
     const cp = Number(String(p.price || 0).replace(/[^0-9.,]/g, '')), dp = getDiscountPercent(String(p.id)), op = Math.round(cp * (1 + (dp / 100)));
     modalImages = [p.image1, p.image2, p.image3, p.image4, p.image5].filter(img => typeof img === 'string' && img.trim() !== ''); if (modalImages.length === 0) modalImages.push('https://placehold.co/400x500/F8E9EA/423133');
     
@@ -284,7 +296,29 @@ function renderRelatedProducts(cid, mc, sc) {
 window.th_updateCartQty = function(id, d, e) {
     if(e) { e.preventDefault(); e.stopPropagation(); } let ex = cart.find(x => x.id == id);
     if(ex) { ex.qty = parseInt(ex.qty || 1) + d; if(ex.qty <= 0) { cart = cart.filter(x => x.id != id); window.showToast("Removed from Bag", "fa-times"); } else { if(d > 0) window.showToast("Quantity Increased", "fa-plus"); } } 
-    else if(d > 0) { const p = products.find(x => x.id == id); if(p) { cart.push({ id: p.id, name: p.name, price: p.price, prepTime: p.prepTime, image: p.image1, isCustomizable: p.isCustomizable, mainCategory: p.mainCategory, qty: 1 }); window.showToast("Added to Bag", "fa-check"); } }
+    else if(d > 0) { 
+        const p = products.find(x => x.id == id); 
+        if(p) { 
+            // Capture visual builder specs
+            let customSpecsStr = "";
+            if (p.mainCategory === 'Pipe Cleaner Crafts' && activeBuild.flowers.length > 0) {
+                 customSpecsStr = `Elements: ${activeBuild.flowers.join(', ')} | Wrap: ${activeBuild.wrapping}`;
+            }
+            
+            cart.push({ 
+                id: p.id, 
+                name: p.name, 
+                price: p.price, 
+                prepTime: p.prepTime, 
+                image: p.image1, 
+                isCustomizable: p.isCustomizable, 
+                mainCategory: p.mainCategory, 
+                customSpecs: customSpecsStr, // Save the configuration
+                qty: 1 
+            }); 
+            window.showToast("Added to Bag", "fa-check"); 
+        } 
+    }
     localStorage.setItem('th_cart', JSON.stringify(cart)); updateCartCount();
     const pv = document.getElementById('product-view'); if(pv && !pv.classList.contains('hidden')) updateProductButtons(id);
     if(document.getElementById('checkout-overlay') && !document.getElementById('checkout-overlay').classList.contains('hidden')){ if (cart.length === 0) { window.closeCheckout(); return window.showToast("Bag is empty!", "fa-times"); } renderCheckoutItems(); updateCheckoutUI(); }
@@ -310,11 +344,15 @@ window.routeCheckoutFromModal = function(id, e) {
 };
 
 function renderCheckoutItems() {
-    const c = document.getElementById('checkout-items-list'); if(!c) return; if (cart.length === 0) { c.innerHTML = '<div class="text-center py-10 text-gray-400 font-medium text-sm"><i class="fas fa-shopping-bag text-4xl block mb-3 opacity-30"></i> Your bag is completely empty.</div>'; return; }
+    const c = document.getElementById('checkout-items-list'); if(!c) return; if (cart.length === 0) { c.innerHTML = '<div class="text-center py-10 text-gray-400 font-medium text-sm"><i class="fas fa-shopping-bag text-4xl block mb-3 opacity-30"></i> Your bag is completely empty.</div>'; document.getElementById('cart-upsell-container')?.classList.add('hidden'); return; }
     let h = ''; cart.forEach(i => { const cp = Number((i.price || 0).toString().replace(/[^0-9.,]/g, '')), dp = getDiscountPercent(String(i.id)), op = Math.round(cp * (1 + (dp / 100))), img = (typeof i.image1 === 'string' && i.image1.trim() !== '') ? i.image1 : (typeof i.image === 'string' ? i.image : 'https://placehold.co/150/F8E9EA/423133'), q = parseInt(i.qty || 1);
-        h += `<div class="flex flex-col sm:flex-row gap-4 border border-luxury-blush bg-white p-4 rounded-2xl shadow-sm"><img src="${img}" class="w-20 h-24 sm:w-24 sm:h-28 object-cover rounded-xl border border-luxury-blush shrink-0 bg-luxury-bg"><div class="flex flex-col justify-between w-full"><div><h4 class="font-bitter text-[14px] sm:text-[15px] font-semibold text-luxury-dark mb-1 leading-snug">${i.name}</h4><p class="text-[10px] uppercase tracking-widest font-bold text-gray-400 mb-3">${i.mainCategory || i.category || 'Handcrafted Art'}</p><div class="flex items-baseline gap-2 mb-4"><span class="font-poppins text-luxury-dark font-bold text-[16px] sm:text-[18px]">₹${cp}</span><span class="font-poppins text-gray-400 text-[11px] line-through">₹${op}</span><span class="text-green-600 font-bold text-[10px] ml-1">${dp}% Off</span></div></div><div class="flex items-center gap-3"><div class="flex items-center bg-white border border-luxury-blush rounded-full h-[36px] overflow-hidden shadow-sm"><button type="button" onclick="window.th_updateCartQty('${i.id}', -1, event)" class="w-10 h-full flex items-center justify-center text-luxury-dark hover:bg-luxury-blush transition-colors"><i class="fas fa-minus text-[10px]"></i></button><div class="w-10 h-full flex items-center justify-center border-l border-r border-luxury-blush text-[12px] font-bold text-luxury-rose bg-luxury-bg">${q}</div><button type="button" onclick="window.th_updateCartQty('${i.id}', 1, event)" class="w-10 h-full flex items-center justify-center text-luxury-dark hover:bg-luxury-blush transition-colors"><i class="fas fa-plus text-[10px]"></i></button></div></div></div></div>`;
+        h += `<div class="flex flex-col sm:flex-row gap-4 border border-luxury-blush bg-white p-4 rounded-2xl shadow-sm"><img src="${img}" class="w-20 h-24 sm:w-24 sm:h-28 object-cover rounded-xl border border-luxury-blush shrink-0 bg-luxury-bg"><div class="flex flex-col justify-between w-full"><div><h4 class="font-bitter text-[14px] sm:text-[15px] font-semibold text-luxury-dark mb-1 leading-snug">${i.name}</h4><p class="text-[10px] uppercase tracking-widest font-bold text-gray-400 mb-1">${i.mainCategory || i.category || 'Handcrafted Art'}</p>
+${i.customSpecs ? `<p class="text-[9px] font-medium text-luxury-rose mb-3 bg-luxury-rose/10 inline-block px-2 py-1 rounded-md border border-luxury-rose/20 leading-relaxed">${i.customSpecs}</p>` : `<div class="mb-3"></div>`}<div class="flex items-baseline gap-2 mb-4"><span class="font-poppins text-luxury-dark font-bold text-[16px] sm:text-[18px]">₹${cp}</span><span class="font-poppins text-gray-400 text-[11px] line-through">₹${op}</span><span class="text-green-600 font-bold text-[10px] ml-1">${dp}% Off</span></div></div><div class="flex items-center gap-3"><div class="flex items-center bg-white border border-luxury-blush rounded-full h-[36px] overflow-hidden shadow-sm"><button type="button" onclick="window.th_updateCartQty('${i.id}', -1, event)" class="w-10 h-full flex items-center justify-center text-luxury-dark hover:bg-luxury-blush transition-colors"><i class="fas fa-minus text-[10px]"></i></button><div class="w-10 h-full flex items-center justify-center border-l border-r border-luxury-blush text-[12px] font-bold text-luxury-rose bg-luxury-bg">${q}</div><button type="button" onclick="window.th_updateCartQty('${i.id}', 1, event)" class="w-10 h-full flex items-center justify-center text-luxury-dark hover:bg-luxury-blush transition-colors"><i class="fas fa-plus text-[10px]"></i></button></div></div></div></div>`;
     });
     const dw = document.getElementById('comm-dimensions-wrapper'); if (cart.some(i => i.isCustomizable)) dw?.classList.remove('hidden'); else dw?.classList.add('hidden'); c.innerHTML = h;
+    
+    // Trigger Upsell rendering
+    renderCartUpsells();
 }
 
 // ==========================================
@@ -397,7 +435,7 @@ window.preparePaymentGateway = function() {
     const scc = (settings.countryCode || '+91'), fcp = scc + " " + ta.phone; let fa = `${ta.address_1}, ${ta.address_2 ? ta.address_2 + ', ' : ''}${ta.city}, ${ta.state} - ${ta.pincode}`;
     const cln = ta.first_name.replace(/[^a-zA-Z0-9]/g, '').substring(0, 10); currentOrderReference = `TH_${cln}_${String(Date.now()).slice(-4)}`; 
     let ad = `ID: ${currentOrderReference} | Ph: ${fcp} | Patron: ${ta.first_name} ${ta.last_name || ''} | Email: ${ta.email} | Address: ${fa} | Purpose: ${t} | Notes: ${c} | Delivery Fee: ₹${currentDeliveryFee}`; if(activeCouponValue > 0) ad += ` | Coupon: ${activeCouponCode} (-₹${cd})`; if(dims && document.getElementById('comm-dimensions-wrapper') && !document.getElementById('comm-dimensions-wrapper').classList.contains('hidden')) ad += ` | Size: ${dims}`; ad += ` | Est. Prep: ${tpt}`; 
-    const fmt = Number(ft).toFixed(2), uId = (settings.upiId || "khushisj315@oksbi").trim(), uLnk = `upi://pay?pa=${uId}&pn=${settings.storeName ? settings.storeName.replace(/\s+/g, '_') : 'Twisted_Happiness'}&am=${fmt}&cu=INR&tn=${currentOrderReference}`;
+    const fmt = Number(ft).toFixed(2), uId = (settings.upiId || "khushisj315@oksbi").trim(), uLnk = `upi://pay?pa=${uId}&pn=Twisted_Happiness&am=${fmt}&cu=INR&tn=${currentOrderReference}`;
     pendingOrderPayload = { order_details: JSON.stringify(its), subtotal: ss, discount: vd, total: ft, customer_reqs: ad, status: 'new', user_id: currentSessionUser ? currentSessionUser.id : null };
     setTimeout(() => { checkoutStep = 3; if(document.getElementById('checkout-payment-amount')) document.getElementById('checkout-payment-amount').textContent = `₹${fmt}`; const vb = document.getElementById('btn-confirm-payment'); if(vb) { vb.innerHTML = 'I Have Completed Payment <i class="fas fa-check-circle"></i>'; vb.disabled = false; } if (isMobileDevice()) { if(document.getElementById('payment-mobile-btn')) document.getElementById('payment-mobile-btn').href = uLnk; document.getElementById('payment-mobile-container')?.classList.remove('hidden'); document.getElementById('payment-qr-container')?.classList.add('hidden'); } else { const qrUrl = `https://quickchart.io/qr?size=250&margin=2&text=${encodeURIComponent(uLnk)}`; if(document.getElementById('payment-qr-img')) document.getElementById('payment-qr-img').src = qrUrl; document.getElementById('payment-qr-container')?.classList.remove('hidden'); document.getElementById('payment-mobile-container')?.classList.add('hidden'); } updateCheckoutUI(); document.getElementById('checkout-overlay')?.scrollTo({top: 0, behavior: 'smooth'}); hideInteractionLoader(); }, 1500); 
 };
@@ -414,8 +452,90 @@ window.confirmPaymentAndOrder = async function() {
 // 🚨 ORDER TRACKING LOGIC
 // ==========================================
 async function renderCustomerOrdersPipeline() {
-    const c = document.getElementById('customer-orders-pipeline'); if(!c || !currentSessionUser) return; c.innerHTML = '<div class="text-center py-8 text-gray-400 text-[11px] font-medium"><i class="fas fa-spinner fa-spin mr-2"></i> Querying secure logs...</div>';
-    try { const { data } = await _supabase.from('orders').select('*').eq('user_id', currentSessionUser.id).order('created_at', { ascending: false }); if(!data || data.length === 0) { c.innerHTML = '<div class="text-center p-10 text-gray-400 text-[11px] uppercase tracking-widest"><i class="fas fa-box-open text-2xl block mb-2 opacity-40"></i> No commissions found.</div>'; return; } let html = ''; data.forEach(o => { const dt = new Date(o.created_at).toLocaleDateString('en-IN', { day: 'numeric', month: 'short' }); let t = "Verifying Payment", cl = "text-yellow-600 bg-yellow-50 border-yellow-200"; if (o.status === 'curating') { t = "Artisan is Crafting"; cl = "text-luxury-gold bg-luxury-gold/5 border-luxury-gold/20"; } else if (o.status === 'ready') { t = "Ready for Dispatch"; cl = "text-purple-600 bg-purple-50 border-purple-200"; } else if (o.status === 'completed') { t = "Elegantly Delivered"; cl = "text-green-600 bg-green-50 border-green-200"; } const idm = (o.customer_reqs || '').match(/Order ID:\s*([^|]+)/); const exId = idm ? idm[1].trim() : 'TH_LOG'; html += `<div class="bg-white border border-luxury-blush p-4 rounded-2xl shadow-sm"><div class="flex justify-between items-start border-b border-luxury-blush pb-3 mb-3"><div><span class="text-[8px] text-gray-400 uppercase tracking-widest block mb-0.5">Reference</span><h4 class="font-poppins font-bold text-sm">${exId}</h4></div><span class="text-[8px] font-bold border px-2 py-0.5 rounded uppercase ${cl}">${t}</span></div><p class="text-gray-400 text-[10px]">Placed on ${dt}</p><p class="font-bold text-luxury-dark text-[12px] mt-1">Invoice Total: ₹${o.total}</p></div>`; }); c.innerHTML = html; } catch(err) { c.innerHTML = '<div class="text-center text-red-500 py-4 text-xs">Failed to fetch.</div>'; }
+    const c = document.getElementById('customer-orders-pipeline'); 
+    if(!c || !currentSessionUser) return; 
+    
+    c.innerHTML = '<div class="text-center py-8 text-gray-400 text-[11px] font-medium"><i class="fas fa-spinner fa-spin mr-2"></i> Fetching your archive...</div>';
+    
+    try { 
+        const { data } = await _supabase.from('orders').select('*').eq('user_id', currentSessionUser.id).order('created_at', { ascending: false }); 
+        
+        if(!data || data.length === 0) { 
+            c.innerHTML = '<div class="text-center p-10 text-gray-400 text-[11px] uppercase tracking-widest"><i class="fas fa-box-open text-2xl block mb-2 opacity-40"></i> No commissions found.</div>'; 
+            return; 
+        } 
+        
+        let html = ''; 
+        data.forEach(o => { 
+            const dt = new Date(o.created_at).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' }); 
+            
+            // Determine active step for the progress bar
+            let step = 1;
+            let statusText = "Verifying Payment";
+            if (o.status === 'curating') { step = 2; statusText = "Artisan is Crafting"; }
+            else if (o.status === 'ready') { step = 3; statusText = "Dispatched"; }
+            else if (o.status === 'completed') { step = 4; statusText = "Delivered"; }
+
+            const idm = (o.customer_reqs || '').match(/ID:\s*([^|]+)/); 
+            const exId = idm ? idm[1].trim() : 'TH_ORDER'; 
+
+            // Parse items to show thumbnails
+            let itemsHtml = '';
+            try {
+                const items = JSON.parse(o.order_details);
+                items.forEach(i => {
+                    itemsHtml += `<img src="${i.image}" class="w-10 h-10 rounded-md object-cover border border-luxury-blush" title="${i.name} (x${i.qty})">`;
+                });
+            } catch(e) {}
+
+            html += `
+            <details class="bg-white border border-luxury-blush rounded-2xl shadow-sm group overflow-hidden cursor-pointer">
+                <summary class="p-5 list-none flex flex-col sm:flex-row justify-between sm:items-center gap-4 outline-none">
+                    <div class="flex flex-col">
+                        <span class="text-[9px] text-gray-400 uppercase tracking-widest font-bold mb-1">Order ${exId}</span>
+                        <h4 class="font-poppins font-bold text-luxury-dark text-sm mb-1">${statusText}</h4>
+                        <p class="text-gray-400 text-[10px]">${dt} • ₹${o.total}</p>
+                    </div>
+                    <div class="flex items-center justify-between sm:justify-end w-full sm:w-auto gap-4">
+                        <div class="flex gap-1">${itemsHtml}</div>
+                        <i class="fas fa-chevron-down text-gray-300 transition-transform group-open:rotate-180"></i>
+                    </div>
+                </summary>
+                
+                <div class="p-5 pt-0 border-t border-luxury-blush mt-2 bg-luxury-bg/50">
+                    <!-- Visual Status Tracker -->
+                    <div class="relative flex justify-between items-center w-full max-w-sm mx-auto mt-6 mb-2">
+                        <div class="absolute left-0 top-1/2 -translate-y-1/2 w-full h-1 bg-luxury-blush z-0 rounded-full"></div>
+                        <div class="absolute left-0 top-1/2 -translate-y-1/2 h-1 bg-luxury-rose z-0 rounded-full transition-all" style="width: ${(step-1) * 33.33}%"></div>
+                        
+                        <!-- Step 1 -->
+                        <div class="relative z-10 flex flex-col items-center gap-2">
+                            <div class="w-6 h-6 rounded-full flex items-center justify-center text-[10px] ${step >= 1 ? 'bg-luxury-rose text-white' : 'bg-white border-2 border-luxury-blush text-gray-300'}"><i class="fas fa-receipt"></i></div>
+                            <span class="text-[7px] font-bold uppercase tracking-widest ${step >= 1 ? 'text-luxury-dark' : 'text-gray-400'} absolute -bottom-5 w-max">Placed</span>
+                        </div>
+                        <!-- Step 2 -->
+                        <div class="relative z-10 flex flex-col items-center gap-2">
+                            <div class="w-6 h-6 rounded-full flex items-center justify-center text-[10px] ${step >= 2 ? 'bg-luxury-rose text-white' : 'bg-white border-2 border-luxury-blush text-gray-300'}"><i class="fas fa-paint-brush"></i></div>
+                            <span class="text-[7px] font-bold uppercase tracking-widest ${step >= 2 ? 'text-luxury-dark' : 'text-gray-400'} absolute -bottom-5 w-max">Crafting</span>
+                        </div>
+                        <!-- Step 3 -->
+                        <div class="relative z-10 flex flex-col items-center gap-2">
+                            <div class="w-6 h-6 rounded-full flex items-center justify-center text-[10px] ${step >= 3 ? 'bg-luxury-rose text-white' : 'bg-white border-2 border-luxury-blush text-gray-300'}"><i class="fas fa-box"></i></div>
+                            <span class="text-[7px] font-bold uppercase tracking-widest ${step >= 3 ? 'text-luxury-dark' : 'text-gray-400'} absolute -bottom-5 w-max">Shipped</span>
+                        </div>
+                        <!-- Step 4 -->
+                        <div class="relative z-10 flex flex-col items-center gap-2">
+                            <div class="w-6 h-6 rounded-full flex items-center justify-center text-[10px] ${step >= 4 ? 'bg-green-500 text-white' : 'bg-white border-2 border-luxury-blush text-gray-300'}"><i class="fas fa-check"></i></div>
+                            <span class="text-[7px] font-bold uppercase tracking-widest ${step >= 4 ? 'text-green-600' : 'text-gray-400'} absolute -bottom-5 w-max">Delivered</span>
+                        </div>
+                    </div>
+                </div>
+            </details>`; 
+        }); 
+        c.innerHTML = html; 
+    } catch(err) { 
+        c.innerHTML = '<div class="text-center text-red-500 py-4 text-xs">Failed to load archive.</div>'; 
+    }
 }
 
 window.openTrackOrderModal = function() { document.getElementById('track-order-id-guest').value = ''; document.getElementById('track-result-container-guest').classList.add('hidden'); window.openPolicyModal('track-order-modal', 'track-order-box'); };
@@ -459,9 +579,208 @@ function renderFilters() {
     const scd = document.getElementById('desktop-checkbox-filters'); if(scd) { let hDesk = ''; subs.forEach(c => { const isC = activeSubCategories.includes(c); hDesk += `<label class="flex items-center gap-3 cursor-pointer group w-full p-2 hover:bg-white rounded-lg transition-colors border border-transparent hover:border-luxury-blush"><div class="relative flex items-center justify-center w-[14px] h-[14px] rounded border border-luxury-rose/50 bg-white group-hover:border-luxury-rose transition-colors shrink-0 overflow-hidden shadow-sm"><input type="checkbox" value="${c}" class="peer sr-only" onchange="window.th_toggleSubCategory('${c}')" ${isC ? 'checked' : ''}><div class="absolute inset-0 bg-luxury-rose scale-0 peer-checked:scale-100 transition-transform duration-300 origin-center"></div><i class="fas fa-check text-[7px] text-white opacity-0 peer-checked:opacity-100 transition-opacity duration-300 absolute z-10"></i></div><span class="text-[10px] font-bold text-luxury-dark tracking-[0.1em] transition-colors truncate uppercase ${isC ? 'text-luxury-rose' : ''}">${c}</span></label>`; }); scd.innerHTML = hDesk || `<p class="text-[9px] text-gray-400 italic px-2 pt-2">No sub-categories</p>`; }
 }
 
+// ==========================================
+// 🚨 SMART ADDRESS AUTO-FILL
+// ==========================================
+let pincodeTimeout;
+
+function handlePincodeInput(e) {
+    // 1. Trigger the delivery fee UI update immediately
+    if (document.getElementById('checkout-overlay') && !document.getElementById('checkout-overlay').classList.contains('hidden')) {
+        updateCheckoutUI();
+    }
+
+    const pin = e.target.value.trim();
+    
+    // Only process if it's exactly 6 digits
+    if (pin.length === 6 && /^\d+$/.test(pin)) {
+        clearTimeout(pincodeTimeout);
+        pincodeTimeout = setTimeout(() => fetchCityStateFromPin(pin), 400);
+    } else {
+        // Clear fields if the pincode is altered or invalid
+        document.getElementById('prof-city').value = '';
+        document.getElementById('prof-state').value = '';
+    }
+}
+
+async function fetchCityStateFromPin(pincode) {
+    const loader = document.getElementById('pin-loader');
+    const cityInput = document.getElementById('prof-city');
+    const stateInput = document.getElementById('prof-state');
+
+    if (loader) loader.classList.remove('hidden');
+
+    try {
+        const response = await fetch(`https://api.postalpincode.in/pincode/${pincode}`);
+        const data = await response.json();
+
+        if (data && data[0].Status === "Success") {
+            // Extract the first PostOffice details
+            const postOffice = data[0].PostOffice[0];
+            
+            cityInput.value = postOffice.District || postOffice.Region;
+            stateInput.value = postOffice.State;
+            
+            // Visual feedback for auto-fill
+            cityInput.classList.add('bg-green-50', 'border-green-200');
+            stateInput.classList.add('bg-green-50', 'border-green-200');
+            
+            setTimeout(() => {
+                cityInput.classList.remove('bg-green-50', 'border-green-200');
+                stateInput.classList.remove('bg-green-50', 'border-green-200');
+            }, 1500);
+
+        } else {
+            window.showToast("Invalid Pincode entered.", "fa-exclamation-circle", "text-red-500");
+            cityInput.value = '';
+            stateInput.value = '';
+        }
+    } catch (error) {
+        console.error("Postal API Error:", error);
+        window.showToast("Network error while fetching location.", "fa-wifi", "text-yellow-500");
+    } finally {
+        if (loader) loader.classList.add('hidden');
+    }
+}
+
+// ==========================================
+// 🚨 SMART CART UPSELL LOGIC
+// ==========================================
+function renderCartUpsells() {
+    const uc = document.getElementById('cart-upsell-container');
+    if (!uc) return;
+
+    if (cart.length === 0) {
+        uc.classList.add('hidden');
+        return;
+    }
+
+    // 1. Gather IDs currently in the cart to avoid suggesting them
+    const cartIds = cart.map(i => String(i.id));
+
+    // 2. Prioritize suggesting lower-cost/giftable items like 'Pipe Cleaner Crafts'
+    let upsells = products.filter(p => !cartIds.includes(String(p.id)) && p.mainCategory === 'Pipe Cleaner Crafts');
+    
+    // 3. Fallback: If no Pipe Cleaners are left, suggest the cheapest available product not in cart
+    if (upsells.length === 0) {
+        upsells = products.filter(p => !cartIds.includes(String(p.id))).sort((a, b) => a.price - b.price);
+    }
+
+    // 4. Hide if nothing left to suggest
+    if (upsells.length === 0) {
+        uc.classList.add('hidden');
+        return;
+    }
+
+    // 5. Select the top recommendation
+    const suggestion = upsells[0];
+    const img = (typeof suggestion.image1 === 'string' && suggestion.image1.trim() !== '') ? suggestion.image1 : 'https://placehold.co/150/F8E9EA/423133';
+
+    uc.innerHTML = `
+        <div class="bg-gradient-to-r from-luxury-blush/30 to-transparent border border-luxury-blush rounded-2xl p-4 sm:p-5 shadow-sm flex items-center justify-between gap-4">
+            <div class="flex items-center gap-4 cursor-pointer" onclick="window.openProductPage('${suggestion.id}')">
+                <img src="${img}" class="w-14 h-14 sm:w-16 sm:h-16 object-cover rounded-xl border border-luxury-blush shadow-sm bg-luxury-bg shrink-0">
+                <div class="flex flex-col">
+                    <span class="text-[8px] sm:text-[9px] font-bold text-luxury-rose uppercase tracking-widest mb-0.5"><i class="fas fa-sparkles"></i> Perfect Pairing</span>
+                    <h4 class="font-bitter font-semibold text-[12px] sm:text-[14px] text-luxury-dark leading-tight line-clamp-1">${suggestion.name}</h4>
+                    <span class="font-poppins font-bold text-[11px] sm:text-[13px] text-luxury-dark mt-1">₹${suggestion.price}</span>
+                </div>
+            </div>
+            <button type="button" onclick="window.th_updateCartQty('${suggestion.id}', 1, event)" class="shrink-0 bg-white border border-luxury-dark text-luxury-dark hover:bg-luxury-dark hover:text-white font-bold px-4 py-2.5 rounded-full text-[9px] uppercase tracking-widest transition-colors shadow-sm">
+                Add
+            </button>
+        </div>
+    `;
+    uc.classList.remove('hidden');
+}
+
+window.th_submitReview = async function(pid, rating, comment) {
+    if(!currentSessionUser) return window.openCustomerAuthModal();
+    
+    // Check if the user has a completed order containing this product_id
+    const { data: verified } = await _supabase.from('orders')
+        .select('id')
+        .eq('user_id', currentSessionUser.id)
+        .eq('status', 'completed')
+        .ilike('order_details', `%${pid}%`);
+
+    if (!verified || verified.length === 0) {
+        return window.showToast("Only verified buyers can review", "fa-lock", "text-red-500");
+    }
+
+    const { error } = await _supabase.from('reviews').insert([{
+        product_id: pid,
+        user_id: currentSessionUser.id,
+        rating: rating,
+        comment: comment
+    }]);
+
+    if(error) window.showToast("Failed to post review", "fa-times", "text-red-500");
+    else window.showToast("Review Posted!", "fa-star", "text-luxury-gold");
+};
+
+// ==========================================
+// 🚨 VISUAL CUSTOMIZER STUDIO
+// ==========================================
+function renderVisualCustomizer(product) {
+    const vc = document.getElementById('visual-customizer-studio');
+    if (!vc) return;
+
+    // Only show the visual builder for Pipe Cleaner Crafts
+    if (product.mainCategory !== 'Pipe Cleaner Crafts') {
+        vc.classList.add('hidden');
+        return;
+    }
+
+    const flowerOptions = ['Crimson rose', 'Blush tulip', 'Ivory lily', 'Golden sunflower', 'Azure daisy', 'Lavender sprig'];
+    const wrapOptions = ['Classic Kraft', 'Midnight black', 'Silk ribbon', 'Vintage print'];
+
+    let flowerHtml = flowerOptions.map(f => {
+        const isSelected = activeBuild.flowers.includes(f);
+        return `<button type="button" onclick="window.th_toggleBuildFlower('${f}')" class="px-3 py-1.5 rounded-full text-[10px] font-bold border transition-all ${isSelected ? 'bg-luxury-rose text-white border-luxury-rose shadow-sm' : 'bg-white text-gray-500 border-luxury-blush hover:border-luxury-rose'}">${f}</button>`;
+    }).join('');
+
+    let wrapHtml = wrapOptions.map(w => {
+        const isSelected = activeBuild.wrapping === w;
+        return `<button type="button" onclick="window.th_setBuildWrapping('${w}')" class="px-3 py-1.5 rounded-full text-[10px] font-bold border transition-all ${isSelected ? 'bg-luxury-dark text-white border-luxury-dark shadow-sm' : 'bg-white text-gray-500 border-luxury-blush hover:border-luxury-dark'}">${w}</button>`;
+    }).join('');
+
+    vc.innerHTML = `
+        <h4 class="font-bold text-[10px] uppercase tracking-widest text-luxury-dark mb-3"><i class="fas fa-magic text-luxury-rose mr-1"></i> Custom Bouquet Studio</h4>
+        <div class="mb-4">
+            <span class="block text-[9px] font-bold text-gray-400 uppercase tracking-widest mb-2">Tap to add elements</span>
+            <div class="flex flex-wrap gap-2">${flowerHtml}</div>
+        </div>
+        <div>
+            <span class="block text-[9px] font-bold text-gray-400 uppercase tracking-widest mb-2">Select wrapping aesthetic</span>
+            <div class="flex flex-wrap gap-2">${wrapHtml}</div>
+        </div>
+    `;
+    vc.classList.remove('hidden');
+}
+
+window.th_toggleBuildFlower = function(flower) {
+    const idx = activeBuild.flowers.indexOf(flower);
+    if (idx > -1) activeBuild.flowers.splice(idx, 1);
+    else activeBuild.flowers.push(flower);
+    
+    // Re-render the visual customizer to update active states
+    const pid = document.getElementById('product-view').getAttribute('data-current-id');
+    const p = products.find(x => x.id == pid);
+    if(p) renderVisualCustomizer(p);
+};
+
+window.th_setBuildWrapping = function(wrap) {
+    activeBuild.wrapping = wrap;
+    const pid = document.getElementById('product-view').getAttribute('data-current-id');
+    const p = products.find(x => x.id == pid);
+    if(p) renderVisualCustomizer(p);
+};
+
 window.th_toggleSubCategory = function(cat) { const idx = activeSubCategories.indexOf(cat); if(idx > -1) { activeSubCategories.splice(idx, 1); } else { activeSubCategories.push(cat); } renderFilters(); renderProducts(currentSearchQuery); };
 
 window.openPolicyModal = function(mId, bId) { currentModalLevel = 2; window.safePushState(2); const mod = document.getElementById(mId); const bx = document.getElementById(bId); if(!mod || !bx) return; mod.classList.remove('hidden'); document.body.classList.add('overflow-hidden'); requestAnimationFrame(() => { mod.classList.remove('opacity-0'); bx.classList.remove('scale-95', 'translate-y-2'); bx.classList.add('scale-100', 'translate-y-0'); }); };
 window.closePolicyModal = function(mId, bId) { const mod = document.getElementById(mId); const bx = document.getElementById(bId); if(!mod || !bx) return; requestAnimationFrame(() => { mod.classList.add('opacity-0'); bx.classList.remove('scale-100', 'translate-y-0'); bx.classList.add('scale-95', 'translate-y-2'); setTimeout(() => { mod.classList.add('hidden'); if(document.getElementById('checkout-overlay')?.classList.contains('hidden')) { document.body.classList.remove('overflow-hidden'); } }, 200); }); };
+
 
 // --- END OF FILE ---
