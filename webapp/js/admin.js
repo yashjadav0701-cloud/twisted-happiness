@@ -48,16 +48,22 @@ function unlockDashboard() {
     document.getElementById('login-view').classList.add('hidden'); document.getElementById('admin-dashboard').classList.remove('hidden');
     requestAnimationFrame(() => {
         document.getElementById('admin-dashboard').classList.remove('opacity-0');
-        fetchRuntimeSettings(); fetchDatabase(); fetchOrders(); showToast('Studio Unlocked', 'fa-unlock'); 
+        // Isolate functions so a crash in one doesn't kill the others
+        fetchRuntimeSettings().catch(e => console.error(e)); 
+        fetchDatabase().catch(e => console.error(e)); 
+        fetchOrders().catch(e => console.error(e)); 
+        showToast('Studio Unlocked', 'fa-unlock'); 
     });
 }
 
 window.th_addPromoLine = function(val) {
-    const textVal = (typeof val === 'string') ? val : "";
-    const container = document.getElementById('promo-lines-container'); if(!container) return;
-    const div = document.createElement('div'); div.className = "flex items-center gap-2 promo-row";
-    div.innerHTML = `<input type="text" value="${textVal}" placeholder="e.g. Free Shipping..." class="promo-line-input w-full bg-white border border-luxury-blush rounded-lg px-3 py-2 text-[11px] font-medium outline-none focus:ring-2 focus:ring-luxury-rose/30"><button type="button" onclick="this.parentElement.remove()" class="text-red-400 hover:text-red-600 w-8 h-8 flex items-center justify-center shrink-0 border border-luxury-blush rounded-lg bg-white shadow-sm"><i class="fas fa-times"></i></button>`;
-    container.appendChild(div);
+    try {
+        const textVal = (typeof val === 'string') ? val : "";
+        const container = document.getElementById('promo-lines-container'); if(!container) return;
+        const div = document.createElement('div'); div.className = "flex items-center gap-2 promo-row";
+        div.innerHTML = `<input type="text" value="${textVal}" placeholder="e.g. Free Shipping..." class="promo-line-input w-full bg-white border border-luxury-blush rounded-lg px-3 py-2 text-[11px] font-medium outline-none focus:ring-2 focus:ring-luxury-rose/30"><button type="button" onclick="this.parentElement.remove()" class="text-red-400 hover:text-red-600 w-8 h-8 flex items-center justify-center shrink-0 border border-luxury-blush rounded-lg bg-white shadow-sm"><i class="fas fa-times"></i></button>`;
+        container.appendChild(div);
+    } catch(e) { console.error("Error adding promo line", e); }
 };
 
 async function fetchRuntimeSettings() {
@@ -67,8 +73,10 @@ async function fetchRuntimeSettings() {
             const cloud = data[0]; settings = { promoText: cloud.promo_text, instagram: cloud.instagram_url, whatsapp: cloud.whatsapp_num, upiId: cloud.upi_id, countryCode: cloud.country_code || "+91" };
             localStorage.setItem('th_settings', JSON.stringify(settings));
         }
-    } catch(e) {}
+    } catch(e) { console.warn("Failed to fetch settings, using cache."); }
     
+    if(!settings) settings = {}; // Failsafe
+
     const container = document.getElementById('promo-lines-container');
     if(container) {
         container.innerHTML = '';
@@ -78,7 +86,8 @@ async function fetchRuntimeSettings() {
         lines.forEach(l => window.th_addPromoLine(l));
     }
 
-    document.getElementById('admin-wa').value = settings.whatsapp || ''; document.getElementById('admin-country-code').value = settings.countryCode || '+91'; 
+    if(document.getElementById('admin-wa')) document.getElementById('admin-wa').value = settings.whatsapp || ''; 
+    if(document.getElementById('admin-country-code')) document.getElementById('admin-country-code').value = settings.countryCode || '+91'; 
     if(document.getElementById('admin-upi-id')) document.getElementById('admin-upi-id').value = settings.upiId || 'khushisj315@oksbi';
     if(document.getElementById('admin-ig')) document.getElementById('admin-ig').value = settings.instagram || 'https://www.instagram.com/khushiified_art?igsh=aW1vZ2N4cTl2OWo=';
 }

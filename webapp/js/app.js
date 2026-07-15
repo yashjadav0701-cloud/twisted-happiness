@@ -60,12 +60,15 @@ function applyDynamicSettings() {
     });
     if(document.getElementById('current-year')) document.getElementById('current-year').textContent = new Date().getFullYear();
 
-    const defaultPromo = "✨ 100% Handcrafted Fine Art & Gifts 🎀 Bespoke Canvas & Textured Clay Paintings 🎀 Unlock VIP Discounts Up To 15% Off";
+    const defaultPromo = "✨ 100% Handcrafted Fine Art & Gifts 🎀 Bespoke Canvas & Textured Clay Paintings 🌸 Unlock VIP Discounts Up To 15% Off 🦋";
     let promoToDisplay = defaultPromo;
     if (settings.promoText) {
         try {
             const parsed = JSON.parse(settings.promoText);
-            promoToDisplay = parsed.length > 0 ? parsed.join(' 🎀 ') + ' 🎀 ' : defaultPromo;
+            // Join custom lines with a mix of aesthetic separators
+            if (Array.isArray(parsed) && parsed.length > 0 && parsed[0] !== "") {
+                promoToDisplay = parsed.join(' 🎀🌸🎀 ') + ' 🎀🌸🎀 ';
+            }
         } catch(e) { promoToDisplay = settings.promoText; }
     }
     
@@ -134,6 +137,9 @@ async function setupAuthSessionListener() {
     currentSessionUser = session ? session.user : null;
     updateHeaderAvatar();
     if (currentSessionUser) syncCloudWishlist();
+
+    // Heartbeat to keep session alive
+    setInterval(async () => { if(currentSessionUser) await _supabase.auth.getSession(); }, 15 * 60 * 1000);
 
     _supabase.auth.onAuthStateChange((event, session) => {
         if (event === 'SIGNED_OUT') { currentSessionUser = null; savedAddresses = []; }
@@ -600,10 +606,15 @@ window.preparePaymentGateway = function() {
 
 window.confirmPaymentAndOrder = async function() {
     if(!pendingOrderPayload) return; const b = document.getElementById('btn-confirm-payment'); if(b) { b.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Securing Order...'; b.disabled = true; }
-    const { error } = await _supabase.from('orders').insert([pendingOrderPayload]);
-    if (error) { window.showToast("Error: " + error.message, "fa-times", "text-red-500"); if(b) { b.innerHTML = 'I Have Completed Payment <i class="fas fa-check-circle"></i>'; b.disabled = false; } return; }
-    document.getElementById('payment-gateway-view')?.classList.add('hidden'); document.getElementById('payment-gateway-view')?.classList.remove('flex'); if(document.getElementById('success-ref-note')) document.getElementById('success-ref-note').textContent = currentOrderReference; document.getElementById('payment-success-view')?.classList.remove('hidden'); document.getElementById('payment-success-view')?.classList.add('flex');
-    cart = []; localStorage.setItem('th_cart', JSON.stringify(cart)); updateCartCount(); 
+    try {
+        const { error } = await _supabase.from('orders').insert([pendingOrderPayload]);
+        if (error) throw error;
+        document.getElementById('payment-gateway-view')?.classList.add('hidden'); document.getElementById('payment-gateway-view')?.classList.remove('flex'); if(document.getElementById('success-ref-note')) document.getElementById('success-ref-note').textContent = currentOrderReference; document.getElementById('payment-success-view')?.classList.remove('hidden'); document.getElementById('payment-success-view')?.classList.add('flex');
+        cart = []; localStorage.setItem('th_cart', JSON.stringify(cart)); updateCartCount(); 
+    } catch(err) {
+        window.showToast("Error Securing Order", "fa-times", "text-red-500");
+        if(b) { b.innerHTML = 'I Have Completed Payment <i class="fas fa-check-circle"></i>'; b.disabled = false; }
+    }
 };
 
 async function renderCustomerOrdersPipeline() {
@@ -736,4 +747,8 @@ window.th_submitReview = async function(pid, rating, comment) {
     else window.showToast("Review Posted!", "fa-star", "text-luxury-gold");
 };
 
+window.th_toggleSubCategory = function(cat) { const idx = activeSubCategories.indexOf(cat); if(idx > -1) { activeSubCategories.splice(idx, 1); } else { activeSubCategories.push(cat); } renderFilters(); renderProducts(currentSearchQuery); };
+
+window.openPolicyModal = function(mId, bId) { currentModalLevel = 2; window.safePushState(2); const mod = document.getElementById(mId); const bx = document.getElementById(bId); if(!mod || !bx) return; mod.classList.remove('hidden'); document.body.classList.add('overflow-hidden'); requestAnimationFrame(() => { mod.classList.remove('opacity-0'); bx.classList.remove('scale-95', 'translate-y-2'); bx.classList.add('scale-100', 'translate-y-0'); }); };
+window.closePolicyModal = function(mId, bId) { const mod = document.getElementById(mId); const bx = document.getElementById(bId); if(!mod || !bx) return; requestAnimationFrame(() => { mod.classList.add('opacity-0'); bx.classList.remove('scale-100', 'translate-y-0'); bx.classList.add('scale-95', 'translate-y-2'); setTimeout(() => { mod.classList.add('hidden'); if(document.getElementById('checkout-overlay')?.classList.contains('hidden')) { document.body.classList.remove('overflow-hidden'); } }, 200); }); };
 // --- END OF FILE ---
