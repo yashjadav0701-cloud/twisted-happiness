@@ -390,8 +390,6 @@ window.th_purgeOrder = async function(id) {
     try { await _supabase.from('orders').delete().eq('id', id); showToast("Erased Permanently", "fa-trash"); fetchOrders(); } catch(e) { showToast("Error", "fa-times", "text-red-500"); } 
 };
 
-window.th_rejectOrder = async function(id) {
-
 window.th_pushToShiprocket = async function(orderId, event) {
     const btn = event.currentTarget; const originalHtml = btn.innerHTML; btn.innerHTML = '<i class="fas fa-spinner fa-spin mr-1.5"></i> Syncing...'; btn.disabled = true;
     try {

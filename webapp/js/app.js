@@ -60,17 +60,19 @@ function applyDynamicSettings() {
     });
     if(document.getElementById('current-year')) document.getElementById('current-year').textContent = new Date().getFullYear();
 
-    let promoToDisplay = "✨ 100% Handcrafted Fine Art & Gifts 🎀 Bespoke Canvas & Textured Clay Paintings 🌸 Unlock VIP Discounts Up To 15% Off 🦋";
+    const basePromo = "✨ 100% Handcrafted Fine Art & Gifts 🎀 Bespoke Canvas & Textured Clay Paintings 🌸 Unlock VIP Discounts Up To 15% Off 🦋";
+    let dynamicPromo = "";
     if (settings.promoText) {
         try {
             const parsed = JSON.parse(settings.promoText);
             if (Array.isArray(parsed) && parsed.length > 0 && parsed[0].trim() !== "") {
-                promoToDisplay = parsed.join(' 🌸 ') + ' 🦋 ';
+                dynamicPromo = ' 🌸 ' + parsed.join(' 🌸 ') + ' 🦋 ';
             }
         } catch(e) { }
     }
     
-    const seamlessText = `${promoToDisplay} &nbsp; &nbsp; ${promoToDisplay} &nbsp; &nbsp; ${promoToDisplay}`;
+    const combinedPromo = basePromo + dynamicPromo;
+    const seamlessText = `${combinedPromo} &nbsp; &nbsp; ${combinedPromo} &nbsp; &nbsp; ${combinedPromo}`;
     if(document.getElementById('promo-marquee-1')) document.getElementById('promo-marquee-1').innerHTML = `<div class="animate-marquee">${seamlessText}</div>`;
     if(document.getElementById('promo-marquee-2')) document.getElementById('promo-marquee-2').innerHTML = `<div class="animate-marquee">${seamlessText}</div>`;
 }
