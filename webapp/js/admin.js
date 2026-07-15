@@ -153,6 +153,7 @@ window.th_addPromoLine = function(val = "") {
 
 async function fetchDatabase() { 
     const list = document.getElementById('admin-product-list');
+    if(list) list.innerHTML = '<div class="text-center text-gray-400 py-10 text-[10px] uppercase tracking-[0.2em] font-medium"><i class="fas fa-spinner fa-spin text-2xl block mb-2 opacity-30"></i> Loading Inventory...</div>';
     try { 
         const { data, error } = await _supabase.from('creations').select('*').order('created_at', { ascending: false }); 
         if (error) throw error;
