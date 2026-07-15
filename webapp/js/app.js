@@ -1,6 +1,6 @@
 /**
  * Twisted Happiness - Core Storefront Engine
- * Version: 16.0.0 - Fully Repaired & Upgraded
+ * Version: 16.5.0 - Fully Repaired & Hardened
  */
 
 const SUPABASE_URL = "https://gvrfucjtnyqfkdynrmqs.supabase.co"; 
@@ -65,9 +65,8 @@ function applyDynamicSettings() {
     if (settings.promoText) {
         try {
             const parsed = JSON.parse(settings.promoText);
-            // Join custom lines with a mix of aesthetic separators
             if (Array.isArray(parsed) && parsed.length > 0 && parsed[0] !== "") {
-                promoToDisplay = parsed.join(' 🎀🌸🎀 ') + ' 🎀🌸🎀 ';
+                promoToDisplay = parsed.join(' 🌸 ') + ' 🦋 ';
             }
         } catch(e) { promoToDisplay = settings.promoText; }
     }
@@ -138,8 +137,8 @@ async function setupAuthSessionListener() {
     updateHeaderAvatar();
     if (currentSessionUser) syncCloudWishlist();
 
-    // Heartbeat to keep session alive
-    setInterval(async () => { if(currentSessionUser) await _supabase.auth.getSession(); }, 15 * 60 * 1000);
+    // Heartbeat: Automatically refresh the user token in the background so they don't get logged out!
+    setInterval(async () => { if(currentSessionUser) await _supabase.auth.getSession(); }, 5 * 60 * 1000);
 
     _supabase.auth.onAuthStateChange((event, session) => {
         if (event === 'SIGNED_OUT') { currentSessionUser = null; savedAddresses = []; }
@@ -328,14 +327,18 @@ function renderVisualCustomizer(product) {
     const vc = document.getElementById('visual-customizer-studio'); if (!vc) return;
     const isBouquet = (product.name || '').toLowerCase().includes('bouquet');
     if (product.mainCategory !== 'Pipe Cleaner Crafts' || !isBouquet) { vc.classList.add('hidden'); return; }
+    
     const flowerOptions = ['Crimson Rose', 'Blush Peony', 'Ivory Lily', 'Golden Sunflower', 'Lilac Tulip', 'Blue Hydrangea', 'Sunset Carnation', 'Classic Daisy'];
     const fillerOptions = ['Baby\'s Breath', 'Eucalyptus Leaves', 'Lavender Sprigs', 'Golden Fern', 'Pearl Branches'];
     const wrapOptions = ['Vintage Kraft', 'Midnight Matte', 'Frosted Pearl', 'Blushing Silk', 'Holographic Clear'];
     const ribbonOptions = ['Satin Bow', 'Lace Ribbon', 'Rustic Twine', 'Velvet Ribbon'];
-    const generateChips = (opts, active, func, isMulti) => opts.map(o => `<button type="button" onclick="window.${func}('${o.replace(/'/g, "\\'")}')" class="px-3 py-1.5 rounded-full text-[10px] font-bold border transition-all ${isMulti ? (active.includes(o) ? 'bg-luxury-rose text-white border-luxury-rose shadow-sm' : 'bg-white text-gray-500 border-luxury-blush') : (active === o ? 'bg-luxury-dark text-white border-luxury-dark shadow-sm' : 'bg-white text-gray-500 border-luxury-blush')}">${o}</button>`).join('');
-    vc.innerHTML = `<h4 class="font-bold text-[11px] uppercase tracking-widest text-luxury-dark mb-4 border-b border-luxury-blush pb-2"><i class="fas fa-magic text-luxury-rose mr-1"></i> Custom Bouquet Studio</h4><div class="mb-5"><span class="block text-[9px] font-bold text-gray-400 uppercase tracking-widest mb-2">1. Primary Flowers</span><div class="flex flex-wrap gap-2">${generateChips(flowerOptions, activeBuild.flowers, 'th_toggleBuildArray("flowers", ', true)}</div></div><div class="mb-5"><span class="block text-[9px] font-bold text-gray-400 uppercase tracking-widest mb-2">2. Filler Foliage</span><div class="flex flex-wrap gap-2">${generateChips(fillerOptions, activeBuild.fillers, 'th_toggleBuildArray("fillers", ', true)}</div></div><div class="mb-5"><span class="block text-[9px] font-bold text-gray-400 uppercase tracking-widest mb-2">3. Wrapping Style</span><div class="flex flex-wrap gap-2">${generateChips(wrapOptions, activeBuild.wrapping, 'th_setBuildString("wrapping", ', false)}</div></div><div><span class="block text-[9px] font-bold text-gray-400 uppercase tracking-widest mb-2">4. Ribbon Accent</span><div class="flex flex-wrap gap-2">${generateChips(ribbonOptions, activeBuild.ribbon, 'th_setBuildString("ribbon", ', false)}</div></div>`;
+    
+    const generateChips = (opts, active, funcPrefix, isMulti) => opts.map(o => `<button type="button" onclick="window.${funcPrefix}'${o.replace(/'/g, "\\'")}')" class="px-3 py-1.5 rounded-full text-[10px] font-bold border transition-all ${isMulti ? (active.includes(o) ? 'bg-luxury-rose text-white border-luxury-rose shadow-sm' : 'bg-white text-gray-500 border-luxury-blush') : (active === o ? 'bg-luxury-dark text-white border-luxury-dark shadow-sm' : 'bg-white text-gray-500 border-luxury-blush')}">${o}</button>`).join('');
+    
+    vc.innerHTML = `<h4 class="font-bold text-[11px] uppercase tracking-widest text-luxury-dark mb-4 border-b border-luxury-blush pb-2"><i class="fas fa-magic text-luxury-rose mr-1"></i> Custom Bouquet Studio</h4><div class="mb-5"><span class="block text-[9px] font-bold text-gray-400 uppercase tracking-widest mb-2">1. Primary Flowers</span><div class="flex flex-wrap gap-2">${generateChips(flowerOptions, activeBuild.flowers, "th_toggleBuildArray('flowers', ", true)}</div></div><div class="mb-5"><span class="block text-[9px] font-bold text-gray-400 uppercase tracking-widest mb-2">2. Filler Foliage</span><div class="flex flex-wrap gap-2">${generateChips(fillerOptions, activeBuild.fillers, "th_toggleBuildArray('fillers', ", true)}</div></div><div class="mb-5"><span class="block text-[9px] font-bold text-gray-400 uppercase tracking-widest mb-2">3. Wrapping Style</span><div class="flex flex-wrap gap-2">${generateChips(wrapOptions, activeBuild.wrapping, "th_setBuildString('wrapping', ", false)}</div></div><div><span class="block text-[9px] font-bold text-gray-400 uppercase tracking-widest mb-2">4. Ribbon Accent</span><div class="flex flex-wrap gap-2">${generateChips(ribbonOptions, activeBuild.ribbon, "th_setBuildString('ribbon', ", false)}</div></div>`;
     vc.classList.remove('hidden');
 }
+
 window.th_toggleBuildArray = function(cat, val) { const idx = activeBuild[cat].indexOf(val); if (idx > -1) activeBuild[cat].splice(idx, 1); else activeBuild[cat].push(val); const p = products.find(x => x.id == document.getElementById('product-view').getAttribute('data-current-id')); if(p) renderVisualCustomizer(p); };
 window.th_setBuildString = function(cat, val) { activeBuild[cat] = val; const p = products.find(x => x.id == document.getElementById('product-view').getAttribute('data-current-id')); if(p) renderVisualCustomizer(p); };
 
@@ -606,6 +609,15 @@ window.handleCheckoutAction = async function() {
         } 
         window.preparePaymentGateway(); 
     }
+};
+
+window.th_saveProfileAddress = async function(e) {
+    e.preventDefault();
+    const a = { first_name: document.getElementById('padd-fname').value.trim(), last_name: document.getElementById('padd-lname').value.trim(), phone: document.getElementById('padd-phone').value.trim(), address_1: document.getElementById('padd-add1').value.trim(), address_2: document.getElementById('padd-add2').value.trim(), city: document.getElementById('padd-city').value.trim(), state: document.getElementById('padd-state').value.trim(), pincode: document.getElementById('padd-pin').value.trim(), user_id: currentSessionUser.id };
+    showInteractionLoader("Saving Address...");
+    try { await _supabase.from('addresses').insert([a]); await syncCloudAddresses(); document.getElementById('profile-add-address-form').reset(); document.getElementById('profile-add-address-form').classList.add('hidden'); window.showToast("Address Saved", "fa-check"); } 
+    catch (err) { window.showToast("Failed to save", "fa-times", "text-red-500"); }
+    hideInteractionLoader();
 };
 
 window.preparePaymentGateway = function() {
