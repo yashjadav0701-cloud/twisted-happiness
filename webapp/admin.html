@@ -108,7 +108,11 @@
                 <div class="bg-white p-5 shadow-sm border border-luxury-blush rounded-2xl">
                     <h3 class="font-bold text-[10px] text-luxury-dark uppercase tracking-[0.1em] mb-4 flex items-center gap-2"><i class="fas fa-cog text-luxury-rose"></i> Global Settings</h3>
                     <form id="settings-form" class="space-y-4">
-                        <div><label class="block font-bold mb-1.5 text-gray-400 text-[8px] uppercase tracking-[0.1em]">Promo Marquee Text</label><input type="text" id="admin-promo-text" placeholder="e.g. Free shipping on all orders over ₹2499" class="w-full bg-luxury-bg border border-luxury-blush rounded-lg px-3 py-2.5 text-[11px] font-medium outline-none focus:ring-2 focus:ring-luxury-rose/30"></div>
+                        <div class="bg-luxury-bg/50 border border-luxury-blush rounded-xl p-3">
+                            <label class="block font-bold mb-2 text-luxury-rose text-[8px] uppercase tracking-[0.1em]"><i class="fas fa-bullhorn mr-1"></i> Promo Marquee Lines</label>
+                            <div id="promo-lines-container" class="space-y-2 mb-3"></div>
+                            <button type="button" onclick="window.th_addPromoLine()" class="text-[9px] bg-white border border-luxury-blush px-3 py-1.5 rounded-md shadow-sm font-bold text-luxury-dark uppercase tracking-widest hover:text-luxury-rose transition-colors"><i class="fas fa-plus"></i> Add Line</button>
+                        </div>
                         <div><label class="block font-bold mb-1.5 text-gray-400 text-[8px] uppercase tracking-[0.1em]">Instagram URL</label><input type="url" id="admin-ig" placeholder="https://instagram.com/..." class="w-full bg-luxury-bg border border-luxury-blush rounded-lg px-3 py-2.5 text-[11px] font-medium outline-none focus:ring-2 focus:ring-luxury-rose/30"></div>
                         <div><label class="block font-bold mb-1.5 text-gray-400 text-[8px] uppercase tracking-[0.1em]">Default Country Code</label><select id="admin-country-code" class="w-full bg-luxury-bg border border-luxury-blush rounded-lg px-3 py-2.5 text-[11px] font-medium outline-none focus:ring-2 focus:ring-luxury-rose/30 cursor-pointer"></select></div>
                         <div><label class="block font-bold mb-1.5 text-gray-400 text-[8px] uppercase tracking-[0.1em]">WhatsApp Number</label><input type="text" id="admin-wa" required class="w-full bg-luxury-bg border border-luxury-blush rounded-lg px-3 py-2.5 text-[11px] font-medium outline-none focus:ring-2 focus:ring-luxury-rose/30"></div>

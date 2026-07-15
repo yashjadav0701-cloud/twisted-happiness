@@ -318,11 +318,14 @@
                         </div>
                         <span id="checkout-promo-feedback" class="text-[9px] font-bold uppercase tracking-wide hidden"></span>
                         
-                        <div class="border-t border-luxury-blush/50 pt-3 mt-3 flex justify-between items-center">
-                            <span class="text-[9px] text-gray-500 font-bold uppercase tracking-widest">VIP Privilege Applied Automatically</span>
-                            <button type="button" onclick="window.showToast('Spend ₹499: 8% | ₹999: 10% | ₹2499: 12% | ₹4999: 15%', 'fa-gem')" class="text-luxury-rose hover:text-luxury-dark text-[9px] font-bold uppercase tracking-widest underline decoration-luxury-rose/30 decoration-2 underline-offset-4 transition-colors">✨ View Tiers</button>
+                        <div class="border-t border-luxury-blush/50 pt-4 mt-3">
+                        <div id="vip-progress-container" class="w-full hidden"></div>
+                        <div class="flex justify-between items-center mt-3">
+                            <span class="text-[8px] text-gray-500 font-bold uppercase tracking-widest">VIP Privilege Applied Automatically</span>
+                            <button type="button" onclick="window.showToast('Spend ₹499: 8% | ₹999: 10% | ₹2499: 12% | ₹4999: 15%', 'fa-gem')" class="text-luxury-rose hover:text-luxury-dark text-[8px] font-bold uppercase tracking-widest underline decoration-luxury-rose/30 decoration-2 underline-offset-4 transition-colors">View Tiers</button>
                         </div>
                     </div>
+                </div>
 
                     <div class="bg-luxury-bg border border-luxury-blush rounded-2xl p-5 md:p-6 space-y-4 mb-8">
                         <h4 class="font-bold text-[10px] text-luxury-dark uppercase tracking-widest mb-2"><i class="fas fa-paint-brush text-luxury-rose mr-1.5"></i> Customization Notes</h4>
@@ -481,36 +484,50 @@
         </header>
 
         <div class="max-w-[800px] mx-auto w-full px-4 py-6 md:py-10 flex flex-col gap-6 font-sans">
-            <div class="bg-white border border-luxury-blush p-6 rounded-3xl shadow-sm flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-                <div><p class="text-[9px] font-bold text-gray-400 uppercase tracking-widest mb-1">Logged In As</p><h3 class="text-base font-bold text-luxury-dark" id="profile-meta-email"></h3></div>
-                <button type="button" onclick="window.handleCustomerLogout()" class="border border-red-200 text-red-500 hover:bg-red-50 font-bold text-[10px] uppercase tracking-widest px-5 py-2.5 rounded-full transition-colors shadow-sm"><i class="fas fa-sign-out-alt mr-1"></i> Sign Out</button>
-            </div>
-
-            <!-- Profile Address Book -->
-            <div class="bg-luxury-bg border border-luxury-blush p-6 rounded-3xl shadow-sm">
-                <div class="flex justify-between items-center mb-4">
-                    <h3 class="font-logo text-xl text-luxury-dark flex items-center gap-2"><i class="far fa-address-book text-luxury-rose text-sm"></i> Saved Addresses</h3>
+            
+            <!-- User Info Card -->
+            <div class="bg-white border border-luxury-blush p-6 rounded-3xl shadow-sm flex flex-col sm:flex-row justify-between items-start sm:items-center gap-6">
+                <div class="flex items-center gap-4">
+                    <img id="profile-avatar" src="https://i.ibb.co/0RRrFK9N/TH-logo-1.png" class="w-14 h-14 rounded-full object-cover border-2 border-luxury-rose shadow-sm" alt="Profile">
+                    <div>
+                        <h3 class="font-logo text-2xl text-luxury-dark leading-none" id="profile-meta-name">Esteemed Patron</h3>
+                        <p class="text-[10px] font-bold text-gray-400 tracking-wider mt-1" id="profile-meta-email"></p>
+                    </div>
                 </div>
-                <div id="profile-address-list" class="flex flex-col gap-3"></div>
-            </div>
-
-            <!-- Unified Visual Order Archive -->
-            <div class="flex flex-col gap-4">
-                <div class="flex justify-between items-end mb-2">
-                    <h3 class="font-logo text-2xl text-luxury-dark flex items-center gap-2">
-                        <i class="fas fa-layer-group text-luxury-rose text-sm"></i> Order Archive
-                    </h3>
-                    <span class="text-[9px] font-bold text-gray-400 uppercase tracking-widest">Click order to expand</span>
-                </div>
-                <div id="customer-orders-pipeline" class="flex flex-col gap-4">
-                    <!-- Dynamic Orders Will Inject Here -->
+                <div class="flex flex-col gap-3 w-full sm:w-auto">
+                    <form onsubmit="window.th_updateUserProfile(event)" class="flex gap-2 w-full sm:w-auto">
+                        <input type="text" id="profile-edit-name" placeholder="Update Name" required class="w-full sm:w-36 px-4 py-2 bg-luxury-bg border border-luxury-blush rounded-full outline-none text-[10px] font-bold text-luxury-dark focus:border-luxury-rose">
+                        <button type="submit" id="btn-update-profile" class="bg-luxury-dark text-white hover:bg-luxury-rose font-bold text-[9px] uppercase tracking-widest px-4 py-2 rounded-full transition-colors shadow-sm shrink-0">Update</button>
+                    </form>
+                    <button type="button" onclick="window.handleCustomerLogout()" class="w-full sm:w-auto border border-red-200 text-red-500 hover:bg-red-50 font-bold text-[9px] uppercase tracking-widest px-5 py-2.5 rounded-full transition-colors shadow-sm flex justify-center items-center gap-2"><i class="fas fa-sign-out-alt"></i> Sign Out</button>
                 </div>
             </div>
 
-            <div class="flex flex-col gap-4">
-                <h3 class="font-logo text-xl text-luxury-dark mb-2 flex items-center gap-2"><i class="fas fa-layer-group text-luxury-rose text-sm"></i> Commission History</h3>
-                <div id="customer-orders-pipeline" class="flex flex-col gap-4"></div>
+            <!-- Tabbed Navigation Menu -->
+            <div class="flex gap-2 border-b border-luxury-blush pb-px overflow-x-auto scrollbar-hide">
+                <button type="button" onclick="window.th_switchProfileTab('orders')" id="ptab-orders" class="px-5 py-3 text-[10px] font-bold uppercase tracking-widest transition-colors border-b-2 border-luxury-rose text-luxury-rose whitespace-nowrap"><i class="fas fa-box-open mr-1.5"></i> My Orders</button>
+                <button type="button" onclick="window.th_switchProfileTab('addresses')" id="ptab-addresses" class="px-5 py-3 text-[10px] font-bold uppercase tracking-widest transition-colors border-b-2 border-transparent text-gray-400 hover:text-luxury-dark whitespace-nowrap"><i class="far fa-address-book mr-1.5"></i> Saved Addresses</button>
             </div>
+
+            <!-- Tab Content: Orders -->
+            <div id="pcontent-orders" class="flex flex-col gap-4 animate-fade-in">
+                <div class="flex justify-between items-end mb-1 px-1">
+                    <h3 class="font-logo text-xl text-luxury-dark">Order Archive</h3>
+                    <span class="text-[9px] font-bold text-gray-400 uppercase tracking-widest">Click to expand</span>
+                </div>
+                <div id="customer-orders-pipeline" class="flex flex-col gap-0"></div>
+            </div>
+
+            <!-- Tab Content: Addresses -->
+            <div id="pcontent-addresses" class="hidden flex-col gap-4 animate-fade-in">
+                <div class="bg-luxury-bg border border-luxury-blush p-6 rounded-3xl shadow-sm">
+                    <div class="flex justify-between items-center mb-4">
+                        <h3 class="font-logo text-xl text-luxury-dark flex items-center gap-2"><i class="far fa-address-book text-luxury-rose text-sm"></i> Delivery Details</h3>
+                    </div>
+                    <div id="profile-address-list" class="flex flex-col gap-3"></div>
+                </div>
+            </div>
+
         </div>
     </div>
 

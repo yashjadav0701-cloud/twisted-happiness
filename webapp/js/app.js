@@ -68,7 +68,14 @@ function applyDynamicSettings() {
 
     // Inject Dynamic Promo Text
     const defaultPromo = "✨ 100% Handcrafted Fine Art & Gifts ✨ Bespoke Canvas & Textured Clay Paintings ✨ Custom Sizing Up To 40x24\" ✨ Unlock VIP Discounts Up To 15% Off";
-    const promoToDisplay = settings.promoText ? settings.promoText : defaultPromo;
+    let promoToDisplay = defaultPromo;
+    if (settings.promoText) {
+        try {
+            const parsed = JSON.parse(settings.promoText);
+            promoToDisplay = parsed.length > 0 ? parsed.join(' 🌸 ') + ' 🌸 ' : defaultPromo;
+        } catch(e) { promoToDisplay = settings.promoText; }
+    }
+    
     if(document.getElementById('promo-marquee-1')) document.getElementById('promo-marquee-1').textContent = promoToDisplay;
     if(document.getElementById('promo-marquee-2')) document.getElementById('promo-marquee-2').textContent = promoToDisplay;
 }
@@ -167,16 +174,61 @@ window.handleGoogleOAuthLogin = async function() { try { const { error } = await
 
 window.openCustomerProfile = async function() { 
     if(!currentSessionUser) return; currentModalLevel = 1; window.safePushState(1); 
-    const o = document.getElementById('customer-profile-overlay'); document.getElementById('profile-meta-email').textContent = currentSessionUser.email; 
-    document.getElementById('track-order-id').value = ''; document.getElementById('track-result-container').classList.add('hidden');
+    const o = document.getElementById('customer-profile-overlay'); 
+    
+    const meta = currentSessionUser.user_metadata || {};
+    const avatarUrl = meta.avatar_url || 'https://i.ibb.co/0RRrFK9N/TH-logo-1.png';
+    const fullName = meta.full_name || 'Esteemed Patron';
+    
+    if(document.getElementById('profile-avatar')) document.getElementById('profile-avatar').src = avatarUrl;
+    if(document.getElementById('profile-meta-name')) document.getElementById('profile-meta-name').textContent = fullName;
+    if(document.getElementById('profile-meta-email')) document.getElementById('profile-meta-email').textContent = currentSessionUser.email;
+    if(document.getElementById('profile-edit-name')) document.getElementById('profile-edit-name').value = fullName !== 'Esteemed Patron' ? fullName : '';
+    
     o.classList.remove('hidden'); document.body.classList.add('overflow-hidden'); 
     
-    // Fetch data
+    // Default to the Orders Tab
+    if(window.th_switchProfileTab) window.th_switchProfileTab('orders');
+
     await syncCloudAddresses();
     renderProfileAddressBook();
     renderCustomerOrdersPipeline(); 
     
     requestAnimationFrame(() => { o.classList.remove('opacity-0'); o.classList.add('opacity-100'); }); 
+};
+
+// Logic for switching tabs
+window.th_switchProfileTab = function(tab) {
+    const oBtn = document.getElementById('ptab-orders'), aBtn = document.getElementById('ptab-addresses');
+    const oCon = document.getElementById('pcontent-orders'), aCon = document.getElementById('pcontent-addresses');
+    if(!oBtn) return;
+    
+    const activeClass = "px-5 py-3 text-[10px] font-bold uppercase tracking-widest transition-colors border-b-2 border-luxury-rose text-luxury-rose whitespace-nowrap";
+    const inactiveClass = "px-5 py-3 text-[10px] font-bold uppercase tracking-widest transition-colors border-b-2 border-transparent text-gray-400 hover:text-luxury-dark whitespace-nowrap";
+
+    if (tab === 'orders') {
+        oBtn.className = activeClass; aBtn.className = inactiveClass;
+        oCon.classList.remove('hidden'); oCon.classList.add('flex');
+        aCon.classList.add('hidden'); aCon.classList.remove('flex');
+    } else {
+        aBtn.className = activeClass; oBtn.className = inactiveClass;
+        aCon.classList.remove('hidden'); aCon.classList.add('flex');
+        oCon.classList.add('hidden'); oCon.classList.remove('flex');
+    }
+};
+
+window.th_updateUserProfile = async function(e) {
+    e.preventDefault();
+    const newName = document.getElementById('profile-edit-name').value.trim();
+    const btn = document.getElementById('btn-update-profile');
+    btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i>'; btn.disabled = true;
+    try {
+        const { error } = await _supabase.auth.updateUser({ data: { full_name: newName } });
+        if(error) throw error;
+        window.showToast("Profile Updated", "fa-check");
+        if(document.getElementById('profile-meta-name')) document.getElementById('profile-meta-name').textContent = newName;
+    } catch(err) { window.showToast("Error updating", "fa-times", "text-red-500"); }
+    btn.innerHTML = 'Update'; btn.disabled = false;
 };
 
 function renderProfileAddressBook() {
@@ -459,6 +511,20 @@ function updateCheckoutUI() {
     
     const vr = document.getElementById('qo-vip-row'); if(vr) { if(vd > 0) { document.getElementById('qo-vip-label').textContent = ct.label; document.getElementById('qo-vip-discount').textContent = `- ₹${vd}`; vr.classList.remove('hidden'); } else { vr.classList.add('hidden'); } }
     
+    const vipProgress = document.getElementById('vip-progress-container');
+    if (vipProgress) {
+        if (nt) {
+            const progressPercent = Math.min(100, (ss / nt.threshold) * 100);
+            vipProgress.innerHTML = `<div class="flex justify-between items-end mb-1"><span class="text-[9px] font-bold text-gray-500 uppercase tracking-widest">VIP Status</span><span class="text-[9px] font-bold text-luxury-rose uppercase tracking-widest">Add ₹${nt.threshold - ss} for ${nt.label} 🌸</span></div><div class="w-full bg-luxury-blush/30 h-1.5 rounded-full overflow-hidden"><div class="bg-luxury-rose h-full rounded-full transition-all duration-500" style="width: ${progressPercent}%"></div></div>`;
+            vipProgress.classList.remove('hidden');
+        } else if (ct) {
+            vipProgress.innerHTML = `<p class="text-[10px] font-bold text-luxury-rose uppercase tracking-widest text-center"><i class="fas fa-crown text-luxury-gold mr-1"></i> Maximum VIP Tier Unlocked!</p>`;
+            vipProgress.classList.remove('hidden');
+        } else {
+            vipProgress.classList.add('hidden');
+        }
+    }
+
     if(document.getElementById('qo-total-savings')) document.getElementById('qo-total-savings').textContent = tos; 
     if(document.getElementById('qo-final-total')) document.getElementById('qo-final-total').textContent = `₹${ft}`;
     
@@ -521,8 +587,10 @@ window.preparePaymentGateway = function() {
 
 window.confirmPaymentAndOrder = async function() {
     if(!pendingOrderPayload) return; const b = document.getElementById('btn-confirm-payment'); if(b) { b.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Securing Order...'; b.disabled = true; }
-    pendingOrderPayload.order_id = currentOrderReference; const { error } = await _supabase.from('orders').insert([pendingOrderPayload]);
-    if (error) { window.showToast("Network error. Please try again.", "fa-times", "text-red-500"); if(b) { b.innerHTML = 'I Have Completed Payment <i class="fas fa-check-circle"></i>'; b.disabled = false; } return; }
+    
+    const { error } = await _supabase.from('orders').insert([pendingOrderPayload]);
+    
+    if (error) { window.showToast("Error: " + error.message, "fa-times", "text-red-500"); if(b) { b.innerHTML = 'I Have Completed Payment <i class="fas fa-check-circle"></i>'; b.disabled = false; } return; }
     document.getElementById('payment-gateway-view')?.classList.add('hidden'); document.getElementById('payment-gateway-view')?.classList.remove('flex'); if(document.getElementById('success-ref-note')) document.getElementById('success-ref-note').textContent = currentOrderReference; document.getElementById('payment-success-view')?.classList.remove('hidden'); document.getElementById('payment-success-view')?.classList.add('flex');
     cart = []; localStorage.setItem('th_cart', JSON.stringify(cart)); updateCartCount(); 
 };
@@ -540,7 +608,7 @@ async function renderCustomerOrdersPipeline() {
         const { data } = await _supabase.from('orders').select('*').eq('user_id', currentSessionUser.id).order('created_at', { ascending: false }); 
         
         if(!data || data.length === 0) { 
-            c.innerHTML = '<div class="text-center p-10 text-gray-400 text-[11px] uppercase tracking-widest"><i class="fas fa-box-open text-2xl block mb-2 opacity-40"></i> No commissions found.</div>'; 
+            c.innerHTML = '<div class="text-center p-10 text-gray-400 text-[11px] uppercase tracking-widest"><i class="fas fa-box-open text-3xl block mb-3 opacity-30"></i> No commissions found.</div>'; 
             return; 
         } 
         
@@ -548,65 +616,55 @@ async function renderCustomerOrdersPipeline() {
         data.forEach(o => { 
             const dt = new Date(o.created_at).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' }); 
             
-            // Determine active step for the progress bar
             let step = 1;
             let statusText = "Verifying Payment";
             if (o.status === 'curating') { step = 2; statusText = "Artisan is Crafting"; }
             else if (o.status === 'ready') { step = 3; statusText = "Dispatched"; }
             else if (o.status === 'completed') { step = 4; statusText = "Delivered"; }
+            else if (o.status === 'cancelled') { step = 0; statusText = "Cancelled / Denied"; }
 
             const idm = (o.customer_reqs || '').match(/ID:\s*([^|]+)/); 
             const exId = idm ? idm[1].trim() : 'TH_ORDER'; 
 
-            // Parse items to show thumbnails
             let itemsHtml = '';
             try {
                 const items = JSON.parse(o.order_details);
-                items.forEach(i => {
-                    itemsHtml += `<img src="${i.image}" class="w-10 h-10 rounded-md object-cover border border-luxury-blush" title="${i.name} (x${i.qty})">`;
-                });
+                items.forEach(i => { itemsHtml += `<img src="${i.image}" class="w-10 h-10 rounded-md object-cover border border-luxury-blush bg-luxury-bg shrink-0" title="${i.name} (x${i.qty})">`; });
             } catch(e) {}
 
+            let progressBarHtml = '';
+            if (step > 0) {
+                progressBarHtml = `
+                <div class="relative flex justify-between items-center w-full max-w-sm mx-auto mt-6 mb-2">
+                    <div class="absolute left-0 top-1/2 -translate-y-1/2 w-full h-1 bg-luxury-blush z-0 rounded-full"></div>
+                    <div class="absolute left-0 top-1/2 -translate-y-1/2 h-1 bg-luxury-rose z-0 rounded-full transition-all duration-700" style="width: ${(step-1) * 33.33}%"></div>
+                    <div class="relative z-10 flex flex-col items-center gap-2"><div class="w-6 h-6 rounded-full flex items-center justify-center text-[10px] ${step >= 1 ? 'bg-luxury-rose text-white shadow-md border-2 border-white' : 'bg-white border-2 border-luxury-blush text-gray-300'}"><i class="fas fa-receipt"></i></div><span class="text-[7px] font-bold uppercase tracking-widest ${step >= 1 ? 'text-luxury-dark' : 'text-gray-400'} absolute -bottom-5 w-max">Placed</span></div>
+                    <div class="relative z-10 flex flex-col items-center gap-2"><div class="w-6 h-6 rounded-full flex items-center justify-center text-[10px] ${step >= 2 ? 'bg-luxury-rose text-white shadow-md border-2 border-white' : 'bg-white border-2 border-luxury-blush text-gray-300'}"><i class="fas fa-paint-brush"></i></div><span class="text-[7px] font-bold uppercase tracking-widest ${step >= 2 ? 'text-luxury-dark' : 'text-gray-400'} absolute -bottom-5 w-max">Crafting</span></div>
+                    <div class="relative z-10 flex flex-col items-center gap-2"><div class="w-6 h-6 rounded-full flex items-center justify-center text-[10px] ${step >= 3 ? 'bg-luxury-rose text-white shadow-md border-2 border-white' : 'bg-white border-2 border-luxury-blush text-gray-300'}"><i class="fas fa-box"></i></div><span class="text-[7px] font-bold uppercase tracking-widest ${step >= 3 ? 'text-luxury-dark' : 'text-gray-400'} absolute -bottom-5 w-max">Shipped</span></div>
+                    <div class="relative z-10 flex flex-col items-center gap-2"><div class="w-6 h-6 rounded-full flex items-center justify-center text-[10px] ${step >= 4 ? 'bg-green-500 text-white shadow-md border-2 border-white' : 'bg-white border-2 border-luxury-blush text-gray-300'}"><i class="fas fa-check"></i></div><span class="text-[7px] font-bold uppercase tracking-widest ${step >= 4 ? 'text-green-600' : 'text-gray-400'} absolute -bottom-5 w-max">Delivered</span></div>
+                </div>`;
+            } else {
+                progressBarHtml = `<div class="text-center text-red-500 font-bold text-[9px] uppercase tracking-widest py-3">Order Cancelled</div>`;
+            }
+
             html += `
-            <details class="bg-white border border-luxury-blush rounded-2xl shadow-sm group overflow-hidden cursor-pointer">
-                <summary class="p-5 list-none flex flex-col sm:flex-row justify-between sm:items-center gap-4 outline-none">
+            <details class="bg-white border border-luxury-blush rounded-2xl shadow-sm group overflow-hidden cursor-pointer mb-3">
+                <summary class="p-4 sm:p-5 list-none flex flex-col sm:flex-row justify-between sm:items-center gap-4 outline-none">
                     <div class="flex flex-col">
                         <span class="text-[9px] text-gray-400 uppercase tracking-widest font-bold mb-1">Order ${exId}</span>
-                        <h4 class="font-poppins font-bold text-luxury-dark text-sm mb-1">${statusText}</h4>
-                        <p class="text-gray-400 text-[10px]">${dt} • ₹${o.total}</p>
+                        <h4 class="font-poppins font-bold ${step === 0 ? 'text-red-500' : 'text-luxury-dark'} text-sm mb-1">${statusText}</h4>
+                        <p class="text-gray-400 text-[10px]">${dt} • <span class="font-bold text-luxury-dark">₹${o.total}</span></p>
                     </div>
                     <div class="flex items-center justify-between sm:justify-end w-full sm:w-auto gap-4">
-                        <div class="flex gap-1">${itemsHtml}</div>
+                        <div class="flex gap-2 overflow-x-auto max-w-[150px] scrollbar-hide py-1">${itemsHtml}</div>
                         <i class="fas fa-chevron-down text-gray-300 transition-transform group-open:rotate-180"></i>
                     </div>
                 </summary>
-                
-                <div class="p-5 pt-0 border-t border-luxury-blush mt-2 bg-luxury-bg/50">
-                    <!-- Visual Status Tracker -->
-                    <div class="relative flex justify-between items-center w-full max-w-sm mx-auto mt-6 mb-2">
-                        <div class="absolute left-0 top-1/2 -translate-y-1/2 w-full h-1 bg-luxury-blush z-0 rounded-full"></div>
-                        <div class="absolute left-0 top-1/2 -translate-y-1/2 h-1 bg-luxury-rose z-0 rounded-full transition-all" style="width: ${(step-1) * 33.33}%"></div>
-                        
-                        <!-- Step 1 -->
-                        <div class="relative z-10 flex flex-col items-center gap-2">
-                            <div class="w-6 h-6 rounded-full flex items-center justify-center text-[10px] ${step >= 1 ? 'bg-luxury-rose text-white' : 'bg-white border-2 border-luxury-blush text-gray-300'}"><i class="fas fa-receipt"></i></div>
-                            <span class="text-[7px] font-bold uppercase tracking-widest ${step >= 1 ? 'text-luxury-dark' : 'text-gray-400'} absolute -bottom-5 w-max">Placed</span>
-                        </div>
-                        <!-- Step 2 -->
-                        <div class="relative z-10 flex flex-col items-center gap-2">
-                            <div class="w-6 h-6 rounded-full flex items-center justify-center text-[10px] ${step >= 2 ? 'bg-luxury-rose text-white' : 'bg-white border-2 border-luxury-blush text-gray-300'}"><i class="fas fa-paint-brush"></i></div>
-                            <span class="text-[7px] font-bold uppercase tracking-widest ${step >= 2 ? 'text-luxury-dark' : 'text-gray-400'} absolute -bottom-5 w-max">Crafting</span>
-                        </div>
-                        <!-- Step 3 -->
-                        <div class="relative z-10 flex flex-col items-center gap-2">
-                            <div class="w-6 h-6 rounded-full flex items-center justify-center text-[10px] ${step >= 3 ? 'bg-luxury-rose text-white' : 'bg-white border-2 border-luxury-blush text-gray-300'}"><i class="fas fa-box"></i></div>
-                            <span class="text-[7px] font-bold uppercase tracking-widest ${step >= 3 ? 'text-luxury-dark' : 'text-gray-400'} absolute -bottom-5 w-max">Shipped</span>
-                        </div>
-                        <!-- Step 4 -->
-                        <div class="relative z-10 flex flex-col items-center gap-2">
-                            <div class="w-6 h-6 rounded-full flex items-center justify-center text-[10px] ${step >= 4 ? 'bg-green-500 text-white' : 'bg-white border-2 border-luxury-blush text-gray-300'}"><i class="fas fa-check"></i></div>
-                            <span class="text-[7px] font-bold uppercase tracking-widest ${step >= 4 ? 'text-green-600' : 'text-gray-400'} absolute -bottom-5 w-max">Delivered</span>
-                        </div>
+                <div class="p-4 sm:p-5 pt-0 border-t border-luxury-blush mt-2 bg-luxury-bg/50">
+                    ${progressBarHtml}
+                    <div class="mt-6 bg-white border border-luxury-blush p-3 rounded-xl text-[10px] text-gray-500 whitespace-pre-wrap font-medium">
+                        <p class="font-bold text-luxury-dark mb-1 uppercase tracking-widest text-[8px]">Request Details</p>
+                        ${o.customer_reqs}
                     </div>
                 </div>
             </details>`; 

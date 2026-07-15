@@ -86,11 +86,46 @@ async function fetchRuntimeSettings() {
         }
     } catch(e) {}
     
-    if(document.getElementById('admin-promo-text')) document.getElementById('admin-promo-text').value = settings.promoText || '';
+    // Setup Promo Lines
+    const container = document.getElementById('promo-lines-container');
+    if(container) {
+        container.innerHTML = '';
+        let lines = [];
+        try { lines = JSON.parse(settings.promoText || '[]'); } catch(e) { lines = [settings.promoText]; }
+        if (!Array.isArray(lines) || lines.length === 0) lines = [""];
+        lines.forEach(l => window.th_addPromoLine(l));
+    }
+
     document.getElementById('admin-wa').value = settings.whatsapp || ''; 
     document.getElementById('admin-country-code').value = settings.countryCode || '+91'; 
     if(document.getElementById('admin-upi-id')) document.getElementById('admin-upi-id').value = settings.upiId || 'khushisj315@oksbi';
     if(document.getElementById('admin-ig')) document.getElementById('admin-ig').value = settings.instagram || 'https://www.instagram.com/khushiified_art?igsh=aW1vZ2N4cTl2OWo=';
+}
+
+async function saveSettings(e) { 
+    e.preventDefault(); 
+    
+    // Gather Promo Lines
+    const inputs = document.querySelectorAll('.promo-line-input');
+    const pArray = Array.from(inputs).map(inp => inp.value.trim()).filter(val => val !== "");
+    const pStr = JSON.stringify(pArray);
+
+    const i = document.getElementById('admin-ig').value.trim();
+    const w = document.getElementById('admin-wa').value.trim();
+    const c = document.getElementById('admin-country-code').value;
+    const u = document.getElementById('admin-upi-id').value.trim();
+    
+    const payload = { id: 1, promo_text: pStr, instagram_url: i, whatsapp_num: w, country_code: c, upi_id: u };
+    
+    try {
+        const { error } = await _supabase.from('store_config').upsert([payload]);
+        if (error) throw error;
+        settings = { promoText: pStr, instagram: i, whatsapp: w, countryCode: c, upiId: u };
+        localStorage.setItem('th_settings', JSON.stringify(settings)); 
+        showToast('Settings Saved & Synced to Cloud', 'fa-check'); 
+    } catch(err) {
+        showToast('Failed to sync settings', 'fa-times', 'text-red-500');
+    }
 }
 
 function bindAdminEvents() {
@@ -107,35 +142,23 @@ function bindAdminEvents() {
     document.getElementById('cancel-edit-btn')?.addEventListener('click', cancelEdit);
 }
 
-async function saveSettings(e) { 
-    e.preventDefault(); 
-    const p = document.getElementById('admin-promo-text').value.trim();
-    const i = document.getElementById('admin-ig').value.trim();
-    const w = document.getElementById('admin-wa').value.trim();
-    const c = document.getElementById('admin-country-code').value;
-    const u = document.getElementById('admin-upi-id').value.trim();
-    
-    const payload = { id: 1, promo_text: p, instagram_url: i, whatsapp_num: w, country_code: c, upi_id: u };
-    
-    try {
-        const { error } = await _supabase.from('store_config').upsert([payload]);
-        if (error) throw error;
-        settings = { promoText: p, instagram: i, whatsapp: w, countryCode: c, upiId: u };
-        localStorage.setItem('th_settings', JSON.stringify(settings)); 
-        showToast('Settings Saved & Synced to Cloud', 'fa-check'); 
-    } catch(err) {
-        showToast('Failed to sync settings', 'fa-times', 'text-red-500');
-    }
-}
-
 // 🚨 INVENTORY ENGINE
+// Dynamic Promo Functions
+window.th_addPromoLine = function(val = "") {
+    const container = document.getElementById('promo-lines-container'); if(!container) return;
+    const div = document.createElement('div'); div.className = "flex items-center gap-2";
+    div.innerHTML = `<input type="text" value="${val}" placeholder="e.g. Free Shipping..." class="promo-line-input w-full bg-luxury-bg border border-luxury-blush rounded-lg px-3 py-2 text-[11px] font-medium outline-none focus:ring-2 focus:ring-luxury-rose/30"><button type="button" onclick="this.parentElement.remove()" class="text-red-400 hover:text-red-600 w-8 h-8 flex items-center justify-center shrink-0 border border-luxury-blush rounded-lg bg-white shadow-sm"><i class="fas fa-times"></i></button>`;
+    container.appendChild(div);
+};
+
 async function fetchDatabase() { 
+    const list = document.getElementById('admin-product-list');
     try { 
         const { data, error } = await _supabase.from('creations').select('*').order('created_at', { ascending: false }); 
         if (error) throw error;
         
         products = (data || []).map(row => {
-            let parsedImages = []; try { parsedImages = JSON.parse(row.image_url) || []; } catch(e) {}
+            let parsedImages = []; try { parsedImages = typeof row.image_url === 'string' ? JSON.parse(row.image_url) : (row.image_url || []); } catch(e) {}
             return {
                 id: row.id, name: row.name || 'Untitled Art', category: row.category || '', mainCategory: row.main_category || 'Pipe Cleaner Crafts', price: row.price || 0, prepTime: row.prep_time || '3-5', specs: row.specs || '', dimensions: row.dimensions || '', isCustomizable: row.is_customizable || false,
                 image1: parsedImages.length > 0 ? parsedImages[0].data : '', image2: parsedImages.length > 1 ? parsedImages[1].data : '', image3: parsedImages.length > 2 ? parsedImages[2].data : '', image4: parsedImages.length > 3 ? parsedImages[3].data : '', image5: parsedImages.length > 4 ? parsedImages[4].data : ''
@@ -143,7 +166,10 @@ async function fetchDatabase() {
         });
         
         renderAdminProducts(); renderAdminCategories();
-    } catch (error) { console.error("Admin DB Fetch Error:", error); } 
+    } catch (error) { 
+        console.error("Admin DB Fetch Error:", error); 
+        if(list) list.innerHTML = `<div class="p-5 text-red-500 text-xs font-bold text-center">Database Connection Error: ${error.message}</div>`;
+    } 
 }
 
 function renderAdminProducts() { 
