@@ -2,11 +2,7 @@
  * Twisted Happiness - Core Storefront Engine
  * Version: 15.5.0 - 100% Complete, Stable, & Globally Bound
  */
-let products = []; let currentMainCategory = 'All'; let activeSubCategories = []; let currentSortMode = 'newest'; let currentSearchQuery = ''; 
-let searchTimeout = null; let modalImages = []; let currentSlideIndex = 0; let isAnimating = false; let currentLightboxIndex = 0; let isLightboxAnimating = false; let currentModalLevel = 0; let statePushed = false;
-let checkoutStep = 1; let pendingOrderPayload = null; let currentOrderReference = null; let currentDeliveryFee = 0; let activeCouponValue = 0; let activeCouponCode = "";
-let selectedAddressIndex = savedAddresses.length > 0 ? 0 : -1; let editingAddressIndex = null; let currentSessionUser = null; let authModalMode = "login";
-let activeBuild = { flowers: [], wrapping: 'Classic Kraft' };
+
 const SUPABASE_URL = "https://gvrfucjtnyqfkdynrmqs.supabase.co"; 
 const SUPABASE_ANON_KEY = "sb_publishable_8jru2BqvTdE9bcwNOLIHAA_dx6aUCM0";
 let _supabase;
@@ -36,6 +32,7 @@ let products = []; let currentMainCategory = 'All'; let activeSubCategories = []
 let searchTimeout = null; let modalImages = []; let currentSlideIndex = 0; let isAnimating = false; let currentLightboxIndex = 0; let isLightboxAnimating = false; let currentModalLevel = 0; let statePushed = false;
 let checkoutStep = 1; let pendingOrderPayload = null; let currentOrderReference = null; let currentDeliveryFee = 0; let activeCouponValue = 0; let activeCouponCode = "";
 let selectedAddressIndex = savedAddresses.length > 0 ? 0 : -1; let editingAddressIndex = null; let currentSessionUser = null; let authModalMode = "login"; 
+let activeBuild = { flowers: [], wrapping: 'Classic Kraft' }; 
 
 // ==========================================
 // 🚀 INITIALIZATION & SETTINGS
