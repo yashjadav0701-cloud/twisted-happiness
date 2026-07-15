@@ -19,7 +19,8 @@ let products = []; let allOrders = []; let selectedFilesData = []; let editModeI
 
 function initApp() {
     try { 
-        _supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY); 
+        // PersistSession: false ensures Admin logs out when closing the tab and doesn't override customer accounts!
+        _supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY, { auth: { persistSession: false } }); 
         populateCountryCodes(); bindAdminEvents(); checkSession();
     } catch (e) { console.error("Supabase Init Error:", e); }
 }
@@ -118,6 +119,7 @@ async function fetchDatabase() {
     try { 
         const { data, error } = await _supabase.from('creations').select('*').order('created_at', { ascending: false }); 
         if (error) throw error;
+        const getImg = (arr, idx) => (arr && arr.length > idx) ? (arr[idx].data || arr[idx] || '') : '';
         products = (data || []).map(row => {
             let parsedImages = []; 
             try { 
@@ -126,7 +128,7 @@ async function fetchDatabase() {
             } catch(e) {}
             return {
                 id: row.id, name: row.name || 'Untitled Art', category: row.category || '', mainCategory: row.main_category || 'Pipe Cleaner Crafts', price: row.price || 0, prepTime: row.prep_time || '3-5', specs: row.specs || '', dimensions: row.dimensions || '', isCustomizable: row.is_customizable || false,
-                image1: parsedImages.length > 0 ? parsedImages[0].data : '', image2: parsedImages.length > 1 ? parsedImages[1].data : '', image3: parsedImages.length > 2 ? parsedImages[2].data : '', image4: parsedImages.length > 3 ? parsedImages[3].data : '', image5: parsedImages.length > 4 ? parsedImages[4].data : ''
+                image1: getImg(parsedImages, 0), image2: getImg(parsedImages, 1), image3: getImg(parsedImages, 2), image4: getImg(parsedImages, 3), image5: getImg(parsedImages, 4)
             };
         });
         renderAdminProducts(); renderAdminCategories();

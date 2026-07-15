@@ -235,12 +235,20 @@ window.th_updateUserProfile = async function(e) {
     btn.innerHTML = 'Update'; btn.disabled = false;
 };
 
+window.th_saveProfileAddress = async function(e) {
+    e.preventDefault();
+    const a = { first_name: document.getElementById('padd-fname').value.trim(), last_name: document.getElementById('padd-lname').value.trim(), phone: document.getElementById('padd-phone').value.trim(), address_1: document.getElementById('padd-add1').value.trim(), address_2: document.getElementById('padd-add2').value.trim(), city: document.getElementById('padd-city').value.trim(), state: document.getElementById('padd-state').value.trim(), pincode: document.getElementById('padd-pin').value.trim(), user_id: currentSessionUser.id };
+    showInteractionLoader("Saving Address...");
+    try { await _supabase.from('addresses').insert([a]); await syncCloudAddresses(); document.getElementById('profile-add-address-form').reset(); document.getElementById('profile-add-address-form').classList.add('hidden'); window.showToast("Address Saved", "fa-check"); } 
+    catch (err) { window.showToast("Failed to save", "fa-times", "text-red-500"); }
+    hideInteractionLoader();
+};
+
 function renderProfileAddressBook() {
     const container = document.getElementById('profile-address-list');
     if (!container) return;
     
-    let html = '<div class="flex justify-between items-center mb-3"><p class="text-[9px] font-bold text-gray-400 uppercase tracking-widest">Your Addresses</p><button onclick="window.closeCustomerProfile(); setTimeout(()=>window.openCheckoutBase(), 300)" class="text-luxury-rose font-bold text-[9px] uppercase tracking-widest"><i class="fas fa-plus"></i> Add New in Checkout</button></div>';
-    
+    let html = '';
     if (savedAddresses.length === 0) {
         html += '<p class="text-[11px] text-gray-500 font-medium bg-white p-4 rounded-xl border border-luxury-blush">No addresses saved yet.</p>';
     } else {
@@ -308,12 +316,28 @@ window.applyCouponCode = function() {
 function fetchDatabase() { 
     _supabase.from('creations').select('*').order('created_at', { ascending: false }).then(({data, error}) => {
         if(error) { dismissPreloader(); return; }
-        products = (data || []).map(r => { let pi = []; try { pi = JSON.parse(r.image_url) || []; } catch(e) {}
-            return { id: r.id, name: r.name || 'Untitled Art', category: r.category || '', mainCategory: r.main_category || 'Pipe Cleaner Crafts', price: r.price || 0, prepTime: r.prep_time || '3-5', specs: r.specs || '', dimensions: r.dimensions || '', isCustomizable: r.is_customizable || false, image1: pi.length > 0 ? pi[0].data : '', image2: pi.length > 1 ? pi[1].data : '', image3: pi.length > 2 ? pi[2].data : '', image4: pi.length > 3 ? pi[3].data : '', image5: pi.length > 4 ? pi[4].data : '' };
+        const getImg = (arr, idx) => (arr && arr.length > idx) ? (arr[idx].data || arr[idx] || '') : '';
+        products = (data || []).map(r => { let pi = []; try { pi = typeof r.image_url === 'string' ? JSON.parse(r.image_url) : (r.image_url || []); } catch(e) {}
+            return { id: r.id, name: r.name || 'Untitled Art', category: r.category || '', mainCategory: r.main_category || 'Pipe Cleaner Crafts', price: r.price || 0, prepTime: r.prep_time || '3-5', specs: r.specs || '', dimensions: r.dimensions || '', isCustomizable: r.is_customizable || false, image1: getImg(pi, 0), image2: getImg(pi, 1), image3: getImg(pi, 2), image4: getImg(pi, 3), image5: getImg(pi, 4) };
         });
         requestAnimationFrame(() => { renderFilters(); renderProducts(); setTimeout(dismissPreloader, 400); });
     });
 }
+
+function renderVisualCustomizer(product) {
+    const vc = document.getElementById('visual-customizer-studio'); if (!vc) return;
+    const isBouquet = (product.name || '').toLowerCase().includes('bouquet');
+    if (product.mainCategory !== 'Pipe Cleaner Crafts' || !isBouquet) { vc.classList.add('hidden'); return; }
+    const flowerOptions = ['Crimson Rose', 'Blush Peony', 'Ivory Lily', 'Golden Sunflower', 'Lilac Tulip', 'Blue Hydrangea', 'Sunset Carnation', 'Classic Daisy'];
+    const fillerOptions = ['Baby\'s Breath', 'Eucalyptus Leaves', 'Lavender Sprigs', 'Golden Fern', 'Pearl Branches'];
+    const wrapOptions = ['Vintage Kraft', 'Midnight Matte', 'Frosted Pearl', 'Blushing Silk', 'Holographic Clear'];
+    const ribbonOptions = ['Satin Bow', 'Lace Ribbon', 'Rustic Twine', 'Velvet Ribbon'];
+    const generateChips = (opts, active, func, isMulti) => opts.map(o => `<button type="button" onclick="window.${func}('${o.replace(/'/g, "\\'")}')" class="px-3 py-1.5 rounded-full text-[10px] font-bold border transition-all ${isMulti ? (active.includes(o) ? 'bg-luxury-rose text-white border-luxury-rose shadow-sm' : 'bg-white text-gray-500 border-luxury-blush') : (active === o ? 'bg-luxury-dark text-white border-luxury-dark shadow-sm' : 'bg-white text-gray-500 border-luxury-blush')}">${o}</button>`).join('');
+    vc.innerHTML = `<h4 class="font-bold text-[11px] uppercase tracking-widest text-luxury-dark mb-4 border-b border-luxury-blush pb-2"><i class="fas fa-magic text-luxury-rose mr-1"></i> Custom Bouquet Studio</h4><div class="mb-5"><span class="block text-[9px] font-bold text-gray-400 uppercase tracking-widest mb-2">1. Primary Flowers</span><div class="flex flex-wrap gap-2">${generateChips(flowerOptions, activeBuild.flowers, 'th_toggleBuildArray("flowers", ', true)}</div></div><div class="mb-5"><span class="block text-[9px] font-bold text-gray-400 uppercase tracking-widest mb-2">2. Filler Foliage</span><div class="flex flex-wrap gap-2">${generateChips(fillerOptions, activeBuild.fillers, 'th_toggleBuildArray("fillers", ', true)}</div></div><div class="mb-5"><span class="block text-[9px] font-bold text-gray-400 uppercase tracking-widest mb-2">3. Wrapping Style</span><div class="flex flex-wrap gap-2">${generateChips(wrapOptions, activeBuild.wrapping, 'th_setBuildString("wrapping", ', false)}</div></div><div><span class="block text-[9px] font-bold text-gray-400 uppercase tracking-widest mb-2">4. Ribbon Accent</span><div class="flex flex-wrap gap-2">${generateChips(ribbonOptions, activeBuild.ribbon, 'th_setBuildString("ribbon", ', false)}</div></div>`;
+    vc.classList.remove('hidden');
+}
+window.th_toggleBuildArray = function(cat, val) { const idx = activeBuild[cat].indexOf(val); if (idx > -1) activeBuild[cat].splice(idx, 1); else activeBuild[cat].push(val); const p = products.find(x => x.id == document.getElementById('product-view').getAttribute('data-current-id')); if(p) renderVisualCustomizer(p); };
+window.th_setBuildString = function(cat, val) { activeBuild[cat] = val; const p = products.find(x => x.id == document.getElementById('product-view').getAttribute('data-current-id')); if(p) renderVisualCustomizer(p); };
 
 function renderProducts(sq = '') { 
     const g = document.getElementById('product-grid'); if(!g) return; g.innerHTML = ''; 
