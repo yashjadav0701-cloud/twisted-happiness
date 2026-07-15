@@ -146,6 +146,11 @@ async function fetchDatabase() {
                 image1: getImg(parsedImages, 0), image2: getImg(parsedImages, 1), image3: getImg(parsedImages, 2), image4: getImg(parsedImages, 3), image5: getImg(parsedImages, 4)
             };
         });
+        
+        if(document.getElementById('main-cat-list')) document.getElementById('main-cat-list').innerHTML = [...new Set(products.map(p => p.mainCategory).filter(Boolean))].map(c => `<option value="${c}">`).join('');
+        if(document.getElementById('sub-cat-list')) document.getElementById('sub-cat-list').innerHTML = [...new Set(products.map(p => p.category).filter(Boolean))].map(c => `<option value="${c}">`).join('');
+
+        renderAdminProducts(); renderAdminCategories();
         renderAdminProducts(); renderAdminCategories();
     } catch (error) { 
         console.error("Admin DB Fetch Error:", error); 
@@ -339,7 +344,7 @@ function renderActiveOrders() {
 
         if (order.status === 'new' || order.status === 'pending') {
             statusBadge = `<span class="bg-yellow-100 text-yellow-700 text-[8px] font-bold uppercase tracking-widest px-2.5 py-1 rounded-md">Awaiting Verification</span>`;
-            actionButton = `<button type="button" onclick="window.th_rejectOrder('${order.id}')" class="px-4 py-2.5 rounded-full text-gray-400 border hover:text-red-500 font-bold text-[9px] uppercase tracking-widest">Deny (No Payment)</button><button type="button" onclick="window.th_startCrafting('${order.id}')" class="px-5 py-2.5 rounded-full bg-green-600 text-white font-bold text-[9px] uppercase tracking-widest hover:bg-white hover:text-green-600 transition-colors shadow-sm"><i class="fas fa-magic mr-1"></i> Verify & Start Crafting</button>`;
+            actionButton = `<button type="button" onclick="window.th_purgeOrder('${order.id}')" class="px-4 py-2.5 rounded-full text-gray-400 border hover:text-red-500 font-bold text-[9px] uppercase tracking-widest">Deny (No Payment)</button><button type="button" onclick="window.th_startCrafting('${order.id}')" class="px-5 py-2.5 rounded-full bg-green-600 text-white font-bold text-[9px] uppercase tracking-widest hover:bg-white hover:text-green-600 transition-colors shadow-sm"><i class="fas fa-magic mr-1"></i> Verify & Start Crafting</button>`;
         } else if (order.status === 'curating') {
             statusBadge = `<span class="bg-blue-100 text-blue-700 text-[8px] font-bold uppercase tracking-widest px-2.5 py-1 rounded-md">Artisan At Work</span>`;
             actionButton = `<button type="button" onclick="window.th_markOrderReady('${order.id}')" class="px-5 py-2.5 rounded-full bg-luxury-gold text-white font-bold text-[9px] uppercase tracking-widest hover:bg-white hover:text-luxury-gold shadow-sm"><i class="fas fa-paint-brush mr-2"></i> ✨ Masterpiece Crafted</button>`;
@@ -357,7 +362,7 @@ function renderCompletedOrders() {
     if (completedOrders.length === 0) { container.innerHTML = '<div class="text-center text-gray-400 py-10 text-[10px] uppercase tracking-[0.2em] font-medium"><i class="fas fa-archive text-2xl mb-3 opacity-50 block"></i> No archived deliveries yet.</div>'; return; }
     completedOrders.forEach(order => {
         const date = new Date(order.created_at).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' }); const customerData = extractCustomerData(order.customer_reqs); const visualItems = buildOrderItemsVisual(order.order_details);
-        container.innerHTML += `<div class="border border-luxury-blush rounded-xl p-5 bg-white shadow-sm relative overflow-hidden opacity-80 hover:opacity-100 transition-opacity"><div class="flex justify-between items-start mb-3"><div><h4 class="font-logo font-normal text-lg text-luxury-dark mb-0.5">${customerData.name}</h4><span class="text-[8px] font-bold text-gray-400 uppercase tracking-widest"><i class="fas fa-check-double mr-1 text-luxury-rose"></i> ${date} | ${customerData.orderId}</span></div><span class="bg-gray-100 text-gray-500 text-[8px] font-bold uppercase tracking-widest px-2.5 py-1 rounded-md border border-gray-200">Elegantly Delivered</span></div><div class="mb-3">${visualItems}</div><div class="flex justify-between items-center border-t border-luxury-blush pt-3 mt-2"><p class="text-[9px] font-bold text-gray-400 uppercase tracking-widest">Total <span class="font-poppins text-luxury-dark text-[11px] ml-1">₹${order.total}</span></p><button type="button" onclick="window.th_rejectOrder('${order.id}')" class="text-red-400 hover:text-red-600 text-[10px] uppercase font-bold tracking-widest cursor-pointer transition-colors"><i class="fas fa-trash-alt mr-1"></i> Purge</button></div></div>`;
+        container.innerHTML += `<div class="border border-luxury-blush rounded-xl p-5 bg-white shadow-sm relative overflow-hidden opacity-80 hover:opacity-100 transition-opacity"><div class="flex justify-between items-start mb-3"><div><h4 class="font-logo font-normal text-lg text-luxury-dark mb-0.5">${customerData.name}</h4><span class="text-[8px] font-bold text-gray-400 uppercase tracking-widest"><i class="fas fa-check-double mr-1 text-luxury-rose"></i> ${date} | ${customerData.orderId}</span></div><span class="bg-gray-100 text-gray-500 text-[8px] font-bold uppercase tracking-widest px-2.5 py-1 rounded-md border border-gray-200">Elegantly Delivered</span></div><div class="mb-3">${visualItems}</div><div class="flex justify-between items-center border-t border-luxury-blush pt-3 mt-2"><p class="text-[9px] font-bold text-gray-400 uppercase tracking-widest">Total <span class="font-poppins text-luxury-dark text-[11px] ml-1">₹${order.total}</span></p><button type="button" onclick="window.th_purgeOrder('${order.id}')" class="text-red-400 hover:text-red-600 text-[10px] uppercase font-bold tracking-widest cursor-pointer transition-colors"><i class="fas fa-trash-alt mr-1"></i> Purge</button></div></div>`;
     });
 }
 
@@ -379,21 +384,13 @@ window.th_startCrafting = async function(id) {
 window.th_markOrderReady = async function(id) { showToast("Updating status...", "fa-spinner fa-spin"); try { await _supabase.from('orders').update({ status: 'ready' }).eq('id', id); showToast("Marked as Curated", "fa-check"); fetchOrders(); } catch(e) { showToast("Error", "fa-times", "text-red-500"); } };
 window.th_markOrderDelivered = async function(id) { showToast("Archiving commission...", "fa-spinner fa-spin"); try { await _supabase.from('orders').update({ status: 'completed' }).eq('id', id); showToast("Commission Archived", "fa-check"); fetchOrders(); } catch(e) { showToast("Error", "fa-times", "text-red-500"); } };
 
-window.th_rejectOrder = async function(id) { 
-    const order = allOrders.find(o => o.id === id); if(!order) return;
-    if(!confirm("Deny this order? Customer will receive a WhatsApp message stating failure.")) return; 
-    showToast("Declining...", "fa-spinner fa-spin"); 
-    try { 
-        await _supabase.from('orders').update({ status: 'cancelled' }).eq('id', id); showToast("Commission Denied", "fa-trash"); fetchOrders(); 
-        const customerData = extractCustomerData(order.customer_reqs);
-        if (customerData.phone) {
-            let cleanPhone = customerData.phone.replace(/\D/g, ''); 
-            if (cleanPhone.startsWith('9191') && cleanPhone.length > 11) cleanPhone = cleanPhone.substring(2);
-            const denyMsg = `Dear ${customerData.name},\n\nWe are reaching out regarding your recent order attempt at *Twisted Happiness*.\n\nUnfortunately, we were unable to verify your UPI payment. As a result, your order reservation has been canceled.\n\nIf the amount was deducted from your account, it will automatically be refunded by your bank within 2-3 business days.\n\nIf you would like to secure your handcrafted piece, please reply to this message.`;
-            window.open(`https://wa.me/${cleanPhone}?text=${encodeURIComponent(denyMsg)}`, '_blank');
-        }
-    } catch(e) { showToast("Error", "fa-times", "text-red-500"); } 
+window.th_purgeOrder = async function(id) { 
+    if(!confirm("Permanently delete this order? The customer will no longer see it.")) return; 
+    showToast("Purging...", "fa-spinner fa-spin"); 
+    try { await _supabase.from('orders').delete().eq('id', id); showToast("Erased Permanently", "fa-trash"); fetchOrders(); } catch(e) { showToast("Error", "fa-times", "text-red-500"); } 
 };
+
+window.th_rejectOrder = async function(id) {
 
 window.th_pushToShiprocket = async function(orderId, event) {
     const btn = event.currentTarget; const originalHtml = btn.innerHTML; btn.innerHTML = '<i class="fas fa-spinner fa-spin mr-1.5"></i> Syncing...'; btn.disabled = true;

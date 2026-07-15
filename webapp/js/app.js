@@ -27,7 +27,7 @@ let savedAddresses = safeJSONParse('th_saved_addresses', []);
 
 let products = []; let currentMainCategory = 'All'; let activeSubCategories = []; let currentSortMode = 'newest'; let currentSearchQuery = ''; 
 let searchTimeout = null; let modalImages = []; let currentSlideIndex = 0; let isAnimating = false; let currentLightboxIndex = 0; let isLightboxAnimating = false; let currentModalLevel = 0; let statePushed = false;
-let checkoutStep = 1; let pendingOrderPayload = null; let currentOrderReference = null; let currentDeliveryFee = 0; let activeCouponValue = 0; let activeCouponCode = "";
+let checkoutStep = 1; let pendingOrderPayload = null; window.buyNowPayload = null; let currentOrderReference = null; let currentDeliveryFee = 0; let activeCouponValue = 0; let activeCouponCode = "";
 let selectedAddressIndex = savedAddresses.length > 0 ? 0 : -1; let editingAddressIndex = null; let currentSessionUser = null; let authModalMode = "login"; 
 let activeBuild = { flowers: [], fillers: [], wrapping: 'Vintage Kraft', ribbon: 'Satin Bow' }; 
 
@@ -60,20 +60,19 @@ function applyDynamicSettings() {
     });
     if(document.getElementById('current-year')) document.getElementById('current-year').textContent = new Date().getFullYear();
 
-    let promoToDisplay = "";
+    let promoToDisplay = "✨ 100% Handcrafted Fine Art & Gifts 🎀 Bespoke Canvas & Textured Clay Paintings 🌸 Unlock VIP Discounts Up To 15% Off 🦋";
     if (settings.promoText) {
         try {
             const parsed = JSON.parse(settings.promoText);
             if (Array.isArray(parsed) && parsed.length > 0 && parsed[0].trim() !== "") {
                 promoToDisplay = parsed.join(' 🌸 ') + ' 🦋 ';
             }
-        } catch(e) { promoToDisplay = settings.promoText.trim(); }
-    } else {
-        promoToDisplay = "✨ 100% Handcrafted Fine Art & Gifts 🎀 Bespoke Canvas & Textured Clay Paintings 🌸 Unlock VIP Discounts Up To 15% Off 🦋";
+        } catch(e) { }
     }
     
-    if(document.getElementById('promo-marquee-1')) document.getElementById('promo-marquee-1').textContent = promoToDisplay + " 🌸 ";
-    if(document.getElementById('promo-marquee-2')) document.getElementById('promo-marquee-2').textContent = promoToDisplay + " 🌸 ";
+    const seamlessText = `${promoToDisplay} &nbsp; &nbsp; ${promoToDisplay} &nbsp; &nbsp; ${promoToDisplay}`;
+    if(document.getElementById('promo-marquee-1')) document.getElementById('promo-marquee-1').innerHTML = `<div class="animate-marquee">${seamlessText}</div>`;
+    if(document.getElementById('promo-marquee-2')) document.getElementById('promo-marquee-2').innerHTML = `<div class="animate-marquee">${seamlessText}</div>`;
 }
 
 function setupSocialLinks() {
@@ -379,10 +378,10 @@ function renderProducts(sq = '') {
 }
 
 function generateProductCardHTML(p) {
-    const cp = Number(String(p.price || 0).replace(/[^0-9.,]/g, '')), dp = getDiscountPercent(String(p.id)), op = Math.round(cp * (1 + (dp / 100))), img = (typeof p.image1 === 'string' && p.image1.trim() !== '') ? p.image1 : 'https://placehold.co/400x500/F8E9EA/423133', isH = localWishlist.includes(String(p.id));
+    const cp = Number(String(p.price || 0).replace(/[^0-9.,]/g, '')), dp = getDiscountPercent(String(p.id)), op = Math.round(cp * (1 + (dp / 100))), img = (typeof p.image1 === 'string' && p.image1.trim() !== '') ? p.image1 : 'https://placehold.co/400x500/F8E9EA/423133';
     const c = document.createElement('div'); c.className = `w-full relative cursor-pointer opacity-0 transform translate-y-4 transition-all duration-400 ease-out group scroll-reveal`; c.setAttribute('data-card-id', p.id); c.addEventListener('click', () => window.openProductPage(p.id));
-    c.innerHTML = `<div class="w-full relative rounded-2xl overflow-hidden group shadow-sm bg-gradient-to-tr from-luxury-bg to-white border border-luxury-blush aspect-[4/5] mb-2"><span class="absolute top-2.5 left-2.5 z-10 bg-white/95 text-luxury-dark text-[7px] sm:text-[8px] font-bold px-2.5 py-1 rounded-md uppercase tracking-[0.15em] border border-luxury-blush shadow-sm">${p.category || 'Art'}</span><button type="button" class="wishlist-btn absolute top-2.5 right-2.5 bg-white/95 w-7 h-7 flex items-center justify-center rounded-full border border-luxury-blush z-20 shadow-sm transition-transform active:scale-95"><i class="${isH ? 'fas fa-heart text-red-500' : 'far fa-heart text-gray-300'} wish-icon"></i></button><img loading="lazy" decoding="async" src="${img}" alt="${p.name}" class="absolute inset-0 w-full h-full object-cover"></div><div class="px-1 flex flex-col justify-start text-left w-full"><h3 class="font-bitter font-semibold text-[11px] sm:text-[12px] text-luxury-dark leading-snug w-full transition-colors group-hover:text-luxury-rose mb-0.5 line-clamp-2">${p.name}</h3><div class="flex items-center md:items-baseline gap-1.5 flex-wrap w-full"><span class="font-poppins font-extrabold text-luxury-dark text-[14px] sm:text-[15px] tracking-tight leading-none">₹${cp}</span><span class="font-poppins text-gray-400 text-[9px] font-medium line-through leading-none">₹${op}</span></div></div>`;
-    const wb = c.querySelector('.wishlist-btn'); if (wb) wb.addEventListener('click', (e) => { e.preventDefault(); e.stopPropagation(); window.th_toggleWishlistProduct(p.id, e); }); return c;
+    c.innerHTML = `<div class="w-full relative rounded-2xl overflow-hidden group shadow-sm bg-gradient-to-tr from-luxury-bg to-white border border-luxury-blush aspect-[4/5] mb-2"><span class="absolute top-2.5 left-2.5 z-10 bg-white/95 text-luxury-dark text-[7px] sm:text-[8px] font-bold px-2.5 py-1 rounded-md uppercase tracking-[0.15em] border border-luxury-blush shadow-sm">${p.category || 'Art'}</span><img loading="lazy" decoding="async" src="${img}" alt="${p.name}" class="absolute inset-0 w-full h-full object-cover"></div><div class="px-1 flex flex-col justify-start text-left w-full"><h3 class="font-bitter font-semibold text-[11px] sm:text-[12px] text-luxury-dark leading-snug w-full transition-colors group-hover:text-luxury-rose mb-0.5 line-clamp-2">${p.name}</h3><div class="flex items-center md:items-baseline gap-1.5 flex-wrap w-full"><span class="font-poppins font-extrabold text-luxury-dark text-[14px] sm:text-[15px] tracking-tight leading-none">₹${cp}</span><span class="font-poppins text-gray-400 text-[9px] font-medium line-through leading-none">₹${op}</span></div></div>`;
+    return c;
 }
 
 window.openProductPage = function(id) { 
@@ -456,18 +455,29 @@ window.closeCheckout = function() {
 };
 
 window.routeCheckoutFromModal = function(id, e) { 
-    if(e) { e.preventDefault(); e.stopPropagation(); } const p = products.find(x => x.id == id); if(!p) return; let ex = cart.find(x => x.id == id);
-    if(!ex) { cart.push({ id: p.id, name: p.name, price: p.price, prepTime: p.prepTime, image: p.image1, isCustomizable: p.isCustomizable, mainCategory: p.mainCategory, qty: 1 }); localStorage.setItem('th_cart', JSON.stringify(cart)); updateCartCount(); }
+    if(e) { e.preventDefault(); e.stopPropagation(); } const p = products.find(x => x.id == id); if(!p) return; 
+    let customSpecsStr = "";
+    if (p.mainCategory === 'Pipe Cleaner Crafts' && p.name.toLowerCase().includes('bouquet')) {
+         customSpecsStr = `Flowers: ${activeBuild.flowers.length > 0 ? activeBuild.flowers.join(', ') : 'Standard'} | Fillers: ${activeBuild.fillers.length > 0 ? activeBuild.fillers.join(', ') : 'None'} | Wrap: ${activeBuild.wrapping} | Ribbon: ${activeBuild.ribbon}`;
+    }
+    window.buyNowPayload = { id: p.id, name: p.name, price: p.price, prepTime: p.prepTime, image: p.image1, isCustomizable: p.isCustomizable, mainCategory: p.mainCategory, customSpecs: customSpecsStr, qty: 1 };
     window.openCheckoutBase(); 
 };
 
 function renderCheckoutItems() {
-    const c = document.getElementById('checkout-items-list'); if(!c) return; if (cart.length === 0) { c.innerHTML = '<div class="text-center py-10 text-gray-400 font-medium text-sm"><i class="fas fa-shopping-bag text-4xl block mb-3 opacity-30"></i> Your bag is completely empty.</div>'; document.getElementById('cart-upsell-container')?.classList.add('hidden'); return; }
-    let h = ''; cart.forEach(i => { const cp = Number((i.price || 0).toString().replace(/[^0-9.,]/g, '')), dp = getDiscountPercent(String(i.id)), op = Math.round(cp * (1 + (dp / 100))), img = (typeof i.image1 === 'string' && i.image1.trim() !== '') ? i.image1 : (typeof i.image === 'string' ? i.image : 'https://placehold.co/150/F8E9EA/423133'), q = parseInt(i.qty || 1);
-        h += `<div class="flex flex-col sm:flex-row gap-4 border border-luxury-blush bg-white p-4 rounded-2xl shadow-sm"><img src="${img}" class="w-20 h-24 sm:w-24 sm:h-28 object-cover rounded-xl border border-luxury-blush shrink-0 bg-luxury-bg"><div class="flex flex-col justify-between w-full"><div><h4 class="font-bitter text-[14px] sm:text-[15px] font-semibold text-luxury-dark mb-1 leading-snug">${i.name}</h4><p class="text-[10px] uppercase tracking-widest font-bold text-gray-400 mb-1">${i.mainCategory || i.category || 'Handcrafted Art'}</p>
-${i.customSpecs ? `<p class="text-[9px] font-medium text-luxury-rose mb-3 bg-luxury-rose/10 inline-block px-2 py-1 rounded-md border border-luxury-rose/20 leading-relaxed">${i.customSpecs}</p>` : `<div class="mb-3"></div>`}<div class="flex items-baseline gap-2 mb-4"><span class="font-poppins text-luxury-dark font-bold text-[16px] sm:text-[18px]">₹${cp}</span><span class="font-poppins text-gray-400 text-[11px] line-through">₹${op}</span><span class="text-green-600 font-bold text-[10px] ml-1">${dp}% Off</span></div></div><div class="flex items-center gap-3"><div class="flex items-center bg-white border border-luxury-blush rounded-full h-[36px] overflow-hidden shadow-sm"><button type="button" onclick="window.th_updateCartQty('${i.id}', -1, event)" class="w-10 h-full flex items-center justify-center text-luxury-dark hover:bg-luxury-blush transition-colors"><i class="fas fa-minus text-[10px]"></i></button><div class="w-10 h-full flex items-center justify-center border-l border-r border-luxury-blush text-[12px] font-bold text-luxury-rose bg-luxury-bg">${q}</div><button type="button" onclick="window.th_updateCartQty('${i.id}', 1, event)" class="w-10 h-full flex items-center justify-center text-luxury-dark hover:bg-luxury-blush transition-colors"><i class="fas fa-plus text-[10px]"></i></button></div></div></div></div>`;
+    const c = document.getElementById('checkout-items-list'); if(!c) return; 
+    const listToRender = window.buyNowPayload ? [window.buyNowPayload] : cart;
+    if (listToRender.length === 0) { c.innerHTML = '<div class="text-center py-10 text-gray-400 font-medium text-sm"><i class="fas fa-shopping-bag text-4xl block mb-3 opacity-30"></i> Your bag is completely empty.</div>'; document.getElementById('cart-upsell-container')?.classList.add('hidden'); return; }
+    
+    const titleEl = document.querySelector('#checkout-step-1 h2');
+    if(titleEl) titleEl.textContent = window.buyNowPayload ? "Review Your Order" : "Review Your Bag";
+    if(document.getElementById('step-label-1')) document.getElementById('step-label-1').textContent = window.buyNowPayload ? "Your Order" : "Your Bag";
+
+    let h = ''; listToRender.forEach(i => { const cp = Number((i.price || 0).toString().replace(/[^0-9.,]/g, '')), dp = getDiscountPercent(String(i.id)), op = Math.round(cp * (1 + (dp / 100))), img = (typeof i.image1 === 'string' && i.image1.trim() !== '') ? i.image1 : (typeof i.image === 'string' ? i.image : 'https://placehold.co/150/F8E9EA/423133'), q = parseInt(i.qty || 1);
+        const qtyHtml = window.buyNowPayload ? `<div class="text-[12px] font-bold text-luxury-rose bg-luxury-bg px-4 py-2 border border-luxury-blush rounded-xl">Qty: 1</div>` : `<div class="flex items-center bg-white border border-luxury-blush rounded-full h-[36px] overflow-hidden shadow-sm"><button type="button" onclick="window.th_updateCartQty('${i.id}', -1, event)" class="w-10 h-full flex items-center justify-center text-luxury-dark hover:bg-luxury-blush transition-colors"><i class="fas fa-minus text-[10px]"></i></button><div class="w-10 h-full flex items-center justify-center border-l border-r border-luxury-blush text-[12px] font-bold text-luxury-rose bg-luxury-bg">${q}</div><button type="button" onclick="window.th_updateCartQty('${i.id}', 1, event)" class="w-10 h-full flex items-center justify-center text-luxury-dark hover:bg-luxury-blush transition-colors"><i class="fas fa-plus text-[10px]"></i></button></div>`;
+        h += `<div class="flex flex-col sm:flex-row gap-4 border border-luxury-blush bg-white p-4 rounded-2xl shadow-sm"><img src="${img}" class="w-20 h-24 sm:w-24 sm:h-28 object-cover rounded-xl border border-luxury-blush shrink-0 bg-luxury-bg"><div class="flex flex-col justify-between w-full"><div><h4 class="font-bitter text-[14px] sm:text-[15px] font-semibold text-luxury-dark mb-1 leading-snug">${i.name}</h4><p class="text-[10px] uppercase tracking-widest font-bold text-gray-400 mb-1">${i.mainCategory || i.category || 'Handcrafted Art'}</p>${i.customSpecs ? `<p class="text-[9px] font-medium text-luxury-rose mb-3 bg-luxury-rose/10 inline-block px-2 py-1 rounded-md border border-luxury-rose/20 leading-relaxed">${i.customSpecs}</p>` : `<div class="mb-3"></div>`}<div class="flex items-baseline gap-2 mb-4"><span class="font-poppins text-luxury-dark font-bold text-[16px] sm:text-[18px]">₹${cp}</span><span class="font-poppins text-gray-400 text-[11px] line-through">₹${op}</span><span class="text-green-600 font-bold text-[10px] ml-1">${dp}% Off</span></div></div><div class="flex items-center gap-3">${qtyHtml}</div></div></div>`;
     });
-    const dw = document.getElementById('comm-dimensions-wrapper'); if (cart.some(i => i.isCustomizable)) dw?.classList.remove('hidden'); else dw?.classList.add('hidden'); c.innerHTML = h;
+    const dw = document.getElementById('comm-dimensions-wrapper'); if (listToRender.some(i => i.isCustomizable)) dw?.classList.remove('hidden'); else dw?.classList.add('hidden'); c.innerHTML = h;
 }
 
 async function syncCloudAddresses() {
@@ -514,7 +524,8 @@ window.goToCheckoutStep = function(s) {
 
 function updateCheckoutUI() {
     let ts = 0, ss = 0, ti = 0; 
-    cart.forEach((i) => { 
+    const listToRender = window.buyNowPayload ? [window.buyNowPayload] : cart;
+    listToRender.forEach((i) => { 
         const cp = Number(String(i.price || 0).replace(/[^0-9.,]/g, '')); 
         const q = parseInt(i.qty || 1); 
         const dp = getDiscountPercent(String(i.id)); 
@@ -652,7 +663,10 @@ window.preparePaymentGateway = function() {
     const t = document.getElementById('comm-type') ? document.getElementById('comm-type').value : 'Standard Order', c = document.getElementById('comm-colors') ? document.getElementById('comm-colors').value.trim() : 'No notes', dims = document.getElementById('comm-dimensions') ? document.getElementById('comm-dimensions').value.trim() : ''; 
     const giftNote = document.getElementById('is-gift-toggle')?.checked ? document.getElementById('comm-gift-note').value.trim() : '';
     showInteractionLoader("Securing Order Engine...");
-    let ss = 0, tpt = "", its = []; cart.forEach((i) => { const cp = Number(String(i.price || 0).replace(/[^0-9.,]/g, '')), q = parseInt(i.qty || 1); ss += (cp * q); its.push({ id: i.id, name: i.name, price: cp, qty: q, image: i.image || i.image1 }); }); tpt = calculateTotalPrepTime(cart);
+    let ss = 0, tpt = "", its = []; 
+    const listToRender = window.buyNowPayload ? [window.buyNowPayload] : cart;
+    listToRender.forEach((i) => { const cp = Number(String(i.price || 0).replace(/[^0-9.,]/g, '')), q = parseInt(i.qty || 1); ss += (cp * q); its.push({ id: i.id, name: i.name, price: cp, qty: q, image: i.image || i.image1 }); }); 
+    tpt = calculateTotalPrepTime(listToRender);
     const ta = savedAddresses[selectedAddressIndex]; currentDeliveryFee = calculateDynamicDelivery(ss, ta.pincode, cart);
     const { discount: vd } = calculateCartDiscount(ss); let cd = activeCouponValue > 0 ? Math.round(ss * (activeCouponValue / 100)) : 0; const ft = ss - vd - cd + currentDeliveryFee; 
     let rawPhone = ta.phone.replace(/\D/g, '');

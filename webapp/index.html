@@ -33,6 +33,9 @@
         .custom-scroll::-webkit-scrollbar-track { background: transparent; } 
         .custom-scroll::-webkit-scrollbar-thumb { background-color: theme('colors.luxury.rose'); border-radius: 20px; }
         details > summary::-webkit-details-marker { display: none; }
+        @keyframes custom-marquee { 0% { transform: translateX(0%); } 100% { transform: translateX(-100%); } }
+        .animate-marquee { display: inline-flex; white-space: nowrap; animation: custom-marquee 25s linear infinite; }
+        .animate-marquee:hover { animation-play-state: paused; }
     </style>
 </head>
 <body class="bg-luxury-bg text-luxury-dark font-sans selection:bg-luxury-blush selection:text-luxury-dark overflow-x-hidden w-full min-h-screen">
@@ -138,7 +141,7 @@
         
         <!-- FOOTER -->
         <footer class="w-full py-14 sm:py-16 bg-[#FFF0F2] border-t border-[#f4c6ce] mt-auto">
-            <div class="max-w-[1200px] mx-auto px-6 grid grid-cols-1 md:grid-cols-3 gap-10">
+            <div class="max-w-[1200px] mx-auto w-full px-4 sm:px-6 py-6 md:py-10 pb-40 grid grid-cols-1 lg:grid-cols-12 gap-6 md:gap-12 relative">
                 <div class="flex flex-col items-center md:items-start text-center md:text-left">
                     <h3 class="font-logo font-normal text-3xl sm:text-4xl text-[#D9778A] mb-3" id="footer-dynamic-name">Twisted Happiness</h3>
                     <p class="text-[#8c7a7a] text-[12px] font-medium leading-relaxed max-w-[280px]">Curating bespoke canvas paintings, textured clay art, and premium handcrafted gifts tailored to your aesthetic.</p>
@@ -167,11 +170,6 @@
         </footer>
     </main> <!-- DOM BUG FIXED HERE -->
 
-    <!-- FLOATING WHATSAPP BUTTON -->
-    <a href="javascript:void(0)" id="floating-wa-btn" target="_blank" rel="noopener noreferrer" class="fixed bottom-24 md:bottom-6 right-4 z-[900] bg-[#25D366] text-white w-14 h-14 rounded-full flex items-center justify-center shadow-[0_10px_20px_rgba(37,211,102,0.3)] hover:bg-[#20ba56] transition-transform hover:scale-105 border-2 border-white animate-pulse">
-        <i class="fab fa-whatsapp text-3xl"></i>
-    </a>
-
     <!-- PRODUCT DETAIL PAGE -->
     <article id="product-view" class="hidden w-full min-h-screen bg-white relative z-[80] pb-24 md:pb-10">
         <header class="sticky top-0 w-full bg-white/95 backdrop-blur-md border-b border-luxury-blush px-4 py-3 flex items-center justify-between shadow-sm z-[999]">
@@ -185,9 +183,9 @@
         <div class="w-full max-w-[1100px] mx-auto flex flex-col md:flex-row items-start pt-4 md:pt-10 px-4 sm:px-6 lg:px-8 gap-4 md:gap-12 relative">
             <div class="w-full md:w-[400px] shrink-0 flex flex-col md:sticky md:top-[100px] z-10 mx-auto md:mx-0">
                 <div class="relative w-full aspect-square md:aspect-auto md:h-[450px] bg-[#fdfbfb] border border-luxury-blush rounded-2xl cursor-zoom-in shadow-sm overflow-hidden flex items-center justify-center group">
-                    <button id="btn-slide-prev" class="absolute left-3 top-1/2 -translate-y-1/2 z-20 bg-white/95 shadow-sm text-luxury-dark hover:text-luxury-rose w-10 h-10 rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-300"><i class="fas fa-chevron-left text-sm"></i></button>
+                    <button onclick="window.moveSlide(-1)" class="absolute left-3 top-1/2 -translate-y-1/2 z-20 bg-white/95 shadow-sm text-luxury-dark hover:text-luxury-rose w-10 h-10 rounded-full flex items-center justify-center opacity-0 md:opacity-100 transition-opacity duration-300"><i class="fas fa-chevron-left text-sm"></i></button>
                     <div id="modal-carousel-track" class="flex w-full h-full relative touch-pan-y items-center"></div>
-                    <button id="btn-slide-next" class="absolute right-3 top-1/2 -translate-y-1/2 z-20 bg-white/95 shadow-sm text-luxury-dark hover:text-luxury-rose w-10 h-10 rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-300"><i class="fas fa-chevron-right text-sm"></i></button>
+                    <button onclick="window.moveSlide(1)" class="absolute right-3 top-1/2 -translate-y-1/2 z-20 bg-white/95 shadow-sm text-luxury-dark hover:text-luxury-rose w-10 h-10 rounded-full flex items-center justify-center opacity-0 md:opacity-100 transition-opacity duration-300"><i class="fas fa-chevron-right text-sm"></i></button>
                     <span class="absolute bottom-3 right-3 bg-white/95 backdrop-blur-sm text-luxury-dark text-[8px] font-bold px-3 py-1.5 rounded-full pointer-events-none tracking-widest border border-luxury-blush shadow-sm"><i class="fas fa-expand-alt mr-1"></i> ZOOM</span>
                 </div>
                 <div id="modal-thumbnails" class="flex gap-3 overflow-x-auto scrollbar-hide py-4 mt-1 justify-center md:justify-start w-full"></div>
@@ -200,7 +198,6 @@
                         <span>&rsaquo;</span><span id="breadcrumb-main-cat" class="truncate"></span>
                         <span>&rsaquo;</span><span id="breadcrumb-sub-cat" class="font-bold text-luxury-dark truncate"></span>
                     </nav>
-                    <button type="button" id="modal-wishlist-toggle-btn" class="text-gray-300 hover:text-red-500 text-lg p-2 transition-colors duration-300"><i class="fas fa-heart"></i></button>
                 </div>
 
                 <span id="modal-main-category" class="text-luxury-rose text-[9px] sm:text-[10px] font-bold uppercase tracking-[0.25em] mb-1 block"></span>
@@ -279,7 +276,7 @@
             </button>
         </header>
 
-        <div class="max-w-[1200px] mx-auto w-full px-4 sm:px-6 py-6 md:py-10 grid grid-cols-1 lg:grid-cols-12 gap-6 md:gap-12 relative">
+        <div class="max-w-[1200px] mx-auto w-full px-4 sm:px-6 py-6 md:py-10 pb-32 grid grid-cols-1 lg:grid-cols-12 gap-6 md:gap-12 relative">
             <div class="lg:col-span-8 flex flex-col gap-6 md:gap-8">
                 
                 <!-- Explicit Gated Stepper -->
