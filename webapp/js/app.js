@@ -848,6 +848,10 @@ window.generateGirlyInvoice = function(encodedOrder) {
         const o = JSON.parse(decodeURIComponent(encodedOrder));
         let itemsHtml = '';
         JSON.parse(o.items).forEach(i => { itemsHtml += `<tr><td style="padding:12px; border-bottom:1px solid #fce4e8; font-size:12px; color:#4a4a4a;">${i.name}</td><td style="padding:12px; border-bottom:1px solid #fce4e8; font-size:12px; color:#4a4a4a; text-align:center;">${i.qty}</td><td style="padding:12px; border-bottom:1px solid #fce4e8; font-size:12px; color:#4a4a4a; text-align:right;">₹${i.price}</td></tr>`; });
+        
+        // Fetch current date as Delivery Date
+        const deliveryDate = new Date().toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' });
+        
         const printWindow = window.open('', '_blank');
         printWindow.document.write(`
         <html>
@@ -877,7 +881,11 @@ window.generateGirlyInvoice = function(encodedOrder) {
                     <h2 class="title">Invoice</h2>
                 </div>
                 <div class="details-row">
-                    <div><span class="highlight">Order Ref:</span> ${o.id}<br><span class="highlight">Date:</span> ${o.date}</div>
+                    <div>
+                        <span class="highlight">Order Ref:</span> ${o.id}<br>
+                        <span class="highlight">Order Date:</span> ${o.date}<br>
+                        <span class="highlight">Delivery Date:</span> ${deliveryDate}
+                    </div>
                     <div style="text-align: right; max-width: 250px;"><span class="highlight">Delivered To:</span><br>${o.reqs.replace(/ \| /g, '<br>')}</div>
                 </div>
                 <table>
