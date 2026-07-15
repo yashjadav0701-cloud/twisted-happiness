@@ -57,30 +57,50 @@ function unlockDashboard() {
     });
 }
 
-window.th_addPromoCode = function(code, type, val) {
-    try {
-        const container = document.getElementById('promo-codes-container'); if(!container) return;
-        const div = document.createElement('div'); div.className = "flex items-center gap-2 coupon-row";
-        const t = type || 'percent';
-        div.innerHTML = `<input type="text" value="${code || ''}" placeholder="PROMO CODE" class="coupon-code-input w-full bg-white border border-luxury-blush rounded-lg px-3 py-2 text-[11px] font-bold outline-none uppercase">
-        <select class="coupon-type-input bg-white border border-luxury-blush rounded-lg px-2 py-2 text-[11px] font-medium outline-none cursor-pointer">
-            <option value="percent" ${t==='percent'?'selected':''}>% Off</option>
-            <option value="flat" ${t==='flat'?'selected':''}>₹ Off</option>
-        </select>
-        <input type="number" value="${val || ''}" placeholder="Value" class="coupon-val-input w-24 bg-white border border-luxury-blush rounded-lg px-3 py-2 text-[11px] font-medium outline-none">
-        <button type="button" onclick="this.parentElement.remove()" class="text-red-400 hover:text-red-600 w-8 h-8 flex items-center justify-center shrink-0 border border-luxury-blush rounded-lg bg-white shadow-sm"><i class="fas fa-times"></i></button>`;
-        container.appendChild(div);
-    } catch(e) { console.error("Error adding code", e); }
-};
+window.th_addPromoCode = async function(event) {
+    event.preventDefault();
 
-window.th_addPromoCode = function(code, type, val) {
+    // 1. Grab values from your admin panel inputs
+    const codeInput = document.getElementById('promo-code-input');
+    const discountInput = document.getElementById('promo-discount-input');
+    
+    if (!codeInput || !discountInput) {
+        console.error("Promo code inputs not found in the DOM.");
+        return;
+    }
+
+    const code = codeInput.value.trim().toUpperCase();
+    const discount = parseFloat(discountInput.value);
+
+    // 2. Validate the data
+    if (!code || isNaN(discount)) {
+        alert('Please enter a valid promo code and discount amount.');
+        return;
+    }
+
     try {
-        const container = document.getElementById('promo-codes-container'); if(!container) return;
-        const div = document.createElement('div'); div.className = "flex items-center gap-2 coupon-row";
-        const t = type || 'percent';
-        div.innerHTML = `<input type="text" value="${code || ''}" placeholder="PROMO CODE" class="coupon-code-input w-full bg-white border border-luxury-blush rounded-lg px-3 py-2 text-[11px] font-bold outline-none uppercase"><select class="coupon-type-input bg-white border border-luxury-blush rounded-lg px-2 py-2 text-[11px] font-medium outline-none cursor-pointer"><option value="percent" ${t==='percent'?'selected':''}>% Off</option><option value="flat" ${t==='flat'?'selected':''}>₹ Off</option></select><input type="number" value="${val || ''}" placeholder="Value" class="coupon-val-input w-24 bg-white border border-luxury-blush rounded-lg px-3 py-2 text-[11px] font-medium outline-none"><button type="button" onclick="this.parentElement.remove()" class="text-red-400 hover:text-red-600 w-8 h-8 flex items-center justify-center shrink-0 border border-luxury-blush rounded-lg bg-white shadow-sm"><i class="fas fa-times"></i></button>`;
-        container.appendChild(div);
-    } catch(e) { console.error("Error adding code", e); }
+        // 3. Save to your database (Update this block to match your Supabase/Backend logic)
+        /*
+        const { data, error } = await supabase
+            .from('promo_codes')
+            .insert([{ code: code, discount: discount }]);
+        
+        if (error) throw error;
+        */
+        
+        // 4. Success UI Updates
+        alert(`Promo code ${code} added successfully!`);
+        
+        // Reset the form
+        event.target.reset();
+        
+        // Refresh the list if you have a render function
+        // renderAdminPromoCodes(); 
+        
+    } catch (error) {
+        console.error('Error adding promo code:', error);
+        alert('Failed to add promo code. Check console for details.');
+    }
 };
 
 async function fetchRuntimeSettings() {
@@ -168,7 +188,7 @@ async function fetchDatabase() {
         if(document.getElementById('sub-cat-list')) document.getElementById('sub-cat-list').innerHTML = [...new Set(products.map(p => p.category).filter(Boolean))].map(c => `<option value="${c}">`).join('');
 
         renderAdminProducts(); renderAdminCategories();
-        renderAdminProducts(); renderAdminCategories();
+
     } catch (error) { 
         console.error("Admin DB Fetch Error:", error); 
         if(list) list.innerHTML = `<div class="p-5 text-red-500 text-xs font-bold text-center">Database Connection Error: ${error.message}</div>`;
@@ -194,7 +214,7 @@ function togglePaintingFields() {
     document.getElementById('p-category').value = ''; renderAdminCategories(); 
 }
 
-function renderAdminCategories() { const datalist = document.getElementById('category-list'), mainCat = document.getElementById('p-main-category').value; if(datalist) { const relevantProducts = products.filter(p => p.mainCategory === mainCat); const allSubs = [...new Set(relevantProducts.map(p => p.category).filter(c => c))]; datalist.innerHTML = ''; allSubs.forEach(cat => { const option = document.createElement('option'); option.value = cat; datalist.appendChild(option); }); } }
+function renderAdminCategories() { const datalist = document.getElementById('sub-cat-list'), mainCat = document.getElementById('p-main-category').value; if(datalist) { const relevantProducts = products.filter(p => p.mainCategory === mainCat); const allSubs = [...new Set(relevantProducts.map(p => p.category).filter(c => c))]; datalist.innerHTML = ''; allSubs.forEach(cat => { const option = document.createElement('option'); option.value = cat; datalist.appendChild(option); }); } }
 
 function compressImageToBlob(file, maxSize = 1600) { 
     return new Promise((resolve) => { 

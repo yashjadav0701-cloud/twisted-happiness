@@ -127,7 +127,7 @@ function bindDOMEvents() {
     document.getElementById('sortInputMob')?.addEventListener('change', (e) => setSortMode(e.target.value));
     document.getElementById('sortInputDesk')?.addEventListener('change', (e) => setSortMode(e.target.value));
     document.getElementById('sub-category-filters-mob')?.addEventListener('change', (e) => filterSubCategory(e.target.value));
-    document.getElementById('track-order-form')?.addEventListener('submit', handleTrackOrder);
+    document.getElementById('track-order-form-guest')?.addEventListener('submit', handleTrackOrderGuest);
     document.getElementById('track-order-form-guest')?.addEventListener('submit', handleTrackOrderGuest);
     document.getElementById('customer-auth-form')?.addEventListener('submit', handleAuthFormSubmit);
     setupTouchCarousel(); setupLightboxTouch();
@@ -386,27 +386,50 @@ function generateProductCardHTML(p) {
     return c;
 }
 
-window.openProductPage = function(id) { 
-    const p = products.find(x => x.id == id); if(!p) return; document.getElementById('product-view').setAttribute('data-current-id', p.id);
-    activeBuild = { flowers: [], fillers: [], wrapping: 'Vintage Kraft', ribbon: 'Satin Bow' }; 
-    renderVisualCustomizer(p); 
-    const cp = Number(String(p.price || 0).replace(/[^0-9.,]/g, '')), dp = getDiscountPercent(String(p.id)), op = Math.round(cp * (1 + (dp / 100)));
-    modalImages = [p.image1, p.image2, p.image3, p.image4, p.image5].filter(img => typeof img === 'string' && img.trim() !== ''); if (modalImages.length === 0) modalImages.push('https://placehold.co/400x500/F8E9EA/423133');
-    
-    const tr = document.getElementById('modal-carousel-track'), th = document.getElementById('modal-thumbnails'); tr.style.transition = 'none'; let html = '';
-    modalImages.forEach(src => { html += `<div class="w-full h-full flex-shrink-0 flex items-center justify-center relative bg-transparent" onclick="window.openLightboxFromCarousel()"><img loading="lazy" src="${src}" class="w-full max-h-full object-contain"></div>`; }); tr.innerHTML = html; currentSlideIndex = 0; tr.style.transform = `translateX(0)`;
-    
-    th.innerHTML = ''; if (modalImages.length > 1) { modalImages.forEach((src, idx) => { const tm = document.createElement('img'); tm.src = src; tm.className = `w-12 h-12 object-cover rounded-md border-2 transition-all cursor-pointer ${idx === 0 ? 'border-luxury-rose scale-105 opacity-100' : 'border-transparent opacity-60 hover:opacity-100'}`; tm.id = `thumb-${idx}`; tm.addEventListener('click', () => window.goToSlide(idx)); th.appendChild(tm); }); } 
-    
-    document.getElementById('modal-wishlist-toggle-btn').onclick = (e) => window.th_toggleWishlistProduct(p.id, e); updateWishlistUIElements(p.id, (localWishlist || []).includes(String(p.id)));
+window.openProductPage = async function(id) {
+    try {
+        const p = products.find(x => String(x.id) === String(id));
+        if (!p) return;
+        
+        if(document.getElementById('modal-title')) document.getElementById('modal-title').textContent = p.name;
+        if(document.getElementById('modal-main-category')) document.getElementById('modal-main-category').textContent = p.mainCategory;
+        if(document.getElementById('breadcrumb-main-cat')) document.getElementById('breadcrumb-main-cat').textContent = p.mainCategory;
+        if(document.getElementById('breadcrumb-sub-cat')) document.getElementById('breadcrumb-sub-cat').textContent = p.subCategory;
+        if(document.getElementById('modal-price')) document.getElementById('modal-price').textContent = '₹' + p.price;
+        if(document.getElementById('modal-desc')) document.getElementById('modal-desc').innerHTML = (p.description || '').replace(/\n/g, '<br>');
 
-    if(document.getElementById('modal-title')) document.getElementById('modal-title').textContent = p.name; if(document.getElementById('modal-main-category')) document.getElementById('modal-main-category').textContent = p.mainCategory; if(document.getElementById('modal-sub-category')) document.getElementById('modal-sub-category').textContent = p.category || 'Fine Art Medium'; if(document.getElementById('breadcrumb-main-cat')) document.getElementById('breadcrumb-main-cat').textContent = p.mainCategory; if(document.getElementById('breadcrumb-sub-cat')) document.getElementById('breadcrumb-sub-cat').textContent = p.name.substring(0, 20) + (p.name.length > 20 ? '...' : ''); if(document.getElementById('modal-price')) document.getElementById('modal-price').textContent = cp; if(document.getElementById('modal-original-price')) document.getElementById('modal-original-price').textContent = "₹" + op; if(document.getElementById('modal-discount-tag')) document.getElementById('modal-discount-tag').textContent = `${dp}% OFF`; if(document.getElementById('modal-specs')) document.getElementById('modal-specs').innerHTML = p.specs || 'No details provided.'; if(document.getElementById('modal-edd-delivery-tag')) document.getElementById('modal-edd-delivery-tag').textContent = calculateEDDBracket(p.prepTime || '3-5');
+        let modalImages = [];
+        try { modalImages = JSON.parse(p.images || '[]'); } catch(e) { modalImages = typeof p.images === 'string' ? [p.images] : []; }
+        const mf = document.getElementById('modal-featured-img'); if (mf) mf.src = modalImages[0] || 'https://via.placeholder.com/400x500?text=No+Image';
+        
+        const th = document.getElementById('modal-thumbnails');
+        if (th) {
+            th.innerHTML = ''; 
+            if (modalImages.length > 1) { 
+                modalImages.forEach((src, idx) => { 
+                    const tm = document.createElement('img'); 
+                    tm.src = src; 
+                    tm.className = `w-12 h-12 object-cover rounded-md border-2 transition-all cursor-pointer ${idx === 0 ? 'border-luxury-rose scale-105 opacity-100' : 'border-transparent opacity-60 hover:opacity-100'}`; 
+                    tm.id = `thumb-${idx}`; 
+                    tm.addEventListener('click', () => {
+                        if (mf) mf.src = src;
+                        document.querySelectorAll('#modal-thumbnails img').forEach(i => { i.classList.remove('border-luxury-rose', 'scale-105', 'opacity-100'); i.classList.add('border-transparent', 'opacity-60'); });
+                        tm.classList.remove('border-transparent', 'opacity-60');
+                        tm.classList.add('border-luxury-rose', 'scale-105', 'opacity-100');
+                    }); 
+                    th.appendChild(tm); 
+                }); 
+            }
+        }
 
-    const cg = document.getElementById('modal-care-guide'); if (cg) { if (p.mainCategory === 'Canvas Paintings') cg.innerHTML = `<li>Keep away from prolonged direct sunlight.</li><li>Avoid areas with extreme humidity.</li><li>Dust gently with a clean, dry microfiber cloth.</li>`; else if (p.mainCategory === 'Clay Art Paintings') cg.innerHTML = `<li><strong>Highly fragile.</strong> Handle edges with care.</li><li>Keep strictly away from moisture.</li><li>Dust very lightly using a soft brush.</li>`; else cg.innerHTML = `<li>Keep away from direct, harsh sunlight.</li><li>Lightly dust with a soft, dry brush.</li><li>Do not expose to moisture.</li>`; }
-    const bc = document.getElementById('art-badges-container'), db = document.getElementById('modal-dimensions-badge'), cb = document.getElementById('modal-custom-badge'); if(bc) bc.classList.add('hidden'); if(db) db.classList.add('hidden'); if(cb) cb.classList.add('hidden'); if(p.mainCategory === 'Canvas Paintings' || p.mainCategory === 'Clay Art Paintings') { bc?.classList.remove('hidden'); if(p.dimensions && db) { document.getElementById('modal-dimensions-text').textContent = p.dimensions; db.classList.remove('hidden'); } if(p.isCustomizable) cb?.classList.remove('hidden'); }
-    
-    renderRelatedProducts(p.id, p.mainCategory, p.category); updateProductButtons(p.id);
-    document.getElementById('customer-view')?.classList.add('hidden'); document.getElementById('product-view')?.classList.remove('hidden'); window.scrollTo(0, 0); currentModalLevel = 1; window.safePushState(1); 
+        const btn = document.getElementById('modal-add-cart-btn'); if(btn) btn.onclick = () => window.th_addToCart(p.id);
+        const buyBtn = document.getElementById('modal-buy-now-btn'); if(buyBtn) buyBtn.onclick = () => window.th_buyNow(p.id);
+
+        document.getElementById('product-modal')?.classList.remove('hidden');
+        document.body.style.overflow = 'hidden';
+    } catch (error) { 
+        console.error("Error opening product:", error); 
+    }
 };
 
 window.closeProductPage = function() { document.getElementById('product-view')?.classList.add('hidden'); document.getElementById('customer-view')?.classList.remove('hidden'); window.scrollTo(0, 0); };
@@ -733,38 +756,75 @@ async function renderCustomerOrdersPipeline() {
                 const encodedOrder = encodeURIComponent(JSON.stringify({id: exId, date: dt, items: o.order_details, total: o.total, reqs: o.customer_reqs}));
                 invoiceBtnHtml = `<button type="button" onclick="window.generateGirlyInvoice('${encodedOrder}')" class="mt-4 w-full bg-[#FFF0F2] text-luxury-rose hover:bg-luxury-rose hover:text-white border border-luxury-rose/30 py-3 rounded-xl font-bold text-[10px] uppercase tracking-widest transition-colors shadow-sm flex justify-center items-center gap-2"><i class="fas fa-file-download"></i> Download Official Invoice</button>`;
             } else if (step === 3) {
-                // If live tracking data exists, render the beautiful widget
+                let trackUrl = "#";
+                let awb = "Pending";
                 if (o.tracking_data) {
                     try {
                         const t = typeof o.tracking_data === 'string' ? JSON.parse(o.tracking_data) : o.tracking_data;
-                        invoiceBtnHtml = `
-                        <div class="mt-4 w-full bg-white border border-blue-100 rounded-xl overflow-hidden shadow-sm">
-                            <div class="bg-blue-50/50 px-4 py-2 border-b border-blue-100 flex justify-between items-center">
-                                <span class="text-[9px] font-bold text-blue-600 uppercase tracking-widest"><i class="fas fa-truck mr-1"></i> ${t.courier}</span>
-                                <span class="text-[9px] font-bold text-gray-400 uppercase tracking-widest">AWB: ${t.awb}</span>
-                            </div>
-                            <div class="p-4">
-                                <h5 class="font-bold text-[11px] text-luxury-dark mb-1">${t.latest_status}</h5>
-                                <p class="text-[10px] text-gray-500 mb-2 leading-relaxed">${t.message}</p>
-                                ${t.location ? `<p class="text-[8px] font-bold text-[#D9778A] uppercase tracking-widest"><i class="fas fa-map-marker-alt mr-1"></i> ${t.location}</p>` : ''}
-                            </div>
-                        </div>`;
-                    } catch(e) {
-                        invoiceBtnHtml = `<div class="mt-4 w-full bg-blue-50 text-blue-600 border border-blue-200 py-3 rounded-xl font-bold text-[10px] uppercase tracking-widest text-center shadow-sm flex justify-center items-center gap-2"><i class="fas fa-shipping-fast"></i> Order in Transit</div>`;
-                    }
-                } else {
-                    // Fallback just in case
-                    invoiceBtnHtml = `<div class="mt-4 w-full bg-blue-50 text-blue-600 border border-blue-200 py-3 rounded-xl font-bold text-[10px] uppercase tracking-widest text-center shadow-sm flex justify-center items-center gap-2"><i class="fas fa-shipping-fast"></i> Order in Transit</div>`;
+                        if (t.awb && t.awb !== 'Pending') { awb = t.awb; trackUrl = `https://shiprocket.co/tracking/${awb}`; }
+                    } catch(e) {}
                 }
+                
+                invoiceBtnHtml = `
+                <div class="mt-4 w-full bg-blue-50/50 border border-blue-100 py-4 px-4 rounded-xl flex flex-col items-center shadow-sm gap-3">
+                    <div class="text-center">
+                        <h5 class="font-bold text-[11px] text-luxury-dark uppercase tracking-widest mb-1"><i class="fas fa-box-open mr-1 text-blue-500"></i> Order Dispatched</h5>
+                        <p class="text-[9px] text-gray-500 uppercase tracking-widest">AWB: ${awb}</p>
+                    </div>
+                    ${awb !== 'Pending' 
+                        ? `<a href="${trackUrl}" target="_blank" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold text-[10px] uppercase tracking-widest py-3 rounded-lg shadow-sm transition-colors text-center flex justify-center items-center gap-2"><i class="fas fa-location-arrow"></i> Track Your Order</a>` 
+                        : `<div class="w-full bg-gray-200 text-gray-500 font-bold text-[10px] uppercase tracking-widest py-3 rounded-lg text-center flex justify-center items-center gap-2"><i class="fas fa-spinner fa-spin"></i> Generating Tracking Link...</div>`
+                    }
+                </div>`;
             }
 
             let progressBarHtml = '';
             if (step > 0) {
-                progressBarHtml = `<div class="relative flex justify-between items-center w-full max-w-sm mx-auto mt-6 mb-2"><div class="absolute left-0 top-1/2 -translate-y-1/2 w-full h-1 bg-luxury-blush z-0 rounded-full"></div><div class="absolute left-0 top-1/2 -translate-y-1/2 h-1 bg-luxury-rose z-0 rounded-full transition-all duration-700" style="width: ${(step-1) * 33.33}%"></div><div class="relative z-10 flex flex-col items-center gap-2"><div class="w-6 h-6 rounded-full flex items-center justify-center text-[10px] ${step >= 1 ? 'bg-luxury-rose text-white shadow-md border-2 border-white' : 'bg-white border-2 border-luxury-blush text-gray-300'}"><i class="fas fa-receipt"></i></div><span class="text-[7px] font-bold uppercase tracking-widest ${step >= 1 ? 'text-luxury-dark' : 'text-gray-400'} absolute -bottom-5 w-max">Placed</span></div><div class="relative z-10 flex flex-col items-center gap-2"><div class="w-6 h-6 rounded-full flex items-center justify-center text-[10px] ${step >= 2 ? 'bg-luxury-rose text-white shadow-md border-2 border-white' : 'bg-white border-2 border-luxury-blush text-gray-300'}"><i class="fas fa-paint-brush"></i></div><span class="text-[7px] font-bold uppercase tracking-widest ${step >= 2 ? 'text-luxury-dark' : 'text-gray-400'} absolute -bottom-5 w-max">Crafting</span></div><div class="relative z-10 flex flex-col items-center gap-2"><div class="w-6 h-6 rounded-full flex items-center justify-center text-[10px] ${step >= 3 ? 'bg-luxury-rose text-white shadow-md border-2 border-white' : 'bg-white border-2 border-luxury-blush text-gray-300'}"><i class="fas fa-box"></i></div><span class="text-[7px] font-bold uppercase tracking-widest ${step >= 3 ? 'text-luxury-dark' : 'text-gray-400'} absolute -bottom-5 w-max">Shipped</span></div><div class="relative z-10 flex flex-col items-center gap-2"><div class="w-6 h-6 rounded-full flex items-center justify-center text-[10px] ${step >= 4 ? 'bg-green-500 text-white shadow-md border-2 border-white' : 'bg-white border-2 border-luxury-blush text-gray-300'}"><i class="fas fa-check"></i></div><span class="text-[7px] font-bold uppercase tracking-widest ${step >= 4 ? 'text-green-600' : 'text-gray-400'} absolute -bottom-5 w-max">Delivered</span></div></div>`;
-            } else { progressBarHtml = `<div class="text-center text-red-500 font-bold text-[9px] uppercase tracking-widest py-3">Order Cancelled</div>`; }
+                progressBarHtml = `
+                <div class="mt-5 px-2 pb-2">
+                    <div class="relative pl-6 border-l-2 ${step >= 4 ? 'border-green-500' : 'border-gray-200'} space-y-6 font-sans">
+                        
+                        <!-- Step 1: Order Confirmed -->
+                        <div class="relative">
+                            <div class="absolute -left-[31px] top-0 w-4 h-4 rounded-full border-2 border-white ${step >= 1 ? 'bg-green-500' : 'bg-gray-300'} shadow-sm z-10"></div>
+                            <h5 class="font-bold text-[13px] ${step >= 1 ? 'text-gray-900' : 'text-gray-400'}">Order Confirmed</h5>
+                            <p class="text-[10px] text-gray-400 mb-1">${dt}</p>
+                            ${step >= 1 ? `<p class="text-[11px] text-gray-600 mt-1">Your order has been placed successfully and payment is verified.</p>` : ''}
+                        </div>
+                        
+                        <!-- Step 2: Crafting / Processed -->
+                        <div class="relative">
+                            <div class="absolute -left-[31px] top-0 w-4 h-4 rounded-full border-2 border-white ${step >= 2 ? 'bg-green-500' : 'bg-gray-300'} shadow-sm z-10"></div>
+                            <h5 class="font-bold text-[13px] ${step >= 2 ? 'text-gray-900' : 'text-gray-400'}">Artisan is Crafting</h5>
+                            ${step >= 2 ? `<p class="text-[11px] text-gray-600 mt-1">Seller has processed your order. Our artisan is currently handcrafting your piece.</p>` : ''}
+                        </div>
+                        
+                        <!-- Step 3: Shipped -->
+                        <div class="relative">
+                            <div class="absolute -left-[31px] top-0 w-4 h-4 rounded-full border-2 border-white ${step >= 3 ? 'bg-green-500' : 'bg-gray-300'} shadow-sm z-10"></div>
+                            <h5 class="font-bold text-[13px] ${step >= 3 ? 'text-gray-900' : 'text-gray-400'}">Shipped</h5>
+                            ${step >= 3 ? `<p class="text-[11px] text-gray-600 mt-1">Your item has been securely packaged and picked up by our delivery partner.</p>` : ''}
+                        </div>
+                        
+                        <!-- Step 4: Delivered -->
+                        <div class="relative">
+                            <div class="absolute -left-[31px] top-0 w-4 h-4 rounded-full border-2 border-white ${step >= 4 ? 'bg-green-500' : 'bg-gray-300'} shadow-sm z-10"></div>
+                            <h5 class="font-bold text-[13px] ${step >= 4 ? 'text-green-600' : 'text-gray-400'}">Delivered</h5>
+                            ${step >= 4 ? `<p class="text-[11px] text-gray-600 mt-1">Your item has been delivered. Thank you for shopping with us!</p>` : ''}
+                        </div>
 
-            html += `<details class="bg-white border border-luxury-blush rounded-2xl shadow-sm group overflow-hidden cursor-pointer mb-3"><summary class="p-4 sm:p-5 list-none flex flex-col sm:flex-row justify-between sm:items-center gap-4 outline-none"><div class="flex flex-col"><span class="text-[9px] text-gray-400 uppercase tracking-widest font-bold mb-1">Order ${exId}</span><h4 class="font-poppins font-bold ${step === 0 ? 'text-red-500' : 'text-luxury-dark'} text-sm mb-1">${statusText}</h4><p class="text-gray-400 text-[10px]">${dt} • <span class="font-bold text-luxury-dark">₹${o.total}</span></p></div><div class="flex items-center justify-between sm:justify-end w-full sm:w-auto gap-4"><div class="flex gap-2 overflow-x-auto max-w-[150px] scrollbar-hide py-1">${itemsHtml}</div><i class="fas fa-chevron-down text-gray-300 transition-transform group-open:rotate-180"></i></div></summary><div class="p-4 sm:p-5 pt-0 border-t border-luxury-blush mt-2 bg-luxury-bg/50">${progressBarHtml}<div class="mt-6 bg-white border border-luxury-blush p-3 rounded-xl text-[10px] text-gray-500 whitespace-pre-wrap font-medium"><p class="font-bold text-luxury-dark mb-1 uppercase tracking-widest text-[8px]">Request Details</p>${o.customer_reqs}</div>${invoiceBtnHtml}</div></details>`; 
-        }); 
+                    </div>
+                </div>`;
+            } else { 
+                progressBarHtml = `
+                <div class="mt-4 p-4 bg-red-50 rounded-xl border border-red-100 flex items-center gap-3">
+                    <i class="fas fa-times-circle text-red-500 text-lg"></i>
+                    <div>
+                        <h5 class="font-bold text-[12px] text-red-600 uppercase tracking-widest">Order Cancelled</h5>
+                        <p class="text-[10px] text-red-400 mt-0.5">This order was cancelled or payment verification failed.</p>
+                    </div>
+                </div>`; 
+            } 
         c.innerHTML = html; 
     } catch(err) { c.innerHTML = '<div class="text-center text-red-500 py-4 text-xs">Failed to load archive.</div>'; }
 }
@@ -870,7 +930,10 @@ window.generateGirlyInvoice = function(encodedOrder) {
         JSON.parse(o.items).forEach(i => { itemsHtml += `<tr><td style="padding:12px; border-bottom:1px solid #fce4e8; font-size:12px; color:#4a4a4a;">${i.name}</td><td style="padding:12px; border-bottom:1px solid #fce4e8; font-size:12px; color:#4a4a4a; text-align:center;">${i.qty}</td><td style="padding:12px; border-bottom:1px solid #fce4e8; font-size:12px; color:#4a4a4a; text-align:right;">₹${i.price}</td></tr>`; });
         
         // Fetch current date as Delivery Date
-        const deliveryDate = new Date().toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' });
+        // Use the actual delivery date from the database, fallback to current date only if missing
+const deliveryDate = encodedOrder.delivery_date 
+    ? new Date(encodedOrder.delivery_date).toLocaleDateString('en-US') 
+    : new Date().toLocaleDateString('en-US');
         
         const printWindow = window.open('', '_blank');
         printWindow.document.write(`
