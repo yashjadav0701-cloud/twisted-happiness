@@ -188,6 +188,9 @@ function renderProfileAddressBook() {
         return;
     }
     
+    // Add instruction note
+    container.innerHTML = '<p class="text-[9px] font-bold text-gray-400 uppercase tracking-widest mb-3">Addresses can be added or edited securely during checkout.</p>';
+    
     let html = '';
     savedAddresses.forEach((a) => { 
         html += `
@@ -452,10 +455,34 @@ function updateCheckoutUI() {
     const ft = ss - vd - cd + currentDeliveryFee, pd = ts - ss, tos = pd + vd + cd;
     if(document.getElementById('qo-item-count')) document.getElementById('qo-item-count').textContent = ti; if(document.getElementById('qo-original-value')) document.getElementById('qo-original-value').textContent = `₹${ts}`; if(document.getElementById('qo-product-discount')) document.getElementById('qo-product-discount').textContent = `- ₹${pd}`;
     const vr = document.getElementById('qo-vip-row'); if(vr) { if(vd > 0) { document.getElementById('qo-vip-label').textContent = ct.label; document.getElementById('qo-vip-discount').textContent = `- ₹${vd}`; vr.classList.remove('hidden'); } else { vr.classList.add('hidden'); } }
-    if(document.getElementById('qo-total-savings')) document.getElementById('qo-total-savings').textContent = tos; if(document.getElementById('qo-final-total')) document.getElementById('qo-final-total').textContent = `₹${ft}`;
-    const f = document.getElementById('progress-bar-fill'), i1 = document.getElementById('step-indicator-1'), i2 = document.getElementById('step-indicator-2'), i3 = document.getElementById('step-indicator-3'), sb = document.getElementById('checkout-price-sidebar'), mb = document.getElementById('checkout-action-btn-mobile'), db = document.getElementById('checkout-action-btn-if(mb) { if(checkoutStep === 1) { mb.innerHTML = `Next: Delivery <i class="fas fa-arrow-right ml-1"></i>`; mb.disabled = cart.length===0; mb.className=`w-full bg-luxury-dark text-white hover:bg-[#D9778A] py-4 rounded-xl font-bold text-[11px] uppercase tracking-[0.15em] transition-all shadow-float flex items-center justify-center gap-2 ${cart.length===0?'opacity-50 cursor-not-allowed':''}`; } else if (checkoutStep === 2) { mb.innerHTML = `Next: Secure Payment <i class="fas fa-lock ml-1"></i>`; mb.disabled = false; mb.className="w-full bg-luxury-dark text-white hover:bg-[#D9778A] py-4 rounded-xl font-bold text-[11px] uppercase tracking-[0.15em] transition-all shadow-float flex items-center justify-center gap-2"; } }
-    if(db) { if(checkoutStep === 1) { db.innerHTML = `Next: Delivery <i class="fas fa-arrow-right ml-1"></i>`; db.disabled = cart.length===0; db.className=`hidden lg:flex w-full bg-luxury-dark text-white hover:bg-[#D9778A] py-4 rounded-xl font-bold text-[11px] uppercase tracking-[0.15em] transition-all shadow-float items-center justify-center gap-2 mt-2 ${cart.length===0?'opacity-50 cursor-not-allowed':''}`; } else if (checkoutStep === 2) { db.innerHTML = `Next: Secure Payment <i class="fas fa-lock ml-1"></i>`; db.disabled = false; db.className="hidden lg:flex w-full bg-luxury-dark text-white hover:bg-[#D9778A] py-4 rounded-xl font-bold text-[11px] uppercase tracking-[0.15em] transition-all shadow-float items-center justify-center gap-2 mt-2"; } }desk'); if(!f) return;
-    if(sb) { if(window.innerWidth < 1024) { sb.className = (checkoutStep === 1) ? "block w-full mt-2" : "hidden w-full mt-2"; } else { sb.className = (checkoutStep === 1 || checkoutStep === 2) ? "block lg:col-span-4 w-full lg:mt-0" : "hidden lg:block lg:col-span-4 w-full lg:mt-0"; } }
+    if(document.getElementById('qo-total-savings')) document.getElementById('qo-total-savings').textContent = tos; 
+    if(document.getElementById('qo-final-total')) document.getElementById('qo-final-total').textContent = `₹${ft}`;
+    
+    const f = document.getElementById('progress-bar-fill');
+    const i1 = document.getElementById('step-indicator-1');
+    const i2 = document.getElementById('step-indicator-2');
+    const i3 = document.getElementById('step-indicator-3');
+    const sb = document.getElementById('checkout-price-sidebar');
+    const mb = document.getElementById('checkout-action-btn-mobile');
+    const db = document.getElementById('checkout-action-btn-desk'); 
+    
+    if(!f) return;
+    
+    if(mb) { 
+        if(checkoutStep === 1) { mb.innerHTML = `Next: Delivery <i class="fas fa-arrow-right ml-1"></i>`; mb.disabled = cart.length===0; mb.className=`w-full bg-luxury-dark text-white hover:bg-[#D9778A] py-4 rounded-xl font-bold text-[11px] uppercase tracking-[0.15em] transition-all shadow-float flex items-center justify-center gap-2 ${cart.length===0?'opacity-50 cursor-not-allowed':''}`; } 
+        else if (checkoutStep === 2) { mb.innerHTML = `Next: Secure Payment <i class="fas fa-lock ml-1"></i>`; mb.disabled = false; mb.className="w-full bg-luxury-dark text-white hover:bg-[#D9778A] py-4 rounded-xl font-bold text-[11px] uppercase tracking-[0.15em] transition-all shadow-float flex items-center justify-center gap-2"; } 
+    }
+    
+    if(db) { 
+        if(checkoutStep === 1) { db.innerHTML = `Next: Delivery <i class="fas fa-arrow-right ml-1"></i>`; db.disabled = cart.length===0; db.className=`hidden lg:flex w-full bg-luxury-dark text-white hover:bg-[#D9778A] py-4 rounded-xl font-bold text-[11px] uppercase tracking-[0.15em] transition-all shadow-float items-center justify-center gap-2 mt-2 ${cart.length===0?'opacity-50 cursor-not-allowed':''}`; } 
+        else if (checkoutStep === 2) { db.innerHTML = `Next: Secure Payment <i class="fas fa-lock ml-1"></i>`; db.disabled = false; db.className="hidden lg:flex w-full bg-luxury-dark text-white hover:bg-[#D9778A] py-4 rounded-xl font-bold text-[11px] uppercase tracking-[0.15em] transition-all shadow-float items-center justify-center gap-2 mt-2"; } 
+    }
+    
+    if(sb) { 
+        if(window.innerWidth < 1024) { sb.className = (checkoutStep === 1) ? "block w-full mt-2" : "hidden w-full mt-2"; } 
+        else { sb.className = (checkoutStep === 1 || checkoutStep === 2) ? "block lg:col-span-4 w-full lg:mt-0" : "hidden lg:block lg:col-span-4 w-full lg:mt-0"; } 
+    }
+    
     const aCl = "w-8 h-8 rounded-full flex items-center justify-center text-[12px] font-bold transition-colors bg-[#D9778A] text-white shadow-md border-2 border-white group-hover:scale-105", iCl = "w-8 h-8 rounded-full flex items-center justify-center text-[12px] font-bold transition-colors bg-white text-gray-400 border-2 border-luxury-blush group-hover:scale-105";
     if (checkoutStep === 1) { document.getElementById('checkout-step-1')?.classList.remove('hidden'); document.getElementById('checkout-step-2')?.classList.add('hidden'); document.getElementById('checkout-step-3')?.classList.add('hidden'); f.style.width = '0%'; if(i1) i1.className = aCl; if(i2) i2.className = iCl; if(i3) i3.className = iCl; } 
     else if (checkoutStep === 2) { document.getElementById('checkout-step-1')?.classList.add('hidden'); document.getElementById('checkout-step-2')?.classList.remove('hidden'); document.getElementById('checkout-step-3')?.classList.add('hidden'); f.style.width = '50%'; if(i1) i1.className = aCl; if(i2) i2.className = aCl; if(i3) i3.className = iCl; } 
@@ -469,13 +496,20 @@ window.handleCheckoutAction = function() {
 };
 
 window.preparePaymentGateway = function() {
-    const t = document.getElementById('comm-type') ? document.getElementById('comm-type').value : 'Standard Order', c = document.getElementById('comm-colors') ? document.getElementById('comm-colors').value.trim() : 'No notes', dims = document.getElementById('comm-dimensions') ? document.getElementById('comm-dimensions').value.trim() : ''; showInteractionLoader("Securing Order Engine...");
+    const t = document.getElementById('comm-type') ? document.getElementById('comm-type').value : 'Standard Order', c = document.getElementById('comm-colors') ? document.getElementById('comm-colors').value.trim() : 'No notes', dims = document.getElementById('comm-dimensions') ? document.getElementById('comm-dimensions').value.trim() : ''; 
+    const giftNote = document.getElementById('is-gift-toggle')?.checked ? document.getElementById('comm-gift-note').value.trim() : '';
+    showInteractionLoader("Securing Order Engine...");
     let ss = 0, tpt = "", its = []; cart.forEach((i) => { const cp = Number(String(i.price || 0).replace(/[^0-9.,]/g, '')), q = parseInt(i.qty || 1); ss += (cp * q); its.push({ id: i.id, name: i.name, price: cp, qty: q, image: i.image || i.image1 }); }); tpt = calculateTotalPrepTime(cart);
     const ta = savedAddresses[selectedAddressIndex]; currentDeliveryFee = calculateDynamicDelivery(ss, ta.pincode, cart);
     const { discount: vd } = calculateCartDiscount(ss); let cd = activeCouponValue > 0 ? Math.round(ss * (activeCouponValue / 100)) : 0; const ft = ss - vd - cd + currentDeliveryFee; 
     const scc = (settings.countryCode || '+91'), fcp = scc + " " + ta.phone; let fa = `${ta.address_1}, ${ta.address_2 ? ta.address_2 + ', ' : ''}${ta.city}, ${ta.state} - ${ta.pincode}`;
     const cln = ta.first_name.replace(/[^a-zA-Z0-9]/g, '').substring(0, 10); currentOrderReference = `TH_${cln}_${String(Date.now()).slice(-4)}`; 
-    let ad = `ID: ${currentOrderReference} | Ph: ${fcp} | Patron: ${ta.first_name} ${ta.last_name || ''} | Email: ${ta.email} | Address: ${fa} | Purpose: ${t} | Notes: ${c} | Delivery Fee: ₹${currentDeliveryFee}`; if(activeCouponValue > 0) ad += ` | Coupon: ${activeCouponCode} (-₹${cd})`; if(dims && document.getElementById('comm-dimensions-wrapper') && !document.getElementById('comm-dimensions-wrapper').classList.contains('hidden')) ad += ` | Size: ${dims}`; ad += ` | Est. Prep: ${tpt}`; 
+    
+    let ad = `ID: ${currentOrderReference} | Ph: ${fcp} | Patron: ${ta.first_name} ${ta.last_name || ''} | Email: ${ta.email} | Address: ${fa} | Purpose: ${t} | Notes: ${c} | Delivery Fee: ₹${currentDeliveryFee}`; 
+    if(giftNote) ad += ` | Gift Message: "${giftNote}"`;
+    if(activeCouponValue > 0) ad += ` | Coupon: ${activeCouponCode} (-₹${cd})`; 
+    if(dims && document.getElementById('comm-dimensions-wrapper') && !document.getElementById('comm-dimensions-wrapper').classList.contains('hidden')) ad += ` | Size: ${dims}`; 
+    ad += ` | Est. Prep: ${tpt}`;
     const fmt = Number(ft).toFixed(2), uId = (settings.upiId || "khushisj315@oksbi").trim(), uLnk = `upi://pay?pa=${uId}&pn=Twisted_Happiness&am=${fmt}&cu=INR&tn=${currentOrderReference}`;
     pendingOrderPayload = { order_details: JSON.stringify(its), subtotal: ss, discount: vd, total: ft, customer_reqs: ad, status: 'new', user_id: currentSessionUser ? currentSessionUser.id : null };
     setTimeout(() => { checkoutStep = 3; if(document.getElementById('checkout-payment-amount')) document.getElementById('checkout-payment-amount').textContent = `₹${fmt}`; const vb = document.getElementById('btn-confirm-payment'); if(vb) { vb.innerHTML = 'I Have Completed Payment <i class="fas fa-check-circle"></i>'; vb.disabled = false; } if (isMobileDevice()) { if(document.getElementById('payment-mobile-btn')) document.getElementById('payment-mobile-btn').href = uLnk; document.getElementById('payment-mobile-container')?.classList.remove('hidden'); document.getElementById('payment-qr-container')?.classList.add('hidden'); } else { const qrUrl = `https://quickchart.io/qr?size=250&margin=2&text=${encodeURIComponent(uLnk)}`; if(document.getElementById('payment-qr-img')) document.getElementById('payment-qr-img').src = qrUrl; document.getElementById('payment-qr-container')?.classList.remove('hidden'); document.getElementById('payment-mobile-container')?.classList.add('hidden'); } updateCheckoutUI(); document.getElementById('checkout-overlay')?.scrollTo({top: 0, behavior: 'smooth'}); hideInteractionLoader(); }, 1500); 
