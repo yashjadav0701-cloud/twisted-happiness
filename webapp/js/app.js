@@ -474,7 +474,7 @@ window.closeProductPage = function() { document.getElementById('product-view')?.
 
 function updateProductButtons(id) {
     const ac = document.getElementById('modal-action-buttons'); if(!ac) return; const ci = cart.find(i => i.id == id); const q = ci ? parseInt(ci.qty || 1) : 0;
-    if(q > 0) ac.innerHTML = `<div class="flex items-center justify-between w-full h-full bg-white border border-luxury-rose rounded-full px-2 sm:px-4 py-3 shadow-sm min-h-[44px]"><button type="button" onclick="window.th_updateCartQty('${id}', -1, event)" class="w-8 h-8 rounded-full bg-luxury-bg hover:bg-luxury-blush border border-luxury-blush flex items-center justify-center shrink-0"><i class="fas fa-minus text-xs"></i></button><span class="text-base sm:text-lg font-bold text-luxury-rose font-poppins min-w-[20px] text-center">${q}</span><button type="button" onclick="window.th_updateCartQty('${id}', 1, event)" class="w-8 h-8 rounded-full bg-luxury-bg hover:bg-luxury-blush border border-luxury-blush flex items-center justify-center shrink-0"><i class="fas fa-plus text-xs"></i></button></div><button type="button" onclick="window.openCheckoutBase()" class="w-full bg-luxury-dark text-white hover:bg-[#D9778A] font-bold px-2 py-3.5 sm:px-4 rounded-full flex items-center justify-center gap-2 text-[11px] sm:text-[12px] uppercase tracking-wider shadow-md active:scale-[0.98] transition-colors min-h-[44px]"><i class="fas fa-bolt text-luxury-gold"></i> Checkout</button>`; 
+    if(q > 0) ac.innerHTML = `<div class="flex items-center justify-between w-full h-full bg-white border border-luxury-rose rounded-full px-2 sm:px-4 py-3 shadow-sm min-h-[44px]"><button type="button" onclick="window.th_updateCartQty('${id}', -1, event)" class="w-8 h-8 rounded-full bg-luxury-bg hover:bg-luxury-blush border border-luxury-blush flex items-center justify-center shrink-0"><i class="fas fa-minus text-xs"></i></button><span class="text-base sm:text-lg font-bold text-luxury-rose font-poppins min-w-[20px] text-center">${q}</span><button type="button" onclick="window.th_updateCartQty('${id}', 1, event)" class="w-8 h-8 rounded-full bg-luxury-bg hover:bg-luxury-blush border border-luxury-blush flex items-center justify-center shrink-0"><i class="fas fa-plus text-xs"></i></button></div><button type="button" onclick="window.routeCheckoutFromModal('${id}', event)" class="w-full bg-luxury-dark text-white hover:bg-[#D9778A] font-bold px-2 py-3.5 sm:px-4 rounded-full flex items-center justify-center gap-2 text-[11px] sm:text-[12px] uppercase tracking-wider shadow-md active:scale-[0.98] transition-colors min-h-[44px]"><i class="fas fa-bolt text-luxury-gold"></i> Buy Now</button>`; 
     else ac.innerHTML = `<button type="button" onclick="window.th_updateCartQty('${id}', 1, event)" class="w-full bg-white border border-luxury-dark text-luxury-dark hover:bg-luxury-bg font-bold px-2 py-3.5 sm:px-4 rounded-full flex items-center justify-center gap-2 text-[11px] sm:text-[12px] uppercase tracking-wider transition-colors shadow-sm active:scale-[0.98] min-h-[44px]"><i class="fas fa-shopping-bag"></i> Add to Bag</button><button type="button" onclick="window.routeCheckoutFromModal('${id}', event)" class="w-full bg-luxury-dark text-white hover:bg-[#D9778A] font-bold px-2 py-3.5 sm:px-4 rounded-full flex items-center justify-center gap-2 text-[11px] sm:text-[12px] uppercase tracking-wider shadow-md active:scale-[0.98] transition-colors min-h-[44px]"><i class="fas fa-bolt text-luxury-gold"></i> Buy Now</button>`; 
 }
 
@@ -505,7 +505,7 @@ window.th_updateCartQty = function(id, d, e) {
 };
 
 window.openCheckoutBase = function() {
-    if(cart.length === 0) return window.showToast("Your bag is empty!", "fa-times", "text-red-500");
+    if(cart.length === 0 && !window.buyNowPayload) return window.showToast("Your bag is empty!", "fa-times", "text-red-500");
     if(!currentSessionUser) { window.showToast("Please Sign In to Checkout", "fa-user-lock", "text-luxury-rose"); window.openCustomerAuthModal(); return; }
     currentModalLevel = 1; window.safePushState(1); checkoutStep = 1; const o = document.getElementById('checkout-overlay'); if(!o) return;
     o.classList.remove('hidden'); document.body.classList.add('overflow-hidden'); document.getElementById('payment-success-view')?.classList.add('hidden'); document.getElementById('payment-success-view')?.classList.remove('flex'); document.getElementById('payment-gateway-view')?.classList.remove('hidden'); document.getElementById('payment-gateway-view')?.classList.add('flex');
@@ -514,7 +514,7 @@ window.openCheckoutBase = function() {
 
 window.closeCheckout = function() {
     const o = document.getElementById('checkout-overlay'); if(!o) return;
-    requestAnimationFrame(() => { o.classList.remove('opacity-100'); o.classList.add('opacity-0'); setTimeout(() => { o.classList.add('hidden'); if(document.getElementById('return-policy-modal')?.classList.contains('hidden') && document.getElementById('privacy-policy-modal')?.classList.contains('hidden')){ document.body.classList.remove('overflow-hidden'); } pendingOrderPayload = null; renderProducts(currentSearchQuery); }, 300); });
+    requestAnimationFrame(() => { o.classList.remove('opacity-100'); o.classList.add('opacity-0'); setTimeout(() => { o.classList.add('hidden'); if(document.getElementById('return-policy-modal')?.classList.contains('hidden') && document.getElementById('privacy-policy-modal')?.classList.contains('hidden')){ document.body.classList.remove('overflow-hidden'); } pendingOrderPayload = null; window.buyNowPayload = null; renderProducts(currentSearchQuery); }, 300); });
 };
 
 window.routeCheckoutFromModal = function(id, e) { 
@@ -523,7 +523,9 @@ window.routeCheckoutFromModal = function(id, e) {
     if (p.mainCategory === 'Pipe Cleaner Crafts' && p.name.toLowerCase().includes('bouquet')) {
          customSpecsStr = `Flowers: ${activeBuild.flowers.length > 0 ? activeBuild.flowers.join(', ') : 'Standard'} | Fillers: ${activeBuild.fillers.length > 0 ? activeBuild.fillers.join(', ') : 'None'} | Wrap: ${activeBuild.wrapping} | Ribbon: ${activeBuild.ribbon}`;
     }
-    window.buyNowPayload = { id: p.id, name: p.name, price: p.price, prepTime: p.prepTime, image: p.image1, isCustomizable: p.isCustomizable, mainCategory: p.mainCategory, customSpecs: customSpecsStr, qty: 1 };
+    const ci = cart.find(i => i.id == id);
+    const currentQty = ci ? parseInt(ci.qty || 1) : 1;
+    window.buyNowPayload = { id: p.id, name: p.name, price: p.price, prepTime: p.prepTime, image: p.image1, isCustomizable: p.isCustomizable, mainCategory: p.mainCategory, customSpecs: customSpecsStr, qty: currentQty };
     window.openCheckoutBase(); 
 };
 
@@ -581,8 +583,8 @@ function calculateDynamicDelivery(sub, pin, items) {
 
 window.goToCheckoutStep = function(s) { 
     if (s === 1) { checkoutStep = 1; updateCheckoutUI(); } 
-    else if (s === 2) { if (cart.length === 0) return window.showToast("Your bag is empty!", "fa-times", "text-red-500"); checkoutStep = 2; updateCheckoutUI(); } 
-    else if (s === 3) { if (cart.length === 0) return; if (savedAddresses.length === 0 || selectedAddressIndex === -1) return window.showToast("Please provide a delivery address.", "fa-exclamation-circle", "text-red-500"); window.preparePaymentGateway(); }
+    else if (s === 2) { if (cart.length === 0 && !window.buyNowPayload) return window.showToast("Your bag is empty!", "fa-times", "text-red-500"); checkoutStep = 2; updateCheckoutUI(); } 
+    else if (s === 3) { if (cart.length === 0 && !window.buyNowPayload) return; if (savedAddresses.length === 0 || selectedAddressIndex === -1) return window.showToast("Please provide a delivery address.", "fa-exclamation-circle", "text-red-500"); window.preparePaymentGateway(); }
 };
 
 function updateCheckoutUI() {
@@ -671,13 +673,14 @@ function updateCheckoutUI() {
         else mobBar.classList.remove('hidden');
     }
 
+    const isCartEmpty = cart.length === 0 && !window.buyNowPayload;
     if(mb) { 
-        if(checkoutStep === 1) { mb.innerHTML = `Next: Delivery <i class="fas fa-arrow-right ml-1"></i>`; mb.disabled = cart.length===0; mb.className=`w-full bg-luxury-dark text-white hover:bg-[#D9778A] py-4 rounded-xl font-bold text-[11px] uppercase tracking-[0.15em] transition-all shadow-float flex items-center justify-center gap-2 ${cart.length===0?'opacity-50 cursor-not-allowed':''}`; } 
+        if(checkoutStep === 1) { mb.innerHTML = `Next: Delivery <i class="fas fa-arrow-right ml-1"></i>`; mb.disabled = isCartEmpty; mb.className=`w-full bg-luxury-dark text-white hover:bg-[#D9778A] py-4 rounded-xl font-bold text-[11px] uppercase tracking-[0.15em] transition-all shadow-float flex items-center justify-center gap-2 ${isCartEmpty?'opacity-50 cursor-not-allowed':''}`; } 
         else if (checkoutStep === 2) { mb.innerHTML = `Next: Secure Payment <i class="fas fa-lock ml-1"></i>`; mb.disabled = false; mb.className="w-full bg-luxury-dark text-white hover:bg-[#D9778A] py-4 rounded-xl font-bold text-[11px] uppercase tracking-[0.15em] transition-all shadow-float flex items-center justify-center gap-2"; } 
     }
     
     if(db) { 
-        if(checkoutStep === 1) { db.innerHTML = `Next: Delivery <i class="fas fa-arrow-right ml-1"></i>`; db.disabled = cart.length===0; db.className=`hidden lg:flex w-full bg-luxury-dark text-white hover:bg-[#D9778A] py-4 rounded-xl font-bold text-[11px] uppercase tracking-[0.15em] transition-all shadow-float items-center justify-center gap-2 mt-2 ${cart.length===0?'opacity-50 cursor-not-allowed':''}`; } 
+        if(checkoutStep === 1) { db.innerHTML = `Next: Delivery <i class="fas fa-arrow-right ml-1"></i>`; db.disabled = isCartEmpty; db.className=`hidden lg:flex w-full bg-luxury-dark text-white hover:bg-[#D9778A] py-4 rounded-xl font-bold text-[11px] uppercase tracking-[0.15em] transition-all shadow-float items-center justify-center gap-2 mt-2 ${isCartEmpty?'opacity-50 cursor-not-allowed':''}`; } 
         else if (checkoutStep === 2) { db.innerHTML = `Next: Secure Payment <i class="fas fa-lock ml-1"></i>`; db.disabled = false; db.className="hidden lg:flex w-full bg-luxury-dark text-white hover:bg-[#D9778A] py-4 rounded-xl font-bold text-[11px] uppercase tracking-[0.15em] transition-all shadow-float items-center justify-center gap-2 mt-2"; } 
         else if (checkoutStep === 3) { db.className = "hidden"; }
     }
@@ -696,7 +699,7 @@ function updateCheckoutUI() {
 window.handleMobileStickyAction = function() { window.handleCheckoutAction(); };
 window.handleCheckoutAction = async function() {
     if (checkoutStep === 1) { 
-        if (cart.length === 0) return window.showToast("Your bag is empty!", "fa-times", "text-red-500"); 
+        if (cart.length === 0 && !window.buyNowPayload) return window.showToast("Your bag is empty!", "fa-times", "text-red-500"); 
         if (!currentSessionUser) { window.showToast("Please Sign In to Checkout", "fa-user-lock", "text-luxury-rose"); window.openCustomerAuthModal(); return; } 
         checkoutStep = 2; updateCheckoutUI(); renderAddressBook(); document.getElementById('checkout-overlay')?.scrollTo({top: 0, behavior: 'smooth'}); 
     } 
