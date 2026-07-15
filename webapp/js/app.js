@@ -391,16 +391,52 @@ window.openProductPage = async function(id) {
         const p = products.find(x => String(x.id) === String(id));
         if (!p) return;
         
+        // 1. Map Text Details
         if(document.getElementById('modal-title')) document.getElementById('modal-title').textContent = p.name;
         if(document.getElementById('modal-main-category')) document.getElementById('modal-main-category').textContent = p.mainCategory;
+        if(document.getElementById('modal-sub-category')) document.getElementById('modal-sub-category').textContent = p.category;
         if(document.getElementById('breadcrumb-main-cat')) document.getElementById('breadcrumb-main-cat').textContent = p.mainCategory;
-        if(document.getElementById('breadcrumb-sub-cat')) document.getElementById('breadcrumb-sub-cat').textContent = p.subCategory;
-        if(document.getElementById('modal-price')) document.getElementById('modal-price').textContent = '₹' + p.price;
-        if(document.getElementById('modal-desc')) document.getElementById('modal-desc').innerHTML = (p.description || '').replace(/\n/g, '<br>');
+        if(document.getElementById('breadcrumb-sub-cat')) document.getElementById('breadcrumb-sub-cat').textContent = p.category;
+        if(document.getElementById('modal-specs')) document.getElementById('modal-specs').innerHTML = (p.specs || '').replace(/\n/g, '<br>');
+        
+        // 2. Price & Math
+        const cp = Number(String(p.price || 0).replace(/[^0-9.,]/g, ''));
+        const dp = getDiscountPercent(String(p.id));
+        const op = Math.round(cp * (1 + (dp / 100)));
+        
+        if(document.getElementById('modal-price')) document.getElementById('modal-price').textContent = cp;
+        if(document.getElementById('modal-original-price')) document.getElementById('modal-original-price').textContent = `₹${op}`;
+        if(document.getElementById('modal-discount-tag')) document.getElementById('modal-discount-tag').textContent = `${dp}% OFF VIP`;
+        if(document.getElementById('modal-edd-delivery-tag')) document.getElementById('modal-edd-delivery-tag').textContent = calculateEDDBracket(p.prepTime);
 
-        let modalImages = [];
-        try { modalImages = JSON.parse(p.images || '[]'); } catch(e) { modalImages = typeof p.images === 'string' ? [p.images] : []; }
-        const mf = document.getElementById('modal-featured-img'); if (mf) mf.src = modalImages[0] || 'https://via.placeholder.com/400x500?text=No+Image';
+        // 3. Badges
+        if(document.getElementById('modal-dimensions-text')) document.getElementById('modal-dimensions-text').textContent = p.dimensions || '';
+        if(document.getElementById('modal-dimensions-badge')) {
+            if (p.dimensions && p.mainCategory !== 'Pipe Cleaner Crafts') document.getElementById('modal-dimensions-badge').classList.remove('hidden');
+            else document.getElementById('modal-dimensions-badge').classList.add('hidden');
+        }
+        if(document.getElementById('modal-custom-badge')) {
+            if (p.isCustomizable) document.getElementById('modal-custom-badge').classList.remove('hidden');
+            else document.getElementById('modal-custom-badge').classList.add('hidden');
+        }
+        if(document.getElementById('art-badges-container')) {
+            if ((p.dimensions && p.mainCategory !== 'Pipe Cleaner Crafts') || p.isCustomizable) document.getElementById('art-badges-container').classList.remove('hidden');
+            else document.getElementById('art-badges-container').classList.add('hidden');
+        }
+
+        // 4. Images & Carousel Setup
+        modalImages = [p.image1, p.image2, p.image3, p.image4, p.image5].filter(img => img && img.trim() !== '');
+        if(modalImages.length === 0) modalImages = ['https://placehold.co/400x500/F8E9EA/423133'];
+        
+        const tr = document.getElementById('modal-carousel-track');
+        if(tr) {
+            tr.innerHTML = '';
+            modalImages.forEach((src) => {
+                tr.innerHTML += `<img loading="lazy" decoding="async" src="${src}" class="w-full h-full flex-shrink-0 object-cover cursor-pointer" onclick="window.openLightboxFromCarousel()">`;
+            });
+            tr.style.transform = `translateX(0%)`;
+        }
+        currentSlideIndex = 0;
         
         const th = document.getElementById('modal-thumbnails');
         if (th) {
@@ -409,24 +445,26 @@ window.openProductPage = async function(id) {
                 modalImages.forEach((src, idx) => { 
                     const tm = document.createElement('img'); 
                     tm.src = src; 
-                    tm.className = `w-12 h-12 object-cover rounded-md border-2 transition-all cursor-pointer ${idx === 0 ? 'border-luxury-rose scale-105 opacity-100' : 'border-transparent opacity-60 hover:opacity-100'}`; 
+                    tm.className = `w-12 h-12 sm:w-16 sm:h-16 object-cover rounded-md border-2 transition-all cursor-pointer ${idx === 0 ? 'border-luxury-rose scale-105 opacity-100 shadow-sm' : 'border-transparent opacity-60 hover:opacity-100'}`; 
                     tm.id = `thumb-${idx}`; 
-                    tm.addEventListener('click', () => {
-                        if (mf) mf.src = src;
-                        document.querySelectorAll('#modal-thumbnails img').forEach(i => { i.classList.remove('border-luxury-rose', 'scale-105', 'opacity-100'); i.classList.add('border-transparent', 'opacity-60'); });
-                        tm.classList.remove('border-transparent', 'opacity-60');
-                        tm.classList.add('border-luxury-rose', 'scale-105', 'opacity-100');
-                    }); 
+                    tm.addEventListener('click', () => window.goToSlide(idx)); 
                     th.appendChild(tm); 
                 }); 
             }
         }
 
-        const btn = document.getElementById('modal-add-cart-btn'); if(btn) btn.onclick = () => window.th_addToCart(p.id);
-        const buyBtn = document.getElementById('modal-buy-now-btn'); if(buyBtn) buyBtn.onclick = () => window.th_buyNow(p.id);
+        // 5. Setup View State
+        document.getElementById('product-view')?.setAttribute('data-current-id', p.id);
+        renderVisualCustomizer(p);
+        updateProductButtons(p.id);
+        updateWishlistUIElements(p.id, localWishlist.includes(String(p.id)));
+        renderRelatedProducts(p.id, p.mainCategory, p.category);
 
-        document.getElementById('product-modal')?.classList.remove('hidden');
-        document.body.style.overflow = 'hidden';
+        // 6. Transition Screens
+        document.getElementById('customer-view')?.classList.add('hidden');
+        document.getElementById('product-view')?.classList.remove('hidden');
+        window.scrollTo({top: 0, behavior: 'smooth'});
+
     } catch (error) { 
         console.error("Error opening product:", error); 
     }
