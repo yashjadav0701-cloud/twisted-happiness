@@ -354,6 +354,7 @@ window.th_startCrafting = async function(id) {
         const customerData = extractCustomerData(order.customer_reqs);
         if (customerData.phone) {
             let cleanPhone = customerData.phone.replace(/\D/g, ''); 
+            if (cleanPhone.startsWith('9191') && cleanPhone.length > 11) cleanPhone = cleanPhone.substring(2);
             const acceptMsg = `Dear ${customerData.name},\n\nWe have successfully received your payment for your order. Your exquisite commission from *Twisted Happiness* has been embraced, and our artisan has officially begun handcrafting your piece.\n\nIt will take approximately *${customerData.prepTime}* to prepare for dispatch.\n\nThank you for trusting us.`;
             window.open(`https://wa.me/${cleanPhone}?text=${encodeURIComponent(acceptMsg)}`, '_blank');
         }
@@ -372,6 +373,7 @@ window.th_rejectOrder = async function(id) {
         const customerData = extractCustomerData(order.customer_reqs);
         if (customerData.phone) {
             let cleanPhone = customerData.phone.replace(/\D/g, ''); 
+            if (cleanPhone.startsWith('9191') && cleanPhone.length > 11) cleanPhone = cleanPhone.substring(2);
             const denyMsg = `Dear ${customerData.name},\n\nWe are reaching out regarding your recent order attempt at *Twisted Happiness*.\n\nUnfortunately, we were unable to verify your UPI payment. As a result, your order reservation has been canceled.\n\nIf the amount was deducted from your account, it will automatically be refunded by your bank within 2-3 business days.\n\nIf you would like to secure your handcrafted piece, please reply to this message.`;
             window.open(`https://wa.me/${cleanPhone}?text=${encodeURIComponent(denyMsg)}`, '_blank');
         }

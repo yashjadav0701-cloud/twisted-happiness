@@ -60,19 +60,20 @@ function applyDynamicSettings() {
     });
     if(document.getElementById('current-year')) document.getElementById('current-year').textContent = new Date().getFullYear();
 
-    const defaultPromo = "✨ 100% Handcrafted Fine Art & Gifts 🎀 Bespoke Canvas & Textured Clay Paintings 🌸 Unlock VIP Discounts Up To 15% Off 🦋";
-    let promoToDisplay = defaultPromo;
+    let promoToDisplay = "";
     if (settings.promoText) {
         try {
             const parsed = JSON.parse(settings.promoText);
-            if (Array.isArray(parsed) && parsed.length > 0 && parsed[0] !== "") {
+            if (Array.isArray(parsed) && parsed.length > 0 && parsed[0].trim() !== "") {
                 promoToDisplay = parsed.join(' 🌸 ') + ' 🦋 ';
             }
-        } catch(e) { promoToDisplay = settings.promoText; }
+        } catch(e) { promoToDisplay = settings.promoText.trim(); }
+    } else {
+        promoToDisplay = "✨ 100% Handcrafted Fine Art & Gifts 🎀 Bespoke Canvas & Textured Clay Paintings 🌸 Unlock VIP Discounts Up To 15% Off 🦋";
     }
     
-    if(document.getElementById('promo-marquee-1')) document.getElementById('promo-marquee-1').textContent = promoToDisplay;
-    if(document.getElementById('promo-marquee-2')) document.getElementById('promo-marquee-2').textContent = promoToDisplay;
+    if(document.getElementById('promo-marquee-1')) document.getElementById('promo-marquee-1').textContent = promoToDisplay + " 🌸 ";
+    if(document.getElementById('promo-marquee-2')) document.getElementById('promo-marquee-2').textContent = promoToDisplay + " 🌸 ";
 }
 
 function setupSocialLinks() {
@@ -243,6 +244,13 @@ window.th_saveProfileAddress = async function(e) {
     hideInteractionLoader();
 };
 
+window.th_editProfileAddress = function(i) {
+    editingAddressIndex = i; const a = savedAddresses[i];
+    document.getElementById('padd-fname').value = a.first_name || ''; document.getElementById('padd-lname').value = a.last_name || ''; document.getElementById('padd-phone').value = a.phone || ''; document.getElementById('padd-add1').value = a.address_1 || ''; document.getElementById('padd-add2').value = a.address_2 || ''; document.getElementById('padd-city').value = a.city || ''; document.getElementById('padd-state').value = a.state || ''; document.getElementById('padd-pin').value = a.pincode || ''; 
+    document.getElementById('profile-add-address-form').classList.remove('hidden');
+    document.getElementById('pcontent-addresses').scrollTo({top: document.getElementById('pcontent-addresses').scrollHeight, behavior: 'smooth'});
+};
+
 function renderProfileAddressBook() {
     const container = document.getElementById('profile-address-list');
     if (!container) return;
@@ -251,14 +259,17 @@ function renderProfileAddressBook() {
     if (savedAddresses.length === 0) {
         html += '<p class="text-[11px] text-gray-500 font-medium bg-white p-4 rounded-xl border border-luxury-blush">No addresses saved yet.</p>';
     } else {
-        savedAddresses.forEach((a) => { 
+        savedAddresses.forEach((a, i) => { 
             html += `
             <div class="bg-white border border-luxury-blush rounded-xl p-4 shadow-sm flex justify-between items-center mb-3">
                 <div>
                     <p class="font-bold text-luxury-dark text-[11px] uppercase tracking-wider mb-1">${a.first_name} ${a.last_name || ''}</p>
                     <p class="text-gray-500 text-[10px] leading-relaxed">${a.address_1}${a.address_2 ? ', ' + a.address_2 : ''}<br>${a.city}, ${a.state} - <span class="font-bold text-luxury-dark">${a.pincode}</span></p>
                 </div>
-                <button type="button" onclick="window.th_deleteAddress('${a.id}')" class="text-red-400 hover:text-red-600 bg-red-50 w-8 h-8 rounded-full flex items-center justify-center transition-colors"><i class="fas fa-trash-alt text-[10px]"></i></button>
+                <div class="flex gap-2">
+                    <button type="button" onclick="window.th_editProfileAddress(${i})" class="text-luxury-rose hover:text-white hover:bg-luxury-rose border border-luxury-rose/30 bg-luxury-rose/5 w-8 h-8 rounded-full flex items-center justify-center transition-colors"><i class="fas fa-pen text-[10px]"></i></button>
+                    <button type="button" onclick="window.th_deleteAddress('${a.id}')" class="text-red-400 hover:text-red-600 border border-red-200 bg-red-50 w-8 h-8 rounded-full flex items-center justify-center transition-colors"><i class="fas fa-trash-alt text-[10px]"></i></button>
+                </div>
             </div>`; 
         });
     }
@@ -302,7 +313,14 @@ function getDiscountPercent(idStr) { let h = 0; for (let i = 0; i < idStr.length
 function calculateCartDiscount(sub) { let d = 0, cTier = null, nTier = null; for (let i = 0; i < DISCOUNT_TIERS.length; i++) { if (sub >= DISCOUNT_TIERS[i].threshold) { cTier = DISCOUNT_TIERS[i]; nTier = i > 0 ? DISCOUNT_TIERS[i - 1] : null; break; } } if (!cTier && sub > 0) nTier = DISCOUNT_TIERS[DISCOUNT_TIERS.length - 1]; if (cTier) { if (cTier.type === 'percent') d = Math.round(sub * (cTier.value / 100)); else d = cTier.value; } return { discount: d, currentTier: cTier, nextTier: nTier, amountNeeded: nTier ? nTier.threshold - sub : 0 }; }
 function calculateTotalPrepTime(items) { let minD = 999; items.forEach(i => { const pt = i.prepTime || '3'; const m = pt.match(/\d+/g); if(m && m.length >= 1) { let mp = parseInt(m[0]); if (mp < minD) minD = mp; } else { if (3 < minD) minD = 3; } }); if (minD === 999) minD = 3; const tq = items.reduce((s, i) => s + parseInt(i.qty || 1), 0); return `${minD * tq} Days`; }
 function updateCartCount() { requestAnimationFrame(() => { const c = cart.reduce((s, i) => s + parseInt(i.qty || 1), 0); document.querySelectorAll('#cart-count, #product-page-cart-count').forEach(el => { if(el) el.textContent = c; }); }); }
-function calculateEDDBracket(pt) { const m = (pt || '3').match(/\d+/g); let minD = m && m.length > 0 ? parseInt(m[0]) : 3, maxD = m && m.length > 1 ? parseInt(m[1]) : minD + 2; const td = new Date(), minDt = new Date(), maxDt = new Date(); minDt.setDate(td.getDate() + minD + 2); maxDt.setDate(td.getDate() + maxD + 4); const opt = { day: 'numeric', month: 'short' }; return `Estimated Delivery: ${minDt.toLocaleDateString('en-IN', opt)} — ${maxDt.toLocaleDateString('en-IN', opt)}`; }
+function calculateEDDBracket(pt) { 
+    const m = (pt || '3').match(/\d+/g); 
+    let craftDays = m && m.length > 1 ? parseInt(m[1]) : (m && m.length > 0 ? parseInt(m[0]) : 3);
+    let totalDays = craftDays + 6; 
+    const dt = new Date(); dt.setDate(dt.getDate() + totalDays);
+    const opt = { day: 'numeric', month: 'short', year: 'numeric' }; 
+    return `Estimated Delivery by ${dt.toLocaleDateString('en-IN', opt)}. Great art takes time! 🎨✨`; 
+}
 
 window.applyCouponCode = function() {
     const i = document.getElementById('checkout-promo-input'), f = document.getElementById('checkout-promo-feedback'); if(!i || !f) return; const c = i.value.trim().toUpperCase();
@@ -325,7 +343,8 @@ function fetchDatabase() {
 
 function renderVisualCustomizer(product) {
     const vc = document.getElementById('visual-customizer-studio'); if (!vc) return;
-    const isBouquet = (product.name || '').toLowerCase().includes('bouquet');
+    const catLower = (product.category || '').toLowerCase();
+    const isBouquet = catLower === 'bouquet' || catLower === 'bouquets';
     if (product.mainCategory !== 'Pipe Cleaner Crafts' || !isBouquet) { vc.classList.add('hidden'); return; }
     
     const flowerOptions = ['Crimson Rose', 'Blush Peony', 'Ivory Lily', 'Golden Sunflower', 'Lilac Tulip', 'Blue Hydrangea', 'Sunset Carnation', 'Classic Daisy'];
@@ -627,7 +646,9 @@ window.preparePaymentGateway = function() {
     let ss = 0, tpt = "", its = []; cart.forEach((i) => { const cp = Number(String(i.price || 0).replace(/[^0-9.,]/g, '')), q = parseInt(i.qty || 1); ss += (cp * q); its.push({ id: i.id, name: i.name, price: cp, qty: q, image: i.image || i.image1 }); }); tpt = calculateTotalPrepTime(cart);
     const ta = savedAddresses[selectedAddressIndex]; currentDeliveryFee = calculateDynamicDelivery(ss, ta.pincode, cart);
     const { discount: vd } = calculateCartDiscount(ss); let cd = activeCouponValue > 0 ? Math.round(ss * (activeCouponValue / 100)) : 0; const ft = ss - vd - cd + currentDeliveryFee; 
-    const scc = (settings.countryCode || '+91'), fcp = scc + " " + ta.phone; let fa = `${ta.address_1}, ${ta.address_2 ? ta.address_2 + ', ' : ''}${ta.city}, ${ta.state} - ${ta.pincode}`;
+    let rawPhone = ta.phone.replace(/\D/g, '');
+if (rawPhone.startsWith('91') && rawPhone.length > 10) rawPhone = rawPhone.substring(2);
+const scc = (settings.countryCode || '+91'), fcp = scc + " " + rawPhone; let fa = `${ta.address_1}, ${ta.address_2 ? ta.address_2 + ', ' : ''}${ta.city}, ${ta.state} - ${ta.pincode}`;
     const cln = ta.first_name.replace(/[^a-zA-Z0-9]/g, '').substring(0, 10); currentOrderReference = `TH_${cln}_${String(Date.now()).slice(-4)}`; 
     
     let ad = `ID: ${currentOrderReference} | Ph: ${fcp} | Patron: ${ta.first_name} ${ta.last_name || ''} | Email: ${ta.email} | Address: ${fa} | Purpose: ${t} | Notes: ${c} | Delivery Fee: ₹${currentDeliveryFee}`; 
@@ -678,12 +699,42 @@ async function renderCustomerOrdersPipeline() {
             let itemsHtml = '';
             try { const items = JSON.parse(o.order_details); items.forEach(i => { itemsHtml += `<img src="${i.image}" class="w-10 h-10 rounded-md object-cover border border-luxury-blush bg-luxury-bg shrink-0" title="${i.name} (x${i.qty})">`; }); } catch(e) {}
 
+            let invoiceBtnHtml = '';
+            if (step === 4) {
+                const encodedOrder = encodeURIComponent(JSON.stringify({id: exId, date: dt, items: o.order_details, total: o.total, reqs: o.customer_reqs}));
+                invoiceBtnHtml = `<button type="button" onclick="window.generateGirlyInvoice('${encodedOrder}')" class="mt-4 w-full bg-[#FFF0F2] text-luxury-rose hover:bg-luxury-rose hover:text-white border border-luxury-rose/30 py-3 rounded-xl font-bold text-[10px] uppercase tracking-widest transition-colors shadow-sm flex justify-center items-center gap-2"><i class="fas fa-file-download"></i> Download Official Invoice</button>`;
+            } else if (step === 3) {
+                // If live tracking data exists, render the beautiful widget
+                if (o.tracking_data) {
+                    try {
+                        const t = typeof o.tracking_data === 'string' ? JSON.parse(o.tracking_data) : o.tracking_data;
+                        invoiceBtnHtml = `
+                        <div class="mt-4 w-full bg-white border border-blue-100 rounded-xl overflow-hidden shadow-sm">
+                            <div class="bg-blue-50/50 px-4 py-2 border-b border-blue-100 flex justify-between items-center">
+                                <span class="text-[9px] font-bold text-blue-600 uppercase tracking-widest"><i class="fas fa-truck mr-1"></i> ${t.courier}</span>
+                                <span class="text-[9px] font-bold text-gray-400 uppercase tracking-widest">AWB: ${t.awb}</span>
+                            </div>
+                            <div class="p-4">
+                                <h5 class="font-bold text-[11px] text-luxury-dark mb-1">${t.latest_status}</h5>
+                                <p class="text-[10px] text-gray-500 mb-2 leading-relaxed">${t.message}</p>
+                                ${t.location ? `<p class="text-[8px] font-bold text-[#D9778A] uppercase tracking-widest"><i class="fas fa-map-marker-alt mr-1"></i> ${t.location}</p>` : ''}
+                            </div>
+                        </div>`;
+                    } catch(e) {
+                        invoiceBtnHtml = `<div class="mt-4 w-full bg-blue-50 text-blue-600 border border-blue-200 py-3 rounded-xl font-bold text-[10px] uppercase tracking-widest text-center shadow-sm flex justify-center items-center gap-2"><i class="fas fa-shipping-fast"></i> Order in Transit</div>`;
+                    }
+                } else {
+                    // Fallback just in case
+                    invoiceBtnHtml = `<div class="mt-4 w-full bg-blue-50 text-blue-600 border border-blue-200 py-3 rounded-xl font-bold text-[10px] uppercase tracking-widest text-center shadow-sm flex justify-center items-center gap-2"><i class="fas fa-shipping-fast"></i> Order in Transit</div>`;
+                }
+            }
+
             let progressBarHtml = '';
             if (step > 0) {
                 progressBarHtml = `<div class="relative flex justify-between items-center w-full max-w-sm mx-auto mt-6 mb-2"><div class="absolute left-0 top-1/2 -translate-y-1/2 w-full h-1 bg-luxury-blush z-0 rounded-full"></div><div class="absolute left-0 top-1/2 -translate-y-1/2 h-1 bg-luxury-rose z-0 rounded-full transition-all duration-700" style="width: ${(step-1) * 33.33}%"></div><div class="relative z-10 flex flex-col items-center gap-2"><div class="w-6 h-6 rounded-full flex items-center justify-center text-[10px] ${step >= 1 ? 'bg-luxury-rose text-white shadow-md border-2 border-white' : 'bg-white border-2 border-luxury-blush text-gray-300'}"><i class="fas fa-receipt"></i></div><span class="text-[7px] font-bold uppercase tracking-widest ${step >= 1 ? 'text-luxury-dark' : 'text-gray-400'} absolute -bottom-5 w-max">Placed</span></div><div class="relative z-10 flex flex-col items-center gap-2"><div class="w-6 h-6 rounded-full flex items-center justify-center text-[10px] ${step >= 2 ? 'bg-luxury-rose text-white shadow-md border-2 border-white' : 'bg-white border-2 border-luxury-blush text-gray-300'}"><i class="fas fa-paint-brush"></i></div><span class="text-[7px] font-bold uppercase tracking-widest ${step >= 2 ? 'text-luxury-dark' : 'text-gray-400'} absolute -bottom-5 w-max">Crafting</span></div><div class="relative z-10 flex flex-col items-center gap-2"><div class="w-6 h-6 rounded-full flex items-center justify-center text-[10px] ${step >= 3 ? 'bg-luxury-rose text-white shadow-md border-2 border-white' : 'bg-white border-2 border-luxury-blush text-gray-300'}"><i class="fas fa-box"></i></div><span class="text-[7px] font-bold uppercase tracking-widest ${step >= 3 ? 'text-luxury-dark' : 'text-gray-400'} absolute -bottom-5 w-max">Shipped</span></div><div class="relative z-10 flex flex-col items-center gap-2"><div class="w-6 h-6 rounded-full flex items-center justify-center text-[10px] ${step >= 4 ? 'bg-green-500 text-white shadow-md border-2 border-white' : 'bg-white border-2 border-luxury-blush text-gray-300'}"><i class="fas fa-check"></i></div><span class="text-[7px] font-bold uppercase tracking-widest ${step >= 4 ? 'text-green-600' : 'text-gray-400'} absolute -bottom-5 w-max">Delivered</span></div></div>`;
             } else { progressBarHtml = `<div class="text-center text-red-500 font-bold text-[9px] uppercase tracking-widest py-3">Order Cancelled</div>`; }
 
-            html += `<details class="bg-white border border-luxury-blush rounded-2xl shadow-sm group overflow-hidden cursor-pointer mb-3"><summary class="p-4 sm:p-5 list-none flex flex-col sm:flex-row justify-between sm:items-center gap-4 outline-none"><div class="flex flex-col"><span class="text-[9px] text-gray-400 uppercase tracking-widest font-bold mb-1">Order ${exId}</span><h4 class="font-poppins font-bold ${step === 0 ? 'text-red-500' : 'text-luxury-dark'} text-sm mb-1">${statusText}</h4><p class="text-gray-400 text-[10px]">${dt} • <span class="font-bold text-luxury-dark">₹${o.total}</span></p></div><div class="flex items-center justify-between sm:justify-end w-full sm:w-auto gap-4"><div class="flex gap-2 overflow-x-auto max-w-[150px] scrollbar-hide py-1">${itemsHtml}</div><i class="fas fa-chevron-down text-gray-300 transition-transform group-open:rotate-180"></i></div></summary><div class="p-4 sm:p-5 pt-0 border-t border-luxury-blush mt-2 bg-luxury-bg/50">${progressBarHtml}<div class="mt-6 bg-white border border-luxury-blush p-3 rounded-xl text-[10px] text-gray-500 whitespace-pre-wrap font-medium"><p class="font-bold text-luxury-dark mb-1 uppercase tracking-widest text-[8px]">Request Details</p>${o.customer_reqs}</div></div></details>`; 
+            html += `<details class="bg-white border border-luxury-blush rounded-2xl shadow-sm group overflow-hidden cursor-pointer mb-3"><summary class="p-4 sm:p-5 list-none flex flex-col sm:flex-row justify-between sm:items-center gap-4 outline-none"><div class="flex flex-col"><span class="text-[9px] text-gray-400 uppercase tracking-widest font-bold mb-1">Order ${exId}</span><h4 class="font-poppins font-bold ${step === 0 ? 'text-red-500' : 'text-luxury-dark'} text-sm mb-1">${statusText}</h4><p class="text-gray-400 text-[10px]">${dt} • <span class="font-bold text-luxury-dark">₹${o.total}</span></p></div><div class="flex items-center justify-between sm:justify-end w-full sm:w-auto gap-4"><div class="flex gap-2 overflow-x-auto max-w-[150px] scrollbar-hide py-1">${itemsHtml}</div><i class="fas fa-chevron-down text-gray-300 transition-transform group-open:rotate-180"></i></div></summary><div class="p-4 sm:p-5 pt-0 border-t border-luxury-blush mt-2 bg-luxury-bg/50">${progressBarHtml}<div class="mt-6 bg-white border border-luxury-blush p-3 rounded-xl text-[10px] text-gray-500 whitespace-pre-wrap font-medium"><p class="font-bold text-luxury-dark mb-1 uppercase tracking-widest text-[8px]">Request Details</p>${o.customer_reqs}</div>${invoiceBtnHtml}</div></details>`; 
         }); 
         c.innerHTML = html; 
     } catch(err) { c.innerHTML = '<div class="text-center text-red-500 py-4 text-xs">Failed to load archive.</div>'; }
@@ -781,6 +832,58 @@ window.th_submitReview = async function(pid, rating, comment) {
     const { error } = await _supabase.from('reviews').insert([{ product_id: pid, user_id: currentSessionUser.id, rating: rating, comment: comment }]);
     if(error) window.showToast("Failed to post review", "fa-times", "text-red-500");
     else window.showToast("Review Posted!", "fa-star", "text-luxury-gold");
+};
+
+window.generateGirlyInvoice = function(encodedOrder) {
+    try {
+        const o = JSON.parse(decodeURIComponent(encodedOrder));
+        let itemsHtml = '';
+        JSON.parse(o.items).forEach(i => { itemsHtml += `<tr><td style="padding:12px; border-bottom:1px solid #fce4e8; font-size:12px; color:#4a4a4a;">${i.name}</td><td style="padding:12px; border-bottom:1px solid #fce4e8; font-size:12px; color:#4a4a4a; text-align:center;">${i.qty}</td><td style="padding:12px; border-bottom:1px solid #fce4e8; font-size:12px; color:#4a4a4a; text-align:right;">₹${i.price}</td></tr>`; });
+        const printWindow = window.open('', '_blank');
+        printWindow.document.write(`
+        <html>
+        <head>
+            <title>Invoice - ${o.id}</title>
+            <link href="https://fonts.googleapis.com/css2?family=Marcellus&family=Poppins:wght@400;600;700&display=swap" rel="stylesheet">
+            <style>
+                body { font-family: 'Poppins', sans-serif; background-color: #fffafb; margin: 0; padding: 40px; color: #333; }
+                .invoice-box { max-width: 800px; margin: auto; background: white; padding: 40px; border-radius: 20px; box-shadow: 0 10px 30px rgba(217,119,138,0.1); border: 2px solid #fce4e8; }
+                .header { display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid #fce4e8; padding-bottom: 20px; margin-bottom: 30px; }
+                .logo { font-family: 'Marcellus', serif; font-size: 28px; color: #D9778A; margin: 0; }
+                .sub-logo { font-size: 10px; text-transform: uppercase; letter-spacing: 3px; color: #a89f9f; }
+                .title { font-size: 32px; font-weight: 700; color: #D9778A; margin: 0; text-transform: uppercase; letter-spacing: 2px; }
+                .details-row { display: flex; justify-content: space-between; margin-bottom: 30px; font-size: 12px; line-height: 1.8; color: #666; }
+                .highlight { font-weight: 700; color: #4a4a4a; }
+                table { width: 100%; border-collapse: collapse; margin-bottom: 30px; }
+                th { background-color: #FFF0F2; color: #D9778A; font-size: 10px; text-transform: uppercase; letter-spacing: 2px; padding: 15px 12px; text-align: left; }
+                .total-row { display: flex; justify-content: flex-end; font-size: 18px; font-weight: 700; color: #D9778A; margin-top: 20px; border-top: 2px solid #fce4e8; padding-top: 20px; }
+                .footer { text-align: center; margin-top: 40px; font-size: 11px; color: #a89f9f; }
+                .heart { color: #D9778A; }
+            </style>
+        </head>
+        <body>
+            <div class="invoice-box">
+                <div class="header">
+                    <div><h1 class="logo">Twisted Happiness</h1><div class="sub-logo">Fine Art & Handcrafted Gifts</div></div>
+                    <h2 class="title">Invoice</h2>
+                </div>
+                <div class="details-row">
+                    <div><span class="highlight">Order Ref:</span> ${o.id}<br><span class="highlight">Date:</span> ${o.date}</div>
+                    <div style="text-align: right; max-width: 250px;"><span class="highlight">Delivered To:</span><br>${o.reqs.replace(/ \| /g, '<br>')}</div>
+                </div>
+                <table>
+                    <thead><tr><th>Item Description</th><th style="text-align:center;">Qty</th><th style="text-align:right;">Price</th></tr></thead>
+                    <tbody>${itemsHtml}</tbody>
+                </table>
+                <div class="total-row">Grand Total: ₹${o.total}</div>
+                <div class="footer">Thank you for curating your space with us! Made with <span class="heart">♥</span> in India.<br><br><i>This is a computer-generated official receipt.</i></div>
+            </div>
+            <script>window.onload = function() { setTimeout(function(){ window.print(); }, 500); }</script>
+        </body>
+        </html>
+        `);
+        printWindow.document.close();
+    } catch(e) { window.showToast("Failed to generate invoice", "fa-times", "text-red-500"); }
 };
 
 window.th_toggleSubCategory = function(cat) { const idx = activeSubCategories.indexOf(cat); if(idx > -1) { activeSubCategories.splice(idx, 1); } else { activeSubCategories.push(cat); } renderFilters(); renderProducts(currentSearchQuery); };
