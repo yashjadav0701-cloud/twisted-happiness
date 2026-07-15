@@ -145,11 +145,18 @@ function bindDOMEvents() {
 // ==========================================
 // 🚨 AUTHENTICATION & PROFILE
 // ==========================================
-function setupAuthSessionListener() {
+async function setupAuthSessionListener() {
+    const { data: { session } } = await _supabase.auth.getSession();
+    currentSessionUser = session ? session.user : null;
+    
+    const btn = document.getElementById('header-account-btn');
+    if (btn) btn.innerHTML = currentSessionUser ? `<img src="${currentSessionUser.user_metadata?.avatar_url || currentSessionUser.user_metadata?.picture || 'https://i.ibb.co/0RRrFK9N/TH-logo-1.png'}" class="w-7 h-7 rounded-full object-cover border border-luxury-rose">` : `<i class="far fa-user text-lg"></i>`;
+    if (currentSessionUser) syncCloudWishlist();
+
     _supabase.auth.onAuthStateChange((event, session) => {
         currentSessionUser = session ? session.user : null;
         const btn = document.getElementById('header-account-btn');
-        if (btn) btn.innerHTML = currentSessionUser ? `<i class="fas fa-user-check text-[#D9778A] text-lg"></i>` : `<i class="far fa-user text-lg"></i>`;
+        if (btn) btn.innerHTML = currentSessionUser ? `<img src="${currentSessionUser.user_metadata?.avatar_url || currentSessionUser.user_metadata?.picture || 'https://i.ibb.co/0RRrFK9N/TH-logo-1.png'}" class="w-7 h-7 rounded-full object-cover border border-luxury-rose">` : `<i class="far fa-user text-lg"></i>`;
         if (currentSessionUser) syncCloudWishlist();
         if (document.getElementById('checkout-overlay') && !document.getElementById('checkout-overlay').classList.contains('hidden')) syncCloudAddresses();
     });
@@ -499,17 +506,56 @@ window.goToCheckoutStep = function(s) {
 };
 
 function updateCheckoutUI() {
-    let ts = 0, ss = 0, ti = 0; cart.forEach((i) => { const cp = Number(String(i.price || 0).replace(/[^0-9.,]/g, '')), q = parseInt(i.qty || 1), dp = getDiscountPercent(String(i.id)); ts += (Math.round(cp * (1 + (dp / 100))) * q); ss += (cp * q); ti += q; });
-    let cPin = ''; const cf = document.getElementById('checkout-profile-form'); if (cf && !cf.classList.contains('hidden') && document.getElementById('prof-pin')) cPin = document.getElementById('prof-pin').value.trim(); else if (savedAddresses.length > 0 && selectedAddressIndex !== -1) cPin = savedAddresses[selectedAddressIndex].pincode;
-    const de = document.getElementById('qo-delivery-fee'); if (ss >= 2499) { currentDeliveryFee = 0; if(de) de.innerHTML = '<span class="text-green-600 font-bold uppercase tracking-widest text-[10px]">Free</span>'; } else if (cPin.length >= 2) { currentDeliveryFee = calculateDynamicDelivery(ss, cPin, cart); if(de) de.innerHTML = `₹${currentDeliveryFee}`; } else { currentDeliveryFee = 0; if(de) de.innerHTML = '<span class="text-gray-400 text-[10px] font-medium">Calculated next step</span>'; }
-    const { discount: vd, currentTier: ct, nextTier: nt } = calculateCartDiscount(ss); let cd = activeCouponValue > 0 ? Math.round(ss * (activeCouponValue / 100)) : 0; const rc = document.getElementById('qo-coupon-row'); if (rc) { if (cd > 0) { document.getElementById('qo-coupon-discount').textContent = `- ₹${cd}`; rc.classList.remove('hidden'); } else { rc.classList.add('hidden'); } }
+    let ts = 0, ss = 0, ti = 0; 
+    cart.forEach((i) => { 
+        const cp = Number(String(i.price || 0).replace(/[^0-9.,]/g, '')); 
+        const q = parseInt(i.qty || 1); 
+        const dp = getDiscountPercent(String(i.id)); 
+        ts += (Math.round(cp * (1 + (dp / 100))) * q); 
+        ss += (cp * q); 
+        ti += q; 
+    });
+    
+    let cPin = ''; 
+    const cf = document.getElementById('checkout-profile-form'); 
+    if (cf && !cf.classList.contains('hidden') && document.getElementById('prof-pin')) {
+        cPin = document.getElementById('prof-pin').value.trim(); 
+    } else if (savedAddresses.length > 0 && selectedAddressIndex !== -1) {
+        cPin = savedAddresses[selectedAddressIndex].pincode;
+    }
+    
+    const de = document.getElementById('qo-delivery-fee'); 
+    if (ss >= 2499) { 
+        currentDeliveryFee = 0; 
+        if(de) de.innerHTML = '<span class="text-green-600 font-bold uppercase tracking-widest text-[10px]">Free</span>'; 
+    } else if (cPin.length >= 2) { 
+        currentDeliveryFee = calculateDynamicDelivery(ss, cPin, cart); 
+        if(de) de.innerHTML = `₹${currentDeliveryFee}`; 
+    } else { 
+        currentDeliveryFee = 0; 
+        if(de) de.innerHTML = '<span class="text-gray-400 text-[10px] font-medium">Calculated next step</span>'; 
+    }
+    
+    const { discount: vd, currentTier: ct, nextTier: nt } = calculateCartDiscount(ss); 
+    let cd = activeCouponValue > 0 ? Math.round(ss * (activeCouponValue / 100)) : 0; 
+    
+    const rc = document.getElementById('qo-coupon-row'); 
+    if (rc) { 
+        if (cd > 0) { document.getElementById('qo-coupon-discount').textContent = `- ₹${cd}`; rc.classList.remove('hidden'); } 
+        else { rc.classList.add('hidden'); } 
+    }
+    
     const ft = ss - vd - cd + currentDeliveryFee, pd = ts - ss, tos = pd + vd + cd;
     
     if(document.getElementById('qo-item-count')) document.getElementById('qo-item-count').textContent = ti; 
     if(document.getElementById('qo-original-value')) document.getElementById('qo-original-value').textContent = `₹${ts}`; 
     if(document.getElementById('qo-product-discount')) document.getElementById('qo-product-discount').textContent = `- ₹${pd}`;
     
-    const vr = document.getElementById('qo-vip-row'); if(vr) { if(vd > 0) { document.getElementById('qo-vip-label').textContent = ct.label; document.getElementById('qo-vip-discount').textContent = `- ₹${vd}`; vr.classList.remove('hidden'); } else { vr.classList.add('hidden'); } }
+    const vr = document.getElementById('qo-vip-row'); 
+    if(vr) { 
+        if(vd > 0) { document.getElementById('qo-vip-label').textContent = ct.label; document.getElementById('qo-vip-discount').textContent = `- ₹${vd}`; vr.classList.remove('hidden'); } 
+        else { vr.classList.add('hidden'); } 
+    }
     
     const vipProgress = document.getElementById('vip-progress-container');
     if (vipProgress) {
@@ -560,9 +606,23 @@ function updateCheckoutUI() {
 }
 
 window.handleMobileStickyAction = function() { window.handleCheckoutAction(); };
-window.handleCheckoutAction = function() {
-    if (checkoutStep === 1) { if (cart.length === 0) return window.showToast("Your bag is empty!", "fa-times", "text-red-500"); if (!currentSessionUser) { window.showToast("Please Sign In to Checkout", "fa-user-lock", "text-luxury-rose"); window.openCustomerAuthModal(); return; } checkoutStep = 2; updateCheckoutUI(); renderAddressBook(); document.getElementById('checkout-overlay')?.scrollTo({top: 0, behavior: 'smooth'}); } 
-    else if (checkoutStep === 2) { const f = document.getElementById('checkout-profile-form'); if (f && !f.classList.contains('hidden')) { window.saveAddressFromForm().then(s=>{ if(!s) return; }); } if (savedAddresses.length === 0 || selectedAddressIndex === -1) { return window.showToast("Please provide a delivery address.", "fa-exclamation-circle", "text-red-500"); } window.preparePaymentGateway(); }
+window.handleCheckoutAction = async function() {
+    if (checkoutStep === 1) { 
+        if (cart.length === 0) return window.showToast("Your bag is empty!", "fa-times", "text-red-500"); 
+        if (!currentSessionUser) { window.showToast("Please Sign In to Checkout", "fa-user-lock", "text-luxury-rose"); window.openCustomerAuthModal(); return; } 
+        checkoutStep = 2; updateCheckoutUI(); renderAddressBook(); document.getElementById('checkout-overlay')?.scrollTo({top: 0, behavior: 'smooth'}); 
+    } 
+    else if (checkoutStep === 2) { 
+        const f = document.getElementById('checkout-profile-form'); 
+        if (f && !f.classList.contains('hidden')) { 
+            const saved = await window.saveAddressFromForm();
+            if (!saved) return; // Wait until address is successfully saved
+        } 
+        if (savedAddresses.length === 0 || selectedAddressIndex === -1) { 
+            return window.showToast("Please provide a delivery address.", "fa-exclamation-circle", "text-red-500"); 
+        } 
+        window.preparePaymentGateway(); 
+    }
 };
 
 window.preparePaymentGateway = function() {
@@ -922,6 +982,32 @@ window.th_setBuildString = function(category, value) {
     const p = products.find(x => x.id == document.getElementById('product-view').getAttribute('data-current-id'));
     if(p) renderVisualCustomizer(p);
 };
+
+window.prepareReviewForm = function() {
+    if(!currentSessionUser) return window.openCustomerAuthModal();
+    window.setReviewRating(5);
+    document.getElementById('review-comment').value = '';
+    window.openPolicyModal('review-modal', 'review-box');
+};
+
+window.closeReviewModal = function() { window.closePolicyModal('review-modal', 'review-box'); };
+
+window.setReviewRating = function(rating) {
+    document.getElementById('review-rating-val').value = rating;
+    const stars = document.getElementById('review-stars-container').children;
+    for(let i=0; i<5; i++) { 
+        stars[i].className = i < rating ? "fas fa-star cursor-pointer text-luxury-gold transition-colors" : "fas fa-star cursor-pointer text-gray-300 transition-colors hover:text-luxury-gold"; 
+    }
+};
+
+document.getElementById('review-form')?.addEventListener('submit', function(e) {
+    e.preventDefault();
+    const pid = document.getElementById('product-view').getAttribute('data-current-id');
+    const r = document.getElementById('review-rating-val').value;
+    const c = document.getElementById('review-comment').value;
+    window.th_submitReview(pid, r, c);
+    window.closeReviewModal();
+});
 
 window.th_toggleSubCategory = function(cat) { const idx = activeSubCategories.indexOf(cat); if(idx > -1) { activeSubCategories.splice(idx, 1); } else { activeSubCategories.push(cat); } renderFilters(); renderProducts(currentSearchQuery); };
 

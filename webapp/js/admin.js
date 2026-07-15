@@ -145,9 +145,12 @@ function bindAdminEvents() {
 // 🚨 INVENTORY ENGINE
 // Dynamic Promo Functions
 window.th_addPromoLine = function(val = "") {
+    // Prevent event objects from populating the input when the button is clicked
+    const textVal = (val && typeof val === 'string') ? val : "";
+    
     const container = document.getElementById('promo-lines-container'); if(!container) return;
     const div = document.createElement('div'); div.className = "flex items-center gap-2";
-    div.innerHTML = `<input type="text" value="${val}" placeholder="e.g. Free Shipping..." class="promo-line-input w-full bg-luxury-bg border border-luxury-blush rounded-lg px-3 py-2 text-[11px] font-medium outline-none focus:ring-2 focus:ring-luxury-rose/30"><button type="button" onclick="this.parentElement.remove()" class="text-red-400 hover:text-red-600 w-8 h-8 flex items-center justify-center shrink-0 border border-luxury-blush rounded-lg bg-white shadow-sm"><i class="fas fa-times"></i></button>`;
+    div.innerHTML = `<input type="text" value="${textVal}" placeholder="e.g. Free Shipping..." class="promo-line-input w-full bg-luxury-bg border border-luxury-blush rounded-lg px-3 py-2 text-[11px] font-medium outline-none focus:ring-2 focus:ring-luxury-rose/30"><button type="button" onclick="this.parentElement.remove()" class="text-red-400 hover:text-red-600 w-8 h-8 flex items-center justify-center shrink-0 border border-luxury-blush rounded-lg bg-white shadow-sm"><i class="fas fa-times"></i></button>`;
     container.appendChild(div);
 };
 
