@@ -57,50 +57,34 @@ function unlockDashboard() {
     });
 }
 
-window.th_addPromoCode = async function(event) {
-    event.preventDefault();
+window.th_addPromoLine = function(text = '') {
+    const container = document.getElementById('promo-lines-container');
+    if (!container) return;
+    const div = document.createElement('div');
+    div.className = "flex gap-2 items-center";
+    div.innerHTML = `
+        <input type="text" placeholder="Enter promo text..." value="${text}" class="promo-line-input flex-1 bg-white border border-luxury-blush rounded-lg px-3 py-2 text-[10px] font-medium text-luxury-dark outline-none focus:border-luxury-rose">
+        <button type="button" onclick="this.parentElement.remove()" class="text-gray-400 hover:text-red-500 px-2 transition-colors"><i class="fas fa-times text-[12px]"></i></button>
+    `;
+    container.appendChild(div);
+};
 
-    // 1. Grab values from your admin panel inputs
-    const codeInput = document.getElementById('promo-code-input');
-    const discountInput = document.getElementById('promo-discount-input');
+window.th_addPromoCode = function(code = '', type = 'percent', val = '') {
+    const container = document.getElementById('promo-codes-container');
+    if (!container) return;
     
-    if (!codeInput || !discountInput) {
-        console.error("Promo code inputs not found in the DOM.");
-        return;
-    }
-
-    const code = codeInput.value.trim().toUpperCase();
-    const discount = parseFloat(discountInput.value);
-
-    // 2. Validate the data
-    if (!code || isNaN(discount)) {
-        alert('Please enter a valid promo code and discount amount.');
-        return;
-    }
-
-    try {
-        // 3. Save to your database (Update this block to match your Supabase/Backend logic)
-        /*
-        const { data, error } = await supabase
-            .from('promo_codes')
-            .insert([{ code: code, discount: discount }]);
-        
-        if (error) throw error;
-        */
-        
-        // 4. Success UI Updates
-        alert(`Promo code ${code} added successfully!`);
-        
-        // Reset the form
-        event.target.reset();
-        
-        // Refresh the list if you have a render function
-        // renderAdminPromoCodes(); 
-        
-    } catch (error) {
-        console.error('Error adding promo code:', error);
-        alert('Failed to add promo code. Check console for details.');
-    }
+    const row = document.createElement('div');
+    row.className = "coupon-row flex gap-2 items-center bg-white p-2 rounded-lg border border-luxury-blush shadow-sm";
+    row.innerHTML = `
+        <input type="text" placeholder="CODE (e.g. SAVE10)" value="${code}" class="coupon-code-input flex-1 bg-transparent border-none text-[10px] font-bold text-luxury-dark uppercase outline-none placeholder-gray-300">
+        <select class="coupon-type-input bg-luxury-bg border border-luxury-blush rounded text-[9px] px-1 py-1 outline-none text-luxury-dark">
+            <option value="percent" ${type === 'percent' ? 'selected' : ''}>% OFF</option>
+            <option value="flat" ${type === 'flat' ? 'selected' : ''}>₹ OFF</option>
+        </select>
+        <input type="number" placeholder="Val" value="${val}" class="coupon-val-input w-16 bg-transparent border-none text-[10px] font-bold text-luxury-dark outline-none text-right">
+        <button type="button" onclick="this.parentElement.remove()" class="text-gray-400 hover:text-red-500 px-2 transition-colors"><i class="fas fa-times text-[10px]"></i></button>
+    `;
+    container.appendChild(row);
 };
 
 async function fetchRuntimeSettings() {

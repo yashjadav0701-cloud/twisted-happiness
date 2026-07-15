@@ -825,6 +825,11 @@ async function renderCustomerOrdersPipeline() {
                     </div>
                 </div>`; 
             } 
+            
+            // Restoring the missing HTML append line and closing loop bracket
+            html += `<div class="border border-luxury-blush rounded-xl p-4 sm:p-6 mb-4 bg-white shadow-sm hover:border-luxury-rose/50 transition-colors"><div class="flex justify-between items-start border-b border-luxury-blush pb-4 mb-4"><div><h4 class="font-bold text-[12px] text-luxury-dark uppercase tracking-widest mb-1">Order ${exId}</h4><p class="text-[10px] text-gray-500">${dt}</p></div><div class="text-right"><span class="font-poppins font-bold text-luxury-dark text-[14px]">₹${o.total}</span></div></div><div class="flex gap-2 overflow-x-auto scrollbar-hide py-1 mb-2">${itemsHtml}</div>${progressBarHtml}${invoiceBtnHtml}</div>`;
+        });
+        
         c.innerHTML = html; 
     } catch(err) { c.innerHTML = '<div class="text-center text-red-500 py-4 text-xs">Failed to load archive.</div>'; }
 }
