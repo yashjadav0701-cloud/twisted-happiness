@@ -145,7 +145,11 @@ async function saveSettings(e) {
     } catch(err) { showToast('Failed to sync settings', 'fa-times', 'text-red-500'); console.error(err); }
 }
 
+let adminInvSearch = ''; let adminInvFilter = 'All';
+
 function bindAdminEvents() {
+    document.getElementById('admin-inv-search')?.addEventListener('input', (e) => { adminInvSearch = e.target.value.toLowerCase(); renderAdminProducts(); });
+    document.getElementById('admin-inv-filter')?.addEventListener('change', (e) => { adminInvFilter = e.target.value; renderAdminProducts(); });
     document.getElementById('admin-login-form')?.addEventListener('submit', attemptLogin); document.getElementById('btn-logout')?.addEventListener('click', logoutAdmin); document.getElementById('tab-inventory')?.addEventListener('click', () => switchAdminTab('inventory')); document.getElementById('tab-orders')?.addEventListener('click', () => switchAdminTab('orders')); document.getElementById('subtab-active')?.addEventListener('click', () => switchOrderTab('active')); document.getElementById('subtab-completed')?.addEventListener('click', () => switchOrderTab('completed')); document.getElementById('settings-form')?.addEventListener('submit', saveSettings); document.getElementById('inventory-form')?.addEventListener('submit', saveProduct); document.getElementById('p-image-file')?.addEventListener('change', handleFileSelection); document.getElementById('p-main-category')?.addEventListener('change', togglePaintingFields); document.getElementById('cancel-edit-btn')?.addEventListener('click', cancelEdit);
 }
 
@@ -170,6 +174,7 @@ async function fetchDatabase() {
         
         if(document.getElementById('main-cat-list')) document.getElementById('main-cat-list').innerHTML = [...new Set(products.map(p => p.mainCategory).filter(Boolean))].map(c => `<option value="${c}">`).join('');
         if(document.getElementById('sub-cat-list')) document.getElementById('sub-cat-list').innerHTML = [...new Set(products.map(p => p.category).filter(Boolean))].map(c => `<option value="${c}">`).join('');
+        if(document.getElementById('admin-inv-filter')) document.getElementById('admin-inv-filter').innerHTML = `<option value="All">All Categories</option>` + [...new Set(products.map(p => p.mainCategory).filter(Boolean))].map(c => `<option value="${c}">${c}</option>`).join('');
 
         renderAdminProducts(); renderAdminCategories();
 
@@ -180,13 +185,28 @@ async function fetchDatabase() {
 }
 
 function renderAdminProducts() { 
-    const list = document.getElementById('admin-product-list'); list.innerHTML = ''; 
-    if(products.length === 0) { list.innerHTML = '<div class="text-center text-gray-400 py-10 text-[10px] uppercase tracking-[0.2em] font-medium"><i class="fas fa-box-open text-2xl block mb-2 opacity-30"></i> No creations in gallery.</div>'; return; } 
+    const list = document.getElementById('admin-product-list'); 
+    if(!list) return;
+    list.innerHTML = ''; 
+    
+    let filteredProducts = products.filter(p => {
+        const matchesSearch = p.name.toLowerCase().includes(adminInvSearch);
+        const matchesFilter = adminInvFilter === 'All' || p.mainCategory === adminInvFilter;
+        return matchesSearch && matchesFilter;
+    });
+
+    if(filteredProducts.length === 0) { 
+        list.innerHTML = '<div class="col-span-full text-center text-gray-400 py-10 text-[10px] uppercase tracking-[0.2em] font-medium"><i class="fas fa-box-open text-2xl block mb-3 opacity-30"></i> No creations match criteria.</div>'; 
+        return; 
+    } 
+    
     const fragment = document.createDocumentFragment();
-    [...products].forEach(p => { 
-        const cleanPrice = Number(String(p.price || 0).replace(/[^0-9.,]/g, '')); const adminImg = (typeof p.image1 === 'string' && p.image1.trim() !== '') ? p.image1 : 'https://placehold.co/100/F8E9EA/423133';
-        const item = document.createElement('div'); item.className = "flex justify-between bg-white p-4 hover:bg-luxury-bg transition-colors duration-400";
-        item.innerHTML = `<div class="flex gap-3 items-center"><img loading="lazy" decoding="async" src="${adminImg}" alt="${p.name}" class="w-12 h-12 object-cover bg-luxury-bg border border-luxury-blush rounded-lg"><div class="flex flex-col justify-center"><h4 class="font-bitter text-[12px] font-semibold text-luxury-dark leading-tight w-36 sm:w-48 truncate mb-0.5">${p.name}</h4><p class="font-poppins text-[10px] text-luxury-rose font-bold">₹${cleanPrice}</p></div></div><div class="flex gap-4 items-center pr-2"><button type="button" onclick="window.th_triggerEdit('${p.id}')" class="text-gray-400 hover:text-luxury-rose text-sm cursor-pointer w-8 h-8 rounded-full bg-white border border-luxury-blush flex items-center justify-center"><i class="fas fa-pen text-[10px]"></i></button><button type="button" onclick="window.th_triggerDelete('${p.id}')" class="text-gray-400 hover:text-red-500 text-sm cursor-pointer w-8 h-8 rounded-full bg-white border border-luxury-blush flex items-center justify-center"><i class="fas fa-trash text-[10px]"></i></button></div>`;
+    filteredProducts.forEach(p => { 
+        const cleanPrice = Number(String(p.price || 0).replace(/[^0-9.,]/g, '')); 
+        const adminImg = (typeof p.image1 === 'string' && p.image1.trim() !== '') ? p.image1 : 'https://placehold.co/100/F8E9EA/423133';
+        const item = document.createElement('div'); 
+        item.className = "flex justify-between items-center bg-white p-3 hover:bg-luxury-bg transition-colors duration-400 border border-luxury-blush rounded-xl shadow-sm";
+        item.innerHTML = `<div class="flex gap-3 items-center w-full min-w-0"><img loading="lazy" decoding="async" src="${adminImg}" alt="${p.name}" class="w-12 h-12 shrink-0 object-cover bg-luxury-bg border border-luxury-blush rounded-lg"><div class="flex flex-col justify-center min-w-0 flex-grow"><h4 class="font-bitter text-[12px] font-semibold text-luxury-dark leading-tight truncate mb-0.5" title="${p.name}">${p.name}</h4><div class="flex justify-between items-center w-full pr-2"><p class="font-poppins text-[10px] text-luxury-rose font-bold">₹${cleanPrice}</p><span class="text-[8px] text-gray-400 uppercase tracking-widest truncate max-w-[80px] ml-2">${p.mainCategory}</span></div></div></div><div class="flex gap-2 items-center pl-2 shrink-0 border-l border-luxury-blush/60"><button type="button" onclick="window.th_triggerEdit('${p.id}')" class="text-gray-400 hover:text-luxury-rose text-sm cursor-pointer w-7 h-7 rounded-full bg-white border border-luxury-blush flex items-center justify-center transition-colors"><i class="fas fa-pen text-[9px]"></i></button><button type="button" onclick="window.th_triggerDelete('${p.id}')" class="text-gray-400 hover:text-red-500 text-sm cursor-pointer w-7 h-7 rounded-full bg-white border border-luxury-blush flex items-center justify-center transition-colors"><i class="fas fa-trash text-[9px]"></i></button></div>`;
         fragment.appendChild(item);
     }); 
     list.appendChild(fragment);

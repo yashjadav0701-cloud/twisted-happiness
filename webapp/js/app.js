@@ -29,7 +29,7 @@ let products = []; let currentMainCategory = 'All'; let activeSubCategories = []
 let searchTimeout = null; let modalImages = []; let currentSlideIndex = 0; let isAnimating = false; let currentLightboxIndex = 0; let isLightboxAnimating = false; let currentModalLevel = 0; let statePushed = false;
 let checkoutStep = 1; let pendingOrderPayload = null; window.buyNowPayload = null; let currentOrderReference = null; let currentDeliveryFee = 0; let activeCouponValue = 0; let activeCouponCode = "";
 let selectedAddressIndex = savedAddresses.length > 0 ? 0 : -1; let editingAddressIndex = null; let currentSessionUser = null; let authModalMode = "login"; 
-let activeBuild = { flowers: [], fillers: [], wrapping: 'Vintage Kraft', ribbon: 'Satin Bow' }; 
+// Bouquet builder removed 
 
 function initApp() {
     try { 
@@ -345,25 +345,7 @@ function fetchDatabase() {
     });
 }
 
-function renderVisualCustomizer(product) {
-    const vc = document.getElementById('visual-customizer-studio'); if (!vc) return;
-    const catLower = (product.category || '').toLowerCase();
-    const isBouquet = catLower === 'bouquet' || catLower === 'bouquets';
-    if (product.mainCategory !== 'Pipe Cleaner Crafts' || !isBouquet) { vc.classList.add('hidden'); return; }
-    
-    const flowerOptions = ['Crimson Rose', 'Blush Peony', 'Ivory Lily', 'Golden Sunflower', 'Lilac Tulip', 'Blue Hydrangea', 'Sunset Carnation', 'Classic Daisy'];
-    const fillerOptions = ['Baby\'s Breath', 'Eucalyptus Leaves', 'Lavender Sprigs', 'Golden Fern', 'Pearl Branches'];
-    const wrapOptions = ['Vintage Kraft', 'Midnight Matte', 'Frosted Pearl', 'Blushing Silk', 'Holographic Clear'];
-    const ribbonOptions = ['Satin Bow', 'Lace Ribbon', 'Rustic Twine', 'Velvet Ribbon'];
-    
-    const generateChips = (opts, active, funcPrefix, isMulti) => opts.map(o => `<button type="button" onclick="window.${funcPrefix}'${o.replace(/'/g, "\\'")}')" class="px-3 py-1.5 rounded-full text-[10px] font-bold border transition-all ${isMulti ? (active.includes(o) ? 'bg-luxury-rose text-white border-luxury-rose shadow-sm' : 'bg-white text-gray-500 border-luxury-blush') : (active === o ? 'bg-luxury-dark text-white border-luxury-dark shadow-sm' : 'bg-white text-gray-500 border-luxury-blush')}">${o}</button>`).join('');
-    
-    vc.innerHTML = `<h4 class="font-bold text-[11px] uppercase tracking-widest text-luxury-dark mb-4 border-b border-luxury-blush pb-2"><i class="fas fa-magic text-luxury-rose mr-1"></i> Custom Bouquet Studio</h4><div class="mb-5"><span class="block text-[9px] font-bold text-gray-400 uppercase tracking-widest mb-2">1. Primary Flowers</span><div class="flex flex-wrap gap-2">${generateChips(flowerOptions, activeBuild.flowers, "th_toggleBuildArray('flowers', ", true)}</div></div><div class="mb-5"><span class="block text-[9px] font-bold text-gray-400 uppercase tracking-widest mb-2">2. Filler Foliage</span><div class="flex flex-wrap gap-2">${generateChips(fillerOptions, activeBuild.fillers, "th_toggleBuildArray('fillers', ", true)}</div></div><div class="mb-5"><span class="block text-[9px] font-bold text-gray-400 uppercase tracking-widest mb-2">3. Wrapping Style</span><div class="flex flex-wrap gap-2">${generateChips(wrapOptions, activeBuild.wrapping, "th_setBuildString('wrapping', ", false)}</div></div><div><span class="block text-[9px] font-bold text-gray-400 uppercase tracking-widest mb-2">4. Ribbon Accent</span><div class="flex flex-wrap gap-2">${generateChips(ribbonOptions, activeBuild.ribbon, "th_setBuildString('ribbon', ", false)}</div></div>`;
-    vc.classList.remove('hidden');
-}
-
-window.th_toggleBuildArray = function(cat, val) { const idx = activeBuild[cat].indexOf(val); if (idx > -1) activeBuild[cat].splice(idx, 1); else activeBuild[cat].push(val); const p = products.find(x => x.id == document.getElementById('product-view').getAttribute('data-current-id')); if(p) renderVisualCustomizer(p); };
-window.th_setBuildString = function(cat, val) { activeBuild[cat] = val; const p = products.find(x => x.id == document.getElementById('product-view').getAttribute('data-current-id')); if(p) renderVisualCustomizer(p); };
+// Customizer engine removed successfully
 
 function renderProducts(sq = '') { 
     const g = document.getElementById('product-grid'); if(!g) return; g.innerHTML = ''; 
@@ -455,7 +437,15 @@ window.openProductPage = async function(id) {
 
         // 5. Setup View State
         document.getElementById('product-view')?.setAttribute('data-current-id', p.id);
-        renderVisualCustomizer(p);
+        
+        const cg = document.getElementById('modal-care-guide');
+        if (cg) {
+            cg.innerHTML = '<li><i class="fas fa-spinner fa-spin text-luxury-rose mr-2"></i> Curating AI Care Guide...</li>';
+            window.fetchAICareGuide(p.mainCategory).then(html => { 
+                cg.innerHTML = html; 
+            });
+        }
+        
         updateProductButtons(p.id);
         updateWishlistUIElements(p.id, localWishlist.includes(String(p.id)));
         renderRelatedProducts(p.id, p.mainCategory, p.category);
@@ -491,17 +481,22 @@ window.th_updateCartQty = function(id, d, e) {
     else if(d > 0) { 
         const p = products.find(x => x.id == id); 
         if(p) { 
-            let customSpecsStr = "";
-            if (p.mainCategory === 'Pipe Cleaner Crafts' && p.name.toLowerCase().includes('bouquet')) {
-                 customSpecsStr = `Flowers: ${activeBuild.flowers.length > 0 ? activeBuild.flowers.join(', ') : 'Standard'} | Fillers: ${activeBuild.fillers.length > 0 ? activeBuild.fillers.join(', ') : 'None'} | Wrap: ${activeBuild.wrapping} | Ribbon: ${activeBuild.ribbon}`;
-            }
-            cart.push({ id: p.id, name: p.name, price: p.price, prepTime: p.prepTime, image: p.image1, isCustomizable: p.isCustomizable, mainCategory: p.mainCategory, customSpecs: customSpecsStr, qty: 1 }); 
+            cart.push({ id: p.id, name: p.name, price: p.price, prepTime: p.prepTime, image: p.image1, isCustomizable: p.isCustomizable, mainCategory: p.mainCategory, customSpecs: "", qty: 1 }); 
             window.showToast("Added to Bag", "fa-check"); 
         } 
     }
     localStorage.setItem('th_cart', JSON.stringify(cart)); updateCartCount();
     const pv = document.getElementById('product-view'); if(pv && !pv.classList.contains('hidden')) updateProductButtons(id);
     if(document.getElementById('checkout-overlay') && !document.getElementById('checkout-overlay').classList.contains('hidden')){ if (cart.length === 0) { window.closeCheckout(); return window.showToast("Bag is empty!", "fa-times"); } renderCheckoutItems(); updateCheckoutUI(); }
+};
+
+window.th_updateBuyNowQty = function(id, d, e) {
+    if(e) { e.preventDefault(); e.stopPropagation(); }
+    if(window.buyNowPayload && window.buyNowPayload.id == id) {
+        window.buyNowPayload.qty = Math.max(1, parseInt(window.buyNowPayload.qty || 1) + d);
+        renderCheckoutItems();
+        updateCheckoutUI();
+    }
 };
 
 window.openCheckoutBase = function() {
@@ -519,13 +514,9 @@ window.closeCheckout = function() {
 
 window.routeCheckoutFromModal = function(id, e) { 
     if(e) { e.preventDefault(); e.stopPropagation(); } const p = products.find(x => x.id == id); if(!p) return; 
-    let customSpecsStr = "";
-    if (p.mainCategory === 'Pipe Cleaner Crafts' && p.name.toLowerCase().includes('bouquet')) {
-         customSpecsStr = `Flowers: ${activeBuild.flowers.length > 0 ? activeBuild.flowers.join(', ') : 'Standard'} | Fillers: ${activeBuild.fillers.length > 0 ? activeBuild.fillers.join(', ') : 'None'} | Wrap: ${activeBuild.wrapping} | Ribbon: ${activeBuild.ribbon}`;
-    }
     const ci = cart.find(i => i.id == id);
     const currentQty = ci ? parseInt(ci.qty || 1) : 1;
-    window.buyNowPayload = { id: p.id, name: p.name, price: p.price, prepTime: p.prepTime, image: p.image1, isCustomizable: p.isCustomizable, mainCategory: p.mainCategory, customSpecs: customSpecsStr, qty: currentQty };
+    window.buyNowPayload = { id: p.id, name: p.name, price: p.price, prepTime: p.prepTime, image: p.image1, isCustomizable: p.isCustomizable, mainCategory: p.mainCategory, customSpecs: "", qty: currentQty };
     window.openCheckoutBase(); 
 };
 
@@ -539,7 +530,7 @@ function renderCheckoutItems() {
     if(document.getElementById('step-label-1')) document.getElementById('step-label-1').textContent = window.buyNowPayload ? "Your Order" : "Your Bag";
 
     let h = ''; listToRender.forEach(i => { const cp = Number((i.price || 0).toString().replace(/[^0-9.,]/g, '')), dp = getDiscountPercent(String(i.id)), op = Math.round(cp * (1 + (dp / 100))), img = (typeof i.image1 === 'string' && i.image1.trim() !== '') ? i.image1 : (typeof i.image === 'string' ? i.image : 'https://placehold.co/150/F8E9EA/423133'), q = parseInt(i.qty || 1);
-        const qtyHtml = window.buyNowPayload ? `<div class="text-[12px] font-bold text-luxury-rose bg-luxury-bg px-4 py-2 border border-luxury-blush rounded-xl">Qty: 1</div>` : `<div class="flex items-center bg-white border border-luxury-blush rounded-full h-[36px] overflow-hidden shadow-sm"><button type="button" onclick="window.th_updateCartQty('${i.id}', -1, event)" class="w-10 h-full flex items-center justify-center text-luxury-dark hover:bg-luxury-blush transition-colors"><i class="fas fa-minus text-[10px]"></i></button><div class="w-10 h-full flex items-center justify-center border-l border-r border-luxury-blush text-[12px] font-bold text-luxury-rose bg-luxury-bg">${q}</div><button type="button" onclick="window.th_updateCartQty('${i.id}', 1, event)" class="w-10 h-full flex items-center justify-center text-luxury-dark hover:bg-luxury-blush transition-colors"><i class="fas fa-plus text-[10px]"></i></button></div>`;
+        const qtyHtml = window.buyNowPayload ? `<div class="flex items-center bg-white border border-luxury-blush rounded-full h-[36px] overflow-hidden shadow-sm"><button type="button" onclick="window.th_updateBuyNowQty('${i.id}', -1, event)" class="w-10 h-full flex items-center justify-center text-luxury-dark hover:bg-luxury-blush transition-colors"><i class="fas fa-minus text-[10px]"></i></button><div class="w-10 h-full flex items-center justify-center border-l border-r border-luxury-blush text-[12px] font-bold text-luxury-rose bg-luxury-bg">${q}</div><button type="button" onclick="window.th_updateBuyNowQty('${i.id}', 1, event)" class="w-10 h-full flex items-center justify-center text-luxury-dark hover:bg-luxury-blush transition-colors"><i class="fas fa-plus text-[10px]"></i></button></div>` : `<div class="flex items-center bg-white border border-luxury-blush rounded-full h-[36px] overflow-hidden shadow-sm"><button type="button" onclick="window.th_updateCartQty('${i.id}', -1, event)" class="w-10 h-full flex items-center justify-center text-luxury-dark hover:bg-luxury-blush transition-colors"><i class="fas fa-minus text-[10px]"></i></button><div class="w-10 h-full flex items-center justify-center border-l border-r border-luxury-blush text-[12px] font-bold text-luxury-rose bg-luxury-bg">${q}</div><button type="button" onclick="window.th_updateCartQty('${i.id}', 1, event)" class="w-10 h-full flex items-center justify-center text-luxury-dark hover:bg-luxury-blush transition-colors"><i class="fas fa-plus text-[10px]"></i></button></div>`;
         h += `<div class="flex flex-col sm:flex-row gap-4 border border-luxury-blush bg-white p-4 rounded-2xl shadow-sm"><img src="${img}" class="w-20 h-24 sm:w-24 sm:h-28 object-cover rounded-xl border border-luxury-blush shrink-0 bg-luxury-bg"><div class="flex flex-col justify-between w-full"><div><h4 class="font-bitter text-[14px] sm:text-[15px] font-semibold text-luxury-dark mb-1 leading-snug">${i.name}</h4><p class="text-[10px] uppercase tracking-widest font-bold text-gray-400 mb-1">${i.mainCategory || i.category || 'Handcrafted Art'}</p>${i.customSpecs ? `<p class="text-[9px] font-medium text-luxury-rose mb-3 bg-luxury-rose/10 inline-block px-2 py-1 rounded-md border border-luxury-rose/20 leading-relaxed">${i.customSpecs}</p>` : `<div class="mb-3"></div>`}<div class="flex items-baseline gap-2 mb-4"><span class="font-poppins text-luxury-dark font-bold text-[16px] sm:text-[18px]">₹${cp}</span><span class="font-poppins text-gray-400 text-[11px] line-through">₹${op}</span><span class="text-green-600 font-bold text-[10px] ml-1">${dp}% Off</span></div></div><div class="flex items-center gap-3">${qtyHtml}</div></div></div>`;
     });
     const dw = document.getElementById('comm-dimensions-wrapper'); if (listToRender.some(i => i.isCustomizable)) dw?.classList.remove('hidden'); else dw?.classList.add('hidden'); c.innerHTML = h;
@@ -1030,6 +1021,49 @@ const deliveryDate = encodedOrder.delivery_date
         `);
         printWindow.document.close();
     } catch(e) { window.showToast("Failed to generate invoice", "fa-times", "text-red-500"); }
+};
+
+// ==========================================
+// AI Care Guide Generator & Cache Engine (Via Supabase)
+// ==========================================
+
+window.fetchAICareGuide = async function(category) {
+    let cache = safeJSONParse('th_care_guides_cache', {});
+    
+    // 1. Fetch from Local Cache (Prevents redundant API calls)
+    if (cache[category]) return cache[category];
+
+    // 2. Pre-defined fallbacks for core inventory
+    const known = {
+        'Canvas Paintings': `<li>Keep away from direct sunlight to prevent color fading.</li><li>Dust gently with a dry, soft microfiber cloth.</li><li>Do not use chemical cleaners or water.</li><li>Keep in a dry environment to prevent canvas warping.</li><li>Avoid extreme temperature fluctuations to protect the paint.</li>`,
+        'Clay Art Paintings': `<li>Handle with utmost care; textured elements are fragile.</li><li>Dust lightly using a soft-bristled makeup or artist brush.</li><li>Avoid hanging in high-humidity areas like bathrooms.</li><li>Do not press or lean objects against the 3D surface.</li><li>If a small piece detaches, carefully reattach with clear craft adhesive.</li>`,
+        'Pipe Cleaner Crafts': `<li>Keep away from moisture and liquids to prevent rusting of the internal wire.</li><li>Fluff gently with fingers if crushed.</li><li>Use a lint roller lightly or a blow dryer on cool setting to remove dust.</li><li>Avoid prolonged exposure to direct sunlight.</li><li>Store in a rigid, dust-free box when not on display.</li>`
+    };
+    if(known[category]) { 
+        cache[category] = known[category]; 
+        localStorage.setItem('th_care_guides_cache', JSON.stringify(cache)); 
+        return known[category]; 
+    }
+
+    // 3. Live AI Generation via Secure Supabase Edge Function
+    try {
+        const { data, error } = await _supabase.functions.invoke('generate-care-guide', {
+            body: { category: category }
+        });
+        
+        if (error) throw error;
+        if (!data || !data.html) throw new Error("Invalid response from secure backend");
+
+        const aiHtml = data.html;
+        
+        // Push generated data to cache
+        cache[category] = aiHtml;
+        localStorage.setItem('th_care_guides_cache', JSON.stringify(cache));
+        return aiHtml;
+    } catch(e) {
+        console.error("AI Generation failed:", e);
+        return `<li>Handle with care to maintain original condition.</li><li>Keep away from direct sunlight and moisture.</li><li>Clean gently with a soft, dry cloth.</li><li>Avoid dropping or placing heavy objects on the item.</li><li>Store in a clean, dust-free environment.</li>`;
+    }
 };
 
 window.th_toggleSubCategory = function(cat) { const idx = activeSubCategories.indexOf(cat); if(idx > -1) { activeSubCategories.splice(idx, 1); } else { activeSubCategories.push(cat); } renderFilters(); renderProducts(currentSearchQuery); };
