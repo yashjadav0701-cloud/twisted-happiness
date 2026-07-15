@@ -1,6 +1,6 @@
 /**
  * Twisted Happiness - Studio Admin Engine
- * Version: 15.5.0 - Fully Stable, Uncompressed & Globally Bound
+ * Version: 16.0.0 - Fully Repaired & Upgraded
  */
 
 const SUPABASE_URL = "https://gvrfucjtnyqfkdynrmqs.supabase.co"; 
@@ -9,37 +9,25 @@ let _supabase;
 
 const countryCodeMapping = { "+91": "🇮🇳 IN (+91)", "+1": "🇺🇸 US (+1)", "+44": "🇬🇧 UK (+44)" };
 
-// 🛡️ DEFENSIVE CACHE PARSER
 function safeJSONParse(key, fallback) { 
     try { const item = localStorage.getItem(key); return item ? JSON.parse(item) : fallback; } 
     catch (e) { localStorage.removeItem(key); return fallback; } 
 }
 
-// 📦 GLOBAL STATE
 let settings = safeJSONParse('th_settings', { storeName: "Twisted Happiness", instagram: "https://www.instagram.com/khushiified_art?igsh=aW1vZ2N4cTl2OWo=", whatsapp: "9909310501", upiId: "khushisj315@oksbi", countryCode: "+91" });
+let products = []; let allOrders = []; let selectedFilesData = []; let editModeId = null; let mainImageIndex = 0;
 
-let products = []; 
-let allOrders = []; 
-let selectedFilesData = []; 
-let editModeId = null; 
-let mainImageIndex = 0;
-
-// 🚀 INITIALIZATION
 function initApp() {
     try { 
         _supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY); 
-        populateCountryCodes();
-        bindAdminEvents();
-        checkSession();
+        populateCountryCodes(); bindAdminEvents(); checkSession();
     } catch (e) { console.error("Supabase Init Error:", e); }
 }
 document.addEventListener('DOMContentLoaded', initApp);
 
 function populateCountryCodes() {
     const select = document.getElementById('admin-country-code'); if (!select) return;
-    for (const [code, label] of Object.entries(countryCodeMapping)) {
-        const option = document.createElement('option'); option.value = code; option.textContent = label; select.appendChild(option);
-    }
+    for (const [code, label] of Object.entries(countryCodeMapping)) { const option = document.createElement('option'); option.value = code; option.textContent = label; select.appendChild(option); }
 }
 
 async function checkSession() {
@@ -48,45 +36,39 @@ async function checkSession() {
 }
 
 async function attemptLogin(e) { 
-    e.preventDefault(); 
-    const email = document.getElementById('admin-user').value.trim();
-    const pass = document.getElementById('admin-pass').value.trim();
-    const btn = document.getElementById('login-btn'); 
-    
-    if(!email || !pass) return; 
-    btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Verifying...'; btn.disabled = true; 
-    
-    try { 
-        const { data, error } = await _supabase.auth.signInWithPassword({ email: email, password: pass }); 
-        if (error) throw error; if (data.session) unlockDashboard(); 
-    } catch (err) { alert("Access Denied: Check your credentials."); btn.innerHTML = 'Enter Studio'; btn.disabled = false; }
+    e.preventDefault(); const email = document.getElementById('admin-user').value.trim(), pass = document.getElementById('admin-pass').value.trim(), btn = document.getElementById('login-btn'); 
+    if(!email || !pass) return; btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Verifying...'; btn.disabled = true; 
+    try { const { data, error } = await _supabase.auth.signInWithPassword({ email: email, password: pass }); if (error) throw error; if (data.session) unlockDashboard(); } 
+    catch (err) { alert("Access Denied: Check your credentials."); btn.innerHTML = 'Enter Studio'; btn.disabled = false; }
 }
 
 async function logoutAdmin() { await _supabase.auth.signOut(); window.location.href = '/'; }
 
 function unlockDashboard() {
-    document.getElementById('login-view').classList.add('hidden'); 
-    document.getElementById('admin-dashboard').classList.remove('hidden');
+    document.getElementById('login-view').classList.add('hidden'); document.getElementById('admin-dashboard').classList.remove('hidden');
     requestAnimationFrame(() => {
         document.getElementById('admin-dashboard').classList.remove('opacity-0');
-        fetchRuntimeSettings(); // Fetch live config from cloud
-        fetchDatabase(); 
-        fetchOrders(); 
-        showToast('Studio Unlocked', 'fa-unlock'); 
+        fetchRuntimeSettings(); fetchDatabase(); fetchOrders(); showToast('Studio Unlocked', 'fa-unlock'); 
     });
 }
+
+window.th_addPromoLine = function(val) {
+    const textVal = (typeof val === 'string') ? val : "";
+    const container = document.getElementById('promo-lines-container'); if(!container) return;
+    const div = document.createElement('div'); div.className = "flex items-center gap-2 promo-row";
+    div.innerHTML = `<input type="text" value="${textVal}" placeholder="e.g. Free Shipping..." class="promo-line-input w-full bg-white border border-luxury-blush rounded-lg px-3 py-2 text-[11px] font-medium outline-none focus:ring-2 focus:ring-luxury-rose/30"><button type="button" onclick="this.parentElement.remove()" class="text-red-400 hover:text-red-600 w-8 h-8 flex items-center justify-center shrink-0 border border-luxury-blush rounded-lg bg-white shadow-sm"><i class="fas fa-times"></i></button>`;
+    container.appendChild(div);
+};
 
 async function fetchRuntimeSettings() {
     try {
         const { data } = await _supabase.from('store_config').select('*').limit(1);
         if(data && data.length > 0) {
-            const cloud = data[0];
-            settings = { promoText: cloud.promo_text, instagram: cloud.instagram_url, whatsapp: cloud.whatsapp_num, upiId: cloud.upi_id, countryCode: cloud.country_code || "+91" };
+            const cloud = data[0]; settings = { promoText: cloud.promo_text, instagram: cloud.instagram_url, whatsapp: cloud.whatsapp_num, upiId: cloud.upi_id, countryCode: cloud.country_code || "+91" };
             localStorage.setItem('th_settings', JSON.stringify(settings));
         }
     } catch(e) {}
     
-    // Setup Promo Lines
     const container = document.getElementById('promo-lines-container');
     if(container) {
         container.innerHTML = '';
@@ -96,63 +78,30 @@ async function fetchRuntimeSettings() {
         lines.forEach(l => window.th_addPromoLine(l));
     }
 
-    document.getElementById('admin-wa').value = settings.whatsapp || ''; 
-    document.getElementById('admin-country-code').value = settings.countryCode || '+91'; 
+    document.getElementById('admin-wa').value = settings.whatsapp || ''; document.getElementById('admin-country-code').value = settings.countryCode || '+91'; 
     if(document.getElementById('admin-upi-id')) document.getElementById('admin-upi-id').value = settings.upiId || 'khushisj315@oksbi';
     if(document.getElementById('admin-ig')) document.getElementById('admin-ig').value = settings.instagram || 'https://www.instagram.com/khushiified_art?igsh=aW1vZ2N4cTl2OWo=';
 }
 
 async function saveSettings(e) { 
     e.preventDefault(); 
-    
-    // Gather Promo Lines
     const inputs = document.querySelectorAll('.promo-line-input');
     const pArray = Array.from(inputs).map(inp => inp.value.trim()).filter(val => val !== "");
     const pStr = JSON.stringify(pArray);
 
-    const i = document.getElementById('admin-ig').value.trim();
-    const w = document.getElementById('admin-wa').value.trim();
-    const c = document.getElementById('admin-country-code').value;
-    const u = document.getElementById('admin-upi-id').value.trim();
-    
+    const i = document.getElementById('admin-ig').value.trim(), w = document.getElementById('admin-wa').value.trim(), c = document.getElementById('admin-country-code').value, u = document.getElementById('admin-upi-id').value.trim();
     const payload = { id: 1, promo_text: pStr, instagram_url: i, whatsapp_num: w, country_code: c, upi_id: u };
     
     try {
-        const { error } = await _supabase.from('store_config').upsert([payload]);
-        if (error) throw error;
+        const { error } = await _supabase.from('store_config').upsert([payload]); if (error) throw error;
         settings = { promoText: pStr, instagram: i, whatsapp: w, countryCode: c, upiId: u };
-        localStorage.setItem('th_settings', JSON.stringify(settings)); 
-        showToast('Settings Saved & Synced to Cloud', 'fa-check'); 
-    } catch(err) {
-        showToast('Failed to sync settings', 'fa-times', 'text-red-500');
-    }
+        localStorage.setItem('th_settings', JSON.stringify(settings)); showToast('Settings Saved & Synced to Cloud', 'fa-check'); 
+    } catch(err) { showToast('Failed to sync settings', 'fa-times', 'text-red-500'); }
 }
 
 function bindAdminEvents() {
-    document.getElementById('admin-login-form')?.addEventListener('submit', attemptLogin);
-    document.getElementById('btn-logout')?.addEventListener('click', logoutAdmin);
-    document.getElementById('tab-inventory')?.addEventListener('click', () => switchAdminTab('inventory'));
-    document.getElementById('tab-orders')?.addEventListener('click', () => switchAdminTab('orders'));
-    document.getElementById('subtab-active')?.addEventListener('click', () => switchOrderTab('active'));
-    document.getElementById('subtab-completed')?.addEventListener('click', () => switchOrderTab('completed'));
-    document.getElementById('settings-form')?.addEventListener('submit', saveSettings);
-    document.getElementById('inventory-form')?.addEventListener('submit', saveProduct);
-    document.getElementById('p-image-file')?.addEventListener('change', handleFileSelection);
-    document.getElementById('p-main-category')?.addEventListener('change', togglePaintingFields);
-    document.getElementById('cancel-edit-btn')?.addEventListener('click', cancelEdit);
+    document.getElementById('admin-login-form')?.addEventListener('submit', attemptLogin); document.getElementById('btn-logout')?.addEventListener('click', logoutAdmin); document.getElementById('tab-inventory')?.addEventListener('click', () => switchAdminTab('inventory')); document.getElementById('tab-orders')?.addEventListener('click', () => switchAdminTab('orders')); document.getElementById('subtab-active')?.addEventListener('click', () => switchOrderTab('active')); document.getElementById('subtab-completed')?.addEventListener('click', () => switchOrderTab('completed')); document.getElementById('settings-form')?.addEventListener('submit', saveSettings); document.getElementById('inventory-form')?.addEventListener('submit', saveProduct); document.getElementById('p-image-file')?.addEventListener('change', handleFileSelection); document.getElementById('p-main-category')?.addEventListener('change', togglePaintingFields); document.getElementById('cancel-edit-btn')?.addEventListener('click', cancelEdit);
 }
-
-// 🚨 INVENTORY ENGINE
-// Dynamic Promo Functions
-window.th_addPromoLine = function(val = "") {
-    // Prevent event objects from populating the input when the button is clicked
-    const textVal = (val && typeof val === 'string') ? val : "";
-    
-    const container = document.getElementById('promo-lines-container'); if(!container) return;
-    const div = document.createElement('div'); div.className = "flex items-center gap-2";
-    div.innerHTML = `<input type="text" value="${textVal}" placeholder="e.g. Free Shipping..." class="promo-line-input w-full bg-luxury-bg border border-luxury-blush rounded-lg px-3 py-2 text-[11px] font-medium outline-none focus:ring-2 focus:ring-luxury-rose/30"><button type="button" onclick="this.parentElement.remove()" class="text-red-400 hover:text-red-600 w-8 h-8 flex items-center justify-center shrink-0 border border-luxury-blush rounded-lg bg-white shadow-sm"><i class="fas fa-times"></i></button>`;
-    container.appendChild(div);
-};
 
 async function fetchDatabase() { 
     const list = document.getElementById('admin-product-list');
@@ -160,15 +109,17 @@ async function fetchDatabase() {
     try { 
         const { data, error } = await _supabase.from('creations').select('*').order('created_at', { ascending: false }); 
         if (error) throw error;
-        
         products = (data || []).map(row => {
-            let parsedImages = []; try { parsedImages = typeof row.image_url === 'string' ? JSON.parse(row.image_url) : (row.image_url || []); } catch(e) {}
+            let parsedImages = []; 
+            try { 
+                if(typeof row.image_url === 'string') parsedImages = JSON.parse(row.image_url);
+                else parsedImages = row.image_url || []; 
+            } catch(e) {}
             return {
                 id: row.id, name: row.name || 'Untitled Art', category: row.category || '', mainCategory: row.main_category || 'Pipe Cleaner Crafts', price: row.price || 0, prepTime: row.prep_time || '3-5', specs: row.specs || '', dimensions: row.dimensions || '', isCustomizable: row.is_customizable || false,
                 image1: parsedImages.length > 0 ? parsedImages[0].data : '', image2: parsedImages.length > 1 ? parsedImages[1].data : '', image3: parsedImages.length > 2 ? parsedImages[2].data : '', image4: parsedImages.length > 3 ? parsedImages[3].data : '', image5: parsedImages.length > 4 ? parsedImages[4].data : ''
             };
         });
-        
         renderAdminProducts(); renderAdminCategories();
     } catch (error) { 
         console.error("Admin DB Fetch Error:", error); 
@@ -179,23 +130,11 @@ async function fetchDatabase() {
 function renderAdminProducts() { 
     const list = document.getElementById('admin-product-list'); list.innerHTML = ''; 
     if(products.length === 0) { list.innerHTML = '<div class="text-center text-gray-400 py-10 text-[10px] uppercase tracking-[0.2em] font-medium"><i class="fas fa-box-open text-2xl block mb-2 opacity-30"></i> No creations in gallery.</div>'; return; } 
-    
     const fragment = document.createDocumentFragment();
     [...products].forEach(p => { 
         const cleanPrice = Number(String(p.price || 0).replace(/[^0-9.,]/g, '')); const adminImg = (typeof p.image1 === 'string' && p.image1.trim() !== '') ? p.image1 : 'https://placehold.co/100/F8E9EA/423133';
         const item = document.createElement('div'); item.className = "flex justify-between bg-white p-4 hover:bg-luxury-bg transition-colors duration-400";
-        item.innerHTML = `
-            <div class="flex gap-3 items-center">
-                <img loading="lazy" decoding="async" src="${adminImg}" alt="${p.name}" class="w-12 h-12 object-cover bg-luxury-bg border border-luxury-blush rounded-lg">
-                <div class="flex flex-col justify-center">
-                    <h4 class="font-bitter text-[12px] font-semibold text-luxury-dark leading-tight w-36 sm:w-48 truncate mb-0.5">${p.name}</h4>
-                    <p class="font-poppins text-[10px] text-luxury-rose font-bold">₹${cleanPrice}</p>
-                </div>
-            </div>
-            <div class="flex gap-4 items-center pr-2">
-                <button type="button" onclick="window.th_triggerEdit('${p.id}')" class="text-gray-400 hover:text-luxury-rose text-sm cursor-pointer w-8 h-8 rounded-full bg-white border border-luxury-blush flex items-center justify-center"><i class="fas fa-pen text-[10px]"></i></button>
-                <button type="button" onclick="window.th_triggerDelete('${p.id}')" class="text-gray-400 hover:text-red-500 text-sm cursor-pointer w-8 h-8 rounded-full bg-white border border-luxury-blush flex items-center justify-center"><i class="fas fa-trash text-[10px]"></i></button>
-            </div>`;
+        item.innerHTML = `<div class="flex gap-3 items-center"><img loading="lazy" decoding="async" src="${adminImg}" alt="${p.name}" class="w-12 h-12 object-cover bg-luxury-bg border border-luxury-blush rounded-lg"><div class="flex flex-col justify-center"><h4 class="font-bitter text-[12px] font-semibold text-luxury-dark leading-tight w-36 sm:w-48 truncate mb-0.5">${p.name}</h4><p class="font-poppins text-[10px] text-luxury-rose font-bold">₹${cleanPrice}</p></div></div><div class="flex gap-4 items-center pr-2"><button type="button" onclick="window.th_triggerEdit('${p.id}')" class="text-gray-400 hover:text-luxury-rose text-sm cursor-pointer w-8 h-8 rounded-full bg-white border border-luxury-blush flex items-center justify-center"><i class="fas fa-pen text-[10px]"></i></button><button type="button" onclick="window.th_triggerDelete('${p.id}')" class="text-gray-400 hover:text-red-500 text-sm cursor-pointer w-8 h-8 rounded-full bg-white border border-luxury-blush flex items-center justify-center"><i class="fas fa-trash text-[10px]"></i></button></div>`;
         fragment.appendChild(item);
     }); 
     list.appendChild(fragment);
@@ -207,10 +146,7 @@ function togglePaintingFields() {
     document.getElementById('p-category').value = ''; renderAdminCategories(); 
 }
 
-function renderAdminCategories() {
-    const datalist = document.getElementById('category-list'), mainCat = document.getElementById('p-main-category').value;
-    if(datalist) { const relevantProducts = products.filter(p => p.mainCategory === mainCat); const allSubs = [...new Set(relevantProducts.map(p => p.category).filter(c => c))]; datalist.innerHTML = ''; allSubs.forEach(cat => { const option = document.createElement('option'); option.value = cat; datalist.appendChild(option); }); }
-}
+function renderAdminCategories() { const datalist = document.getElementById('category-list'), mainCat = document.getElementById('p-main-category').value; if(datalist) { const relevantProducts = products.filter(p => p.mainCategory === mainCat); const allSubs = [...new Set(relevantProducts.map(p => p.category).filter(c => c))]; datalist.innerHTML = ''; allSubs.forEach(cat => { const option = document.createElement('option'); option.value = cat; datalist.appendChild(option); }); } }
 
 function compressImageToBlob(file, maxSize = 1600) { 
     return new Promise((resolve) => { 
@@ -230,14 +166,8 @@ function compressImageToBlob(file, maxSize = 1600) {
 async function handleFileSelection(e) { 
     const files = e.target.files; if (files.length === 0) return; 
     if (selectedFilesData.length + files.length > 5) { alert("Maximum 5 images allowed."); e.target.value = ""; return; } 
-    
     const btn = document.getElementById('btn-save-product'); btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Processing...'; btn.disabled = true; 
-    
-    for (let i = 0; i < files.length; i++) { 
-        const file = files[i]; const blob = await compressImageToBlob(file); const tempUrl = URL.createObjectURL(blob); 
-        selectedFilesData.push({ name: file.name, blob: blob, data: tempUrl, isNew: true }); 
-    } 
-    
+    for (let i = 0; i < files.length; i++) { const file = files[i]; const blob = await compressImageToBlob(file); const tempUrl = URL.createObjectURL(blob); selectedFilesData.push({ name: file.name, blob: blob, data: tempUrl, isNew: true }); } 
     renderImagePreviews(); btn.innerHTML = editModeId ? 'Update Product' : 'Publish to Collection'; btn.disabled = false; e.target.value = ""; 
 }
 
@@ -246,15 +176,7 @@ function renderImagePreviews() {
     if (selectedFilesData.length === 0) { pContainer.classList.add('hidden'); helpText.classList.add('hidden'); return; }
     pContainer.classList.remove('hidden'); helpText.classList.remove('hidden');
     if(mainImageIndex >= selectedFilesData.length) mainImageIndex = 0;
-    
-    selectedFilesData.forEach((fileObj, i) => { 
-        pContainer.innerHTML += `
-        <div onclick="window.th_setMainImage(${i})" class="relative aspect-[4/5] bg-luxury-bg rounded-xl overflow-hidden border-2 cursor-pointer transition-all ${i === mainImageIndex ? 'border-luxury-rose shadow-md scale-105 z-10' : 'border-luxury-blush opacity-60'}">
-            ${i === mainImageIndex ? '<span class="absolute top-2 left-2 bg-luxury-rose text-white text-[7px] px-1.5 py-0.5 rounded-sm z-10 shadow-sm">COVER</span>' : ''}
-            <button type="button" onclick="window.th_removeSelectedImage(${i}, event)" class="absolute top-2 right-2 bg-white/90 text-luxury-dark w-6 h-6 rounded-full flex items-center justify-center z-20"><i class="fas fa-times text-[10px]"></i></button>
-            <img src="${fileObj.data}" class="w-full h-full object-cover">
-        </div>`; 
-    });
+    selectedFilesData.forEach((fileObj, i) => { pContainer.innerHTML += `<div onclick="window.th_setMainImage(${i})" class="relative aspect-[4/5] bg-luxury-bg rounded-xl overflow-hidden border-2 cursor-pointer transition-all ${i === mainImageIndex ? 'border-luxury-rose shadow-md scale-105 z-10' : 'border-luxury-blush opacity-60'}">${i === mainImageIndex ? '<span class="absolute top-2 left-2 bg-luxury-rose text-white text-[7px] px-1.5 py-0.5 rounded-sm z-10 shadow-sm">COVER</span>' : ''}<button type="button" onclick="window.th_removeSelectedImage(${i}, event)" class="absolute top-2 right-2 bg-white/90 text-luxury-dark w-6 h-6 rounded-full flex items-center justify-center z-20"><i class="fas fa-times text-[10px]"></i></button><img src="${fileObj.data}" class="w-full h-full object-cover"></div>`; });
 }
 
 window.th_setMainImage = function(index) { if (index === 0) return; const selectedImage = selectedFilesData.splice(index, 1)[0]; selectedFilesData.unshift(selectedImage); mainImageIndex = 0; renderImagePreviews(); };
@@ -263,10 +185,8 @@ window.th_removeSelectedImage = function(index, event) { event.stopPropagation()
 async function saveProduct(e) { 
     e.preventDefault();
     const btn = document.getElementById('btn-save-product'), name = document.getElementById('p-name').value; 
-    
     if(!editModeId && selectedFilesData.length === 0) return alert("Provide at least one image."); 
     btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Uploading...'; btn.disabled = true; 
-    
     if (mainImageIndex !== 0 && selectedFilesData.length > 1) { const mainImg = selectedFilesData.splice(mainImageIndex, 1)[0]; selectedFilesData.unshift(mainImg); }
 
     let uploadedUrls = [];
@@ -312,7 +232,6 @@ window.th_triggerDelete = async function(id) {
     if(!error) { showToast("Piece Removed", "fa-trash"); fetchDatabase(); } else { showToast("Error removing piece", "fa-times", "text-red-500"); }
 };
 
-// 🚨 TAB MANAGEMENT
 function switchAdminTab(tab) {
     const invBtn = document.getElementById('tab-inventory'), ordBtn = document.getElementById('tab-orders'), invSec = document.getElementById('admin-inventory-section'), ordSec = document.getElementById('admin-orders-section');
     if(tab === 'inventory') {
@@ -339,87 +258,44 @@ function switchOrderTab(tab) {
     }
 }
 
-// 🚨 ORDER MANAGEMENT ENGINE
 async function fetchOrders() {
     try {
         const { data, error } = await _supabase.from('orders').select('*').order('created_at', { ascending: false }); 
-        if (error) throw error; 
-        allOrders = data;
-        
+        if (error) throw error; allOrders = data || [];
         const pendingCount = allOrders.filter(o => o.status === 'new' || o.status === 'pending').length; 
         const badge = document.getElementById('admin-order-badge');
-        
-        if (pendingCount > 0) { 
-            badge.textContent = pendingCount; 
-            badge.classList.remove('hidden'); 
-        } else { 
-            badge.classList.add('hidden'); 
-        }
-        
-        // Trigger Analytics Calculation
-        updateAnalyticsDashboard();
-
-        requestAnimationFrame(() => { 
-            renderActiveOrders(); 
-            renderCompletedOrders(); 
-        });
-    } catch (err) { 
-        console.error("Error fetching orders", err); 
-    }
+        if (pendingCount > 0) { badge.textContent = pendingCount; badge.classList.remove('hidden'); } else { badge.classList.add('hidden'); }
+        updateAnalyticsDashboard(); requestAnimationFrame(() => { renderActiveOrders(); renderCompletedOrders(); });
+    } catch (err) { console.error("Error fetching orders", err); }
 }
 
 function updateAnalyticsDashboard() {
-    let totalRevenue = 0;
-    let currentMonthRevenue = 0;
-    let activeCount = 0;
-    let completedCount = 0;
-
-    const now = new Date();
-    const currentMonth = now.getMonth();
-    const currentYear = now.getFullYear();
-
+    let totalRevenue = 0, currentMonthRevenue = 0, activeCount = 0, completedCount = 0;
+    const now = new Date(); const currentMonth = now.getMonth(); const currentYear = now.getFullYear();
     allOrders.forEach(o => {
         if (o.status === 'completed') {
-            completedCount++;
-            const orderTotal = parseFloat(o.total) || 0;
-            totalRevenue += orderTotal;
-
+            completedCount++; const orderTotal = parseFloat(o.total) || 0; totalRevenue += orderTotal;
             const orderDate = new Date(o.created_at);
-            if (orderDate.getMonth() === currentMonth && orderDate.getFullYear() === currentYear) {
-                currentMonthRevenue += orderTotal;
-            }
-        } else if (['new', 'pending', 'curating', 'ready'].includes(o.status) || o.status === 'cancelled') {
-            // Include cancelled in active array if you want to track them, otherwise exclude
-            if (o.status !== 'cancelled') {
-                activeCount++;
-            }
-        }
+            if (orderDate.getMonth() === currentMonth && orderDate.getFullYear() === currentYear) { currentMonthRevenue += orderTotal; }
+        } else if (['new', 'pending', 'curating', 'ready'].includes(o.status)) { activeCount++; }
     });
-
-    const formattedRevenue = totalRevenue.toLocaleString('en-IN');
-    const formattedMonth = currentMonthRevenue.toLocaleString('en-IN');
-
-    const revEl = document.getElementById('analytics-revenue');
-    const monthEl = document.getElementById('analytics-month');
-    const actEl = document.getElementById('analytics-active');
-    const compEl = document.getElementById('analytics-completed');
-
-    if (revEl) revEl.textContent = `₹${formattedRevenue}`;
-    if (monthEl) monthEl.textContent = `₹${formattedMonth}`;
+    const revEl = document.getElementById('analytics-revenue'), monthEl = document.getElementById('analytics-month'), actEl = document.getElementById('analytics-active'), compEl = document.getElementById('analytics-completed');
+    if (revEl) revEl.textContent = `₹${totalRevenue.toLocaleString('en-IN')}`;
+    if (monthEl) monthEl.textContent = `₹${currentMonthRevenue.toLocaleString('en-IN')}`;
     if (actEl) actEl.textContent = activeCount;
     if (compEl) compEl.textContent = completedCount;
 }
 
 function extractCustomerData(reqsString) { 
     const safeStr = reqsString || "";
-    const nameMatch = safeStr.match(/Patron:\s*([^|]+)/); const phoneMatch = safeStr.match(/Phone:\s*([^|]+)/); const prepMatch = safeStr.match(/Est.\s*Prep:\s*([^|]+)/); const idMatch = safeStr.match(/ID:\s*([^|]+)/); 
+    const nameMatch = safeStr.match(/Patron:\s*([^|]+)/), phoneMatch = safeStr.match(/Phone:\s*([^|]+)/) || safeStr.match(/Ph:\s*([^|]+)/), prepMatch = safeStr.match(/Est.\s*Prep:\s*([^|]+)/), idMatch = safeStr.match(/ID:\s*([^|]+)/); 
     return { name: nameMatch ? nameMatch[1].trim() : "Esteemed Patron", phone: phoneMatch ? phoneMatch[1].trim() : "", prepTime: prepMatch ? prepMatch[1].trim() : "a few days", orderId: idMatch ? idMatch[1].trim() : "TH_LEGACY" }; 
 }
 
 function buildOrderItemsVisual(orderDetailsData) {
-    let items = [], html = "";
+    let html = "";
     try { 
-        items = JSON.parse(orderDetailsData); html = `<div class="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-3">`;
+        const items = JSON.parse(orderDetailsData); html = `<div class="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-3">`;
         items.forEach(i => { const img = i.image || 'https://placehold.co/100/F8E9EA/423133'; html += `<div class="flex items-center gap-3 bg-white p-2 rounded-lg border border-luxury-blush shadow-sm"><img src="${img}" class="w-12 h-12 object-cover rounded-md border border-luxury-blush bg-luxury-bg"><div><p class="text-[11px] font-bitter font-semibold text-luxury-dark line-clamp-1">${i.name}</p><p class="text-[9px] font-poppins font-bold text-luxury-rose">${i.qty}x <span class="text-gray-400 font-medium">₹${i.price}</span></p></div></div>`; }); html += `</div>`;
     } catch { html = `<p class="font-bitter text-luxury-dark text-[13px] whitespace-pre-wrap font-semibold mb-2 leading-relaxed">${(orderDetailsData || '').trim()}</p>`; }
     return html;
@@ -427,7 +303,7 @@ function buildOrderItemsVisual(orderDetailsData) {
 
 function renderActiveOrders() {
     const container = document.getElementById('admin-active-orders'); container.innerHTML = '';
-    const activeOrders = allOrders.filter(o => o.status === 'new' || o.status === 'pending' || o.status === 'curating' || o.status === 'ready');
+    const activeOrders = allOrders.filter(o => ['new', 'pending', 'curating', 'ready'].includes(o.status));
     if (activeOrders.length === 0) { container.innerHTML = '<div class="text-center text-gray-400 py-10 text-[10px] uppercase tracking-[0.2em] font-medium"><i class="fas fa-inbox text-2xl mb-3 opacity-50 block"></i> Your workspace is clear.</div>'; return; }
 
     activeOrders.forEach(order => {
@@ -463,8 +339,7 @@ window.th_startCrafting = async function(id) {
     const order = allOrders.find(o => o.id === id); if(!order) return; showToast("Verifying & Starting...", "fa-spinner fa-spin");
     try {
         await _supabase.from('orders').update({ status: 'curating' }).eq('id', id); 
-        showToast("Crafting Started", "fa-check"); 
-        fetchOrders(); 
+        showToast("Crafting Started", "fa-check"); fetchOrders(); 
         const customerData = extractCustomerData(order.customer_reqs);
         if (customerData.phone) {
             let cleanPhone = customerData.phone.replace(/\D/g, ''); 
@@ -482,9 +357,7 @@ window.th_rejectOrder = async function(id) {
     if(!confirm("Deny this order? Customer will receive a WhatsApp message stating failure.")) return; 
     showToast("Declining...", "fa-spinner fa-spin"); 
     try { 
-        await _supabase.from('orders').update({ status: 'cancelled' }).eq('id', id); 
-        showToast("Commission Denied", "fa-trash"); 
-        fetchOrders(); 
+        await _supabase.from('orders').update({ status: 'cancelled' }).eq('id', id); showToast("Commission Denied", "fa-trash"); fetchOrders(); 
         const customerData = extractCustomerData(order.customer_reqs);
         if (customerData.phone) {
             let cleanPhone = customerData.phone.replace(/\D/g, ''); 
@@ -504,55 +377,24 @@ window.th_pushToShiprocket = async function(orderId, event) {
     btn.innerHTML = originalHtml; btn.disabled = false;
 };
 
-// ==========================================
-// 🚨 DATA EXPORT ENGINE
-// ==========================================
 window.exportOrdersCSV = function() {
-    if (!allOrders || allOrders.length === 0) {
-        return window.showToast("No orders available to export", "fa-times", "text-red-500");
-    }
-    
-    // Define Headers
+    if (!allOrders || allOrders.length === 0) { return window.showToast("No orders available to export", "fa-times", "text-red-500"); }
     const headers = ["Order ID", "Date", "Status", "Customer Name", "Phone", "Total Amount (INR)", "Order Items"];
-    
-    // Map data to rows
     const rows = allOrders.map(o => {
         const date = new Date(o.created_at).toLocaleDateString('en-IN');
-        
-        // Extract customer details safely
         const safeReqs = o.customer_reqs || "";
-        const nameMatch = safeReqs.match(/Patron:\s*([^|]+)/); 
-        const phoneMatch = safeReqs.match(/Ph:\s*([^|]+)/);
-        const customerName = nameMatch ? nameMatch[1].trim() : "N/A";
-        const customerPhone = phoneMatch ? phoneMatch[1].trim() : "N/A";
-
-        // Parse JSON items safely
+        const nameMatch = safeReqs.match(/Patron:\s*([^|]+)/), phoneMatch = safeReqs.match(/Ph:\s*([^|]+)/);
+        const customerName = nameMatch ? nameMatch[1].trim() : "N/A", customerPhone = phoneMatch ? phoneMatch[1].trim() : "N/A";
         let itemsString = "";
-        try {
-            const items = JSON.parse(o.order_details);
-            itemsString = items.map(i => `${i.qty}x ${i.name}`).join('; ');
-        } catch(e) { 
-            itemsString = "Custom Request / Parsing Error"; 
-        }
-        
-        // Escape quotes and commas for clean CSV formatting
+        try { const items = JSON.parse(o.order_details); itemsString = items.map(i => `${i.qty}x ${i.name}`).join('; '); } catch(e) { itemsString = "Custom Request / Parsing Error"; }
         return `"${o.id}","${date}","${o.status.toUpperCase()}","${customerName}","${customerPhone}","${o.total}","${itemsString}"`;
     });
     
-    // Construct Blob and Trigger Download
     const csvContent = [headers.join(','), ...rows].join('\n');
     const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
-    const link = document.createElement("a");
-    const url = URL.createObjectURL(blob);
-    
-    link.setAttribute("href", url);
-    link.setAttribute("download", `TH_Orders_Export_${new Date().toISOString().slice(0,10)}.csv`);
-    link.style.visibility = 'hidden';
-    
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-    
+    const link = document.createElement("a"); const url = URL.createObjectURL(blob);
+    link.setAttribute("href", url); link.setAttribute("download", `TH_Orders_Export_${new Date().toISOString().slice(0,10)}.csv`);
+    link.style.visibility = 'hidden'; document.body.appendChild(link); link.click(); document.body.removeChild(link);
     window.showToast("Data Exported Successfully", "fa-file-download", "text-green-500");
 };
 

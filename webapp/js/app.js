@@ -1,6 +1,6 @@
 /**
  * Twisted Happiness - Core Storefront Engine
- * Version: 15.5.0 - 100% Complete, Stable, & Globally Bound
+ * Version: 16.0.0 - Fully Repaired & Upgraded
  */
 
 const SUPABASE_URL = "https://gvrfucjtnyqfkdynrmqs.supabase.co"; 
@@ -15,9 +15,6 @@ const DISCOUNT_TIERS = [
     { threshold: 299,  type: 'flat',    value: 30, label: '₹30 OFF VIP' }
 ];
 
-// ==========================================
-// 🛡️ CACHE & STATE MANAGEMENT
-// ==========================================
 function safeJSONParse(key, fallback) { 
     try { const item = localStorage.getItem(key); return item ? JSON.parse(item) : fallback; } 
     catch (e) { localStorage.removeItem(key); return fallback; } 
@@ -34,9 +31,6 @@ let checkoutStep = 1; let pendingOrderPayload = null; let currentOrderReference 
 let selectedAddressIndex = savedAddresses.length > 0 ? 0 : -1; let editingAddressIndex = null; let currentSessionUser = null; let authModalMode = "login"; 
 let activeBuild = { flowers: [], fillers: [], wrapping: 'Vintage Kraft', ribbon: 'Satin Bow' }; 
 
-// ==========================================
-// 🚀 INITIALIZATION & SETTINGS
-// ==========================================
 function initApp() {
     try { 
         _supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY); 
@@ -66,13 +60,12 @@ function applyDynamicSettings() {
     });
     if(document.getElementById('current-year')) document.getElementById('current-year').textContent = new Date().getFullYear();
 
-    // Inject Dynamic Promo Text
-    const defaultPromo = "✨ 100% Handcrafted Fine Art & Gifts ✨ Bespoke Canvas & Textured Clay Paintings ✨ Custom Sizing Up To 40x24\" ✨ Unlock VIP Discounts Up To 15% Off";
+    const defaultPromo = "✨ 100% Handcrafted Fine Art & Gifts 🎀 Bespoke Canvas & Textured Clay Paintings 🎀 Unlock VIP Discounts Up To 15% Off";
     let promoToDisplay = defaultPromo;
     if (settings.promoText) {
         try {
             const parsed = JSON.parse(settings.promoText);
-            promoToDisplay = parsed.length > 0 ? parsed.join(' 🌸 ') + ' 🌸 ' : defaultPromo;
+            promoToDisplay = parsed.length > 0 ? parsed.join(' 🎀 ') + ' 🎀 ' : defaultPromo;
         } catch(e) { promoToDisplay = settings.promoText; }
     }
     
@@ -97,9 +90,6 @@ function setupSocialLinks() {
     }
 }
 
-// ==========================================
-// 🚨 UI LOADERS & UTILITIES
-// ==========================================
 function dismissPreloader() { const p = document.getElementById('luxury-page-preloader'); if(p && !p.classList.contains('hidden')){ p.style.opacity = '0'; p.style.pointerEvents = 'none'; setTimeout(() => p.remove(), 700); } }
 function showInteractionLoader(txt = "Please wait...") { const l = document.getElementById('interaction-loader'); if(!l) return; document.getElementById('interaction-loader-text').textContent = txt; l.classList.remove('hidden'); l.classList.add('flex'); requestAnimationFrame(() => l.classList.remove('opacity-0')); }
 function hideInteractionLoader() { const l = document.getElementById('interaction-loader'); if(!l) return; l.classList.add('opacity-0'); setTimeout(() => { l.classList.add('hidden'); l.classList.remove('flex'); }, 300); }
@@ -125,9 +115,6 @@ function injectSkeletons() {
     loadingGrid.innerHTML = skeletonHTML;
 }
 
-// ==========================================
-// 🚨 DOM EVENT BINDING
-// ==========================================
 function bindDOMEvents() {
     document.addEventListener('keydown', (e) => { if (e.ctrlKey && e.shiftKey && e.key.toLowerCase() === 'k') { e.preventDefault(); window.location.href = '/admin.html'; } });
     document.getElementById('prof-pin')?.addEventListener('input', handlePincodeInput);
@@ -142,24 +129,30 @@ function bindDOMEvents() {
     setupTouchCarousel(); setupLightboxTouch();
 }
 
-// ==========================================
-// 🚨 AUTHENTICATION & PROFILE
-// ==========================================
 async function setupAuthSessionListener() {
     const { data: { session } } = await _supabase.auth.getSession();
     currentSessionUser = session ? session.user : null;
-    
-    const btn = document.getElementById('header-account-btn');
-    if (btn) btn.innerHTML = currentSessionUser ? `<img src="${currentSessionUser.user_metadata?.avatar_url || currentSessionUser.user_metadata?.picture || 'https://i.ibb.co/0RRrFK9N/TH-logo-1.png'}" class="w-7 h-7 rounded-full object-cover border border-luxury-rose">` : `<i class="far fa-user text-lg"></i>`;
+    updateHeaderAvatar();
     if (currentSessionUser) syncCloudWishlist();
 
     _supabase.auth.onAuthStateChange((event, session) => {
-        currentSessionUser = session ? session.user : null;
-        const btn = document.getElementById('header-account-btn');
-        if (btn) btn.innerHTML = currentSessionUser ? `<img src="${currentSessionUser.user_metadata?.avatar_url || currentSessionUser.user_metadata?.picture || 'https://i.ibb.co/0RRrFK9N/TH-logo-1.png'}" class="w-7 h-7 rounded-full object-cover border border-luxury-rose">` : `<i class="far fa-user text-lg"></i>`;
-        if (currentSessionUser) syncCloudWishlist();
-        if (document.getElementById('checkout-overlay') && !document.getElementById('checkout-overlay').classList.contains('hidden')) syncCloudAddresses();
+        if (event === 'SIGNED_OUT') { currentSessionUser = null; savedAddresses = []; }
+        else { currentSessionUser = session ? session.user : null; }
+        
+        updateHeaderAvatar();
+        if (currentSessionUser) {
+            syncCloudWishlist();
+            if (document.getElementById('checkout-overlay') && !document.getElementById('checkout-overlay').classList.contains('hidden')) syncCloudAddresses();
+        }
     });
+}
+
+function updateHeaderAvatar() {
+    const btn = document.getElementById('header-account-btn');
+    if (btn) {
+        const avatarUrl = currentSessionUser?.user_metadata?.avatar_url || currentSessionUser?.user_metadata?.picture || 'https://i.ibb.co/0RRrFK9N/TH-logo-1.png';
+        btn.innerHTML = currentSessionUser ? `<img src="${avatarUrl}" class="w-8 h-8 rounded-full object-cover border-2 border-luxury-rose shadow-sm">` : `<i class="far fa-user text-lg"></i>`;
+    }
 }
 
 window.handleAccountHeaderClick = function() { if (currentSessionUser) window.openCustomerProfile(); else window.openCustomerAuthModal(); };
@@ -184,7 +177,7 @@ window.openCustomerProfile = async function() {
     const o = document.getElementById('customer-profile-overlay'); 
     
     const meta = currentSessionUser.user_metadata || {};
-    const avatarUrl = meta.avatar_url || 'https://i.ibb.co/0RRrFK9N/TH-logo-1.png';
+    const avatarUrl = meta.avatar_url || meta.picture || 'https://i.ibb.co/0RRrFK9N/TH-logo-1.png';
     const fullName = meta.full_name || 'Esteemed Patron';
     
     if(document.getElementById('profile-avatar')) document.getElementById('profile-avatar').src = avatarUrl;
@@ -194,7 +187,6 @@ window.openCustomerProfile = async function() {
     
     o.classList.remove('hidden'); document.body.classList.add('overflow-hidden'); 
     
-    // Default to the Orders Tab
     if(window.th_switchProfileTab) window.th_switchProfileTab('orders');
 
     await syncCloudAddresses();
@@ -204,7 +196,6 @@ window.openCustomerProfile = async function() {
     requestAnimationFrame(() => { o.classList.remove('opacity-0'); o.classList.add('opacity-100'); }); 
 };
 
-// Logic for switching tabs
 window.th_switchProfileTab = function(tab) {
     const oBtn = document.getElementById('ptab-orders'), aBtn = document.getElementById('ptab-addresses');
     const oCon = document.getElementById('pcontent-orders'), aCon = document.getElementById('pcontent-addresses');
@@ -242,25 +233,22 @@ function renderProfileAddressBook() {
     const container = document.getElementById('profile-address-list');
     if (!container) return;
     
+    let html = '<div class="flex justify-between items-center mb-3"><p class="text-[9px] font-bold text-gray-400 uppercase tracking-widest">Your Addresses</p><button onclick="window.closeCustomerProfile(); setTimeout(()=>window.openCheckoutBase(), 300)" class="text-luxury-rose font-bold text-[9px] uppercase tracking-widest"><i class="fas fa-plus"></i> Add New in Checkout</button></div>';
+    
     if (savedAddresses.length === 0) {
-        container.innerHTML = '<p class="text-[11px] text-gray-500 font-medium">No addresses saved yet. Add one during checkout.</p>';
-        return;
+        html += '<p class="text-[11px] text-gray-500 font-medium bg-white p-4 rounded-xl border border-luxury-blush">No addresses saved yet.</p>';
+    } else {
+        savedAddresses.forEach((a) => { 
+            html += `
+            <div class="bg-white border border-luxury-blush rounded-xl p-4 shadow-sm flex justify-between items-center mb-3">
+                <div>
+                    <p class="font-bold text-luxury-dark text-[11px] uppercase tracking-wider mb-1">${a.first_name} ${a.last_name || ''}</p>
+                    <p class="text-gray-500 text-[10px] leading-relaxed">${a.address_1}${a.address_2 ? ', ' + a.address_2 : ''}<br>${a.city}, ${a.state} - <span class="font-bold text-luxury-dark">${a.pincode}</span></p>
+                </div>
+                <button type="button" onclick="window.th_deleteAddress('${a.id}')" class="text-red-400 hover:text-red-600 bg-red-50 w-8 h-8 rounded-full flex items-center justify-center transition-colors"><i class="fas fa-trash-alt text-[10px]"></i></button>
+            </div>`; 
+        });
     }
-    
-    // Add instruction note
-    container.innerHTML = '<p class="text-[9px] font-bold text-gray-400 uppercase tracking-widest mb-3">Addresses can be added or edited securely during checkout.</p>';
-    
-    let html = '';
-    savedAddresses.forEach((a) => { 
-        html += `
-        <div class="bg-white border border-luxury-blush rounded-xl p-4 shadow-sm flex justify-between items-center">
-            <div>
-                <p class="font-bold text-luxury-dark text-[11px] uppercase tracking-wider mb-1">${a.first_name} ${a.last_name || ''}</p>
-                <p class="text-gray-500 text-[10px] leading-relaxed">${a.address_1}${a.address_2 ? ', ' + a.address_2 : ''}<br>${a.city}, ${a.state} - <span class="font-bold text-luxury-dark">${a.pincode}</span></p>
-            </div>
-            <button type="button" onclick="window.th_deleteAddress('${a.id}')" class="text-red-400 hover:text-red-600 bg-red-50 w-8 h-8 rounded-full flex items-center justify-center transition-colors"><i class="fas fa-trash-alt text-[10px]"></i></button>
-        </div>`; 
-    });
     container.innerHTML = html;
 }
 
@@ -281,9 +269,6 @@ window.th_deleteAddress = async function(addressId) {
 window.closeCustomerProfile = function() { const o = document.getElementById('customer-profile-overlay'); requestAnimationFrame(() => { o.classList.remove('opacity-100'); o.classList.add('opacity-0'); setTimeout(() => { o.classList.add('hidden'); document.body.classList.remove('overflow-hidden'); }, 300); }); };
 window.handleCustomerLogout = async function() { showInteractionLoader("Signing Out..."); await _supabase.auth.signOut(); savedAddresses = []; selectedAddressIndex = -1; window.closeCustomerProfile(); hideInteractionLoader(); window.showToast("Signed Out Safely", "fa-sign-out-alt"); };
 
-// ==========================================
-// 🚨 WISHLIST LOGIC
-// ==========================================
 async function syncCloudWishlist() { if (!currentSessionUser) return; try { const { data } = await _supabase.from('wishlist').select('product_id').eq('user_id', currentSessionUser.id); if (data) localWishlist = data.map(w => w.product_id); localStorage.setItem('th_wishlist', JSON.stringify(localWishlist)); } catch(e) {} }
 
 window.th_toggleWishlistProduct = async function(pid, e) {
@@ -300,9 +285,6 @@ function updateWishlistUIElements(id, isA) {
     document.querySelectorAll(`[data-card-id="${id}"] .wish-icon`).forEach(c => { c.className = isA ? "fas fa-heart text-red-500 wish-icon" : "far fa-heart text-gray-300 wish-icon"; });
 }
 
-// ==========================================
-// 🚨 MATH & CALCULATORS
-// ==========================================
 function getDiscountPercent(idStr) { let h = 0; for (let i = 0; i < idStr.length; i++) h = idStr.charCodeAt(i) + ((h << 5) - h); return (Math.abs(h) % 31) + 10; }
 function calculateCartDiscount(sub) { let d = 0, cTier = null, nTier = null; for (let i = 0; i < DISCOUNT_TIERS.length; i++) { if (sub >= DISCOUNT_TIERS[i].threshold) { cTier = DISCOUNT_TIERS[i]; nTier = i > 0 ? DISCOUNT_TIERS[i - 1] : null; break; } } if (!cTier && sub > 0) nTier = DISCOUNT_TIERS[DISCOUNT_TIERS.length - 1]; if (cTier) { if (cTier.type === 'percent') d = Math.round(sub * (cTier.value / 100)); else d = cTier.value; } return { discount: d, currentTier: cTier, nextTier: nTier, amountNeeded: nTier ? nTier.threshold - sub : 0 }; }
 function calculateTotalPrepTime(items) { let minD = 999; items.forEach(i => { const pt = i.prepTime || '3'; const m = pt.match(/\d+/g); if(m && m.length >= 1) { let mp = parseInt(m[0]); if (mp < minD) minD = mp; } else { if (3 < minD) minD = 3; } }); if (minD === 999) minD = 3; const tq = items.reduce((s, i) => s + parseInt(i.qty || 1), 0); return `${minD * tq} Days`; }
@@ -317,9 +299,6 @@ window.applyCouponCode = function() {
     updateCheckoutUI();
 };
 
-// ==========================================
-// 🚨 DATABASE FETCHING
-// ==========================================
 function fetchDatabase() { 
     _supabase.from('creations').select('*').order('created_at', { ascending: false }).then(({data, error}) => {
         if(error) { dismissPreloader(); return; }
@@ -351,13 +330,10 @@ function generateProductCardHTML(p) {
     const wb = c.querySelector('.wishlist-btn'); if (wb) wb.addEventListener('click', (e) => { e.preventDefault(); e.stopPropagation(); window.th_toggleWishlistProduct(p.id, e); }); return c;
 }
 
-// ==========================================
-// 🚨 PRODUCT PAGE MODAL
-// ==========================================
 window.openProductPage = function(id) { 
     const p = products.find(x => x.id == id); if(!p) return; document.getElementById('product-view').setAttribute('data-current-id', p.id);
-    activeBuild = { flowers: [], wrapping: 'Classic Kraft' }; // Reset the visual builder
-    renderVisualCustomizer(p); // Render the visual studio if applicable
+    activeBuild = { flowers: [], fillers: [], wrapping: 'Vintage Kraft', ribbon: 'Satin Bow' }; 
+    renderVisualCustomizer(p); 
     const cp = Number(String(p.price || 0).replace(/[^0-9.,]/g, '')), dp = getDiscountPercent(String(p.id)), op = Math.round(cp * (1 + (dp / 100)));
     modalImages = [p.image1, p.image2, p.image3, p.image4, p.image5].filter(img => typeof img === 'string' && img.trim() !== ''); if (modalImages.length === 0) modalImages.push('https://placehold.co/400x500/F8E9EA/423133');
     
@@ -392,32 +368,17 @@ function renderRelatedProducts(cid, mc, sc) {
     const f = document.createDocumentFragment(); fr.forEach(p => { f.appendChild(generateProductCardHTML(p)); }); g.appendChild(f); setupScrollReveal();
 }
 
-// ==========================================
-// 🚨 CART & CHECKOUT ENGINE
-// ==========================================
 window.th_updateCartQty = function(id, d, e) {
     if(e) { e.preventDefault(); e.stopPropagation(); } let ex = cart.find(x => x.id == id);
     if(ex) { ex.qty = parseInt(ex.qty || 1) + d; if(ex.qty <= 0) { cart = cart.filter(x => x.id != id); window.showToast("Removed from Bag", "fa-times"); } else { if(d > 0) window.showToast("Quantity Increased", "fa-plus"); } } 
     else if(d > 0) { 
         const p = products.find(x => x.id == id); 
         if(p) { 
-            // Capture visual builder specs
             let customSpecsStr = "";
             if (p.mainCategory === 'Pipe Cleaner Crafts' && p.name.toLowerCase().includes('bouquet')) {
                  customSpecsStr = `Flowers: ${activeBuild.flowers.length > 0 ? activeBuild.flowers.join(', ') : 'Standard'} | Fillers: ${activeBuild.fillers.length > 0 ? activeBuild.fillers.join(', ') : 'None'} | Wrap: ${activeBuild.wrapping} | Ribbon: ${activeBuild.ribbon}`;
             }
-            
-            cart.push({ 
-                id: p.id, 
-                name: p.name, 
-                price: p.price, 
-                prepTime: p.prepTime, 
-                image: p.image1, 
-                isCustomizable: p.isCustomizable, 
-                mainCategory: p.mainCategory, 
-                customSpecs: customSpecsStr, // Save the configuration
-                qty: 1 
-            }); 
+            cart.push({ id: p.id, name: p.name, price: p.price, prepTime: p.prepTime, image: p.image1, isCustomizable: p.isCustomizable, mainCategory: p.mainCategory, customSpecs: customSpecsStr, qty: 1 }); 
             window.showToast("Added to Bag", "fa-check"); 
         } 
     }
@@ -452,14 +413,9 @@ function renderCheckoutItems() {
 ${i.customSpecs ? `<p class="text-[9px] font-medium text-luxury-rose mb-3 bg-luxury-rose/10 inline-block px-2 py-1 rounded-md border border-luxury-rose/20 leading-relaxed">${i.customSpecs}</p>` : `<div class="mb-3"></div>`}<div class="flex items-baseline gap-2 mb-4"><span class="font-poppins text-luxury-dark font-bold text-[16px] sm:text-[18px]">₹${cp}</span><span class="font-poppins text-gray-400 text-[11px] line-through">₹${op}</span><span class="text-green-600 font-bold text-[10px] ml-1">${dp}% Off</span></div></div><div class="flex items-center gap-3"><div class="flex items-center bg-white border border-luxury-blush rounded-full h-[36px] overflow-hidden shadow-sm"><button type="button" onclick="window.th_updateCartQty('${i.id}', -1, event)" class="w-10 h-full flex items-center justify-center text-luxury-dark hover:bg-luxury-blush transition-colors"><i class="fas fa-minus text-[10px]"></i></button><div class="w-10 h-full flex items-center justify-center border-l border-r border-luxury-blush text-[12px] font-bold text-luxury-rose bg-luxury-bg">${q}</div><button type="button" onclick="window.th_updateCartQty('${i.id}', 1, event)" class="w-10 h-full flex items-center justify-center text-luxury-dark hover:bg-luxury-blush transition-colors"><i class="fas fa-plus text-[10px]"></i></button></div></div></div></div>`;
     });
     const dw = document.getElementById('comm-dimensions-wrapper'); if (cart.some(i => i.isCustomizable)) dw?.classList.remove('hidden'); else dw?.classList.add('hidden'); c.innerHTML = h;
-    
-    // Trigger Upsell rendering
     renderCartUpsells();
 }
 
-// ==========================================
-// 🚨 ADDRESS BOOK
-// ==========================================
 async function syncCloudAddresses() {
     if (currentSessionUser) { try { const { data } = await _supabase.from('addresses').select('*').order('created_at', { ascending: true }); savedAddresses = data || []; selectedAddressIndex = savedAddresses.length > 0 ? 0 : -1; } catch (e) {} } 
     else { savedAddresses = safeJSONParse('th_saved_addresses', []); selectedAddressIndex = savedAddresses.length > 0 ? 0 : -1; } renderAddressBook();
@@ -478,7 +434,7 @@ window.editAddress = function(i, e) { e.stopPropagation(); editingAddressIndex =
 
 window.saveAddressFromForm = async function() {
     const a = { first_name: document.getElementById('prof-fname').value.trim(), last_name: document.getElementById('prof-lname').value.trim(), email: document.getElementById('prof-email').value.trim(), phone: document.getElementById('prof-phone').value.trim(), address_1: document.getElementById('prof-add1').value.trim(), address_2: document.getElementById('prof-add2').value.trim(), city: document.getElementById('prof-city').value.trim(), state: document.getElementById('prof-state').value.trim(), pincode: document.getElementById('prof-pin').value.trim() };
-    if(!a.first_name || !a.phone || !a.address_1 || !a.city || !a.pincode) return window.showToast("Please fill all required fields", "fa-exclamation-circle", "text-red-500");
+    if(!a.first_name || !a.phone || !a.address_1 || !a.city || !a.pincode) { window.showToast("Please fill all required fields", "fa-exclamation-circle", "text-red-500"); return false; }
     showInteractionLoader("Saving Address...");
     if (currentSessionUser) { try { a.user_id = currentSessionUser.id; if (editingAddressIndex !== null) await _supabase.from('addresses').update(a).eq('id', savedAddresses[editingAddressIndex].id); else await _supabase.from('addresses').insert([a]); await syncCloudAddresses(); } catch (e) { alert("Failed to save address: " + e.message); hideInteractionLoader(); return false; } } 
     else { if (editingAddressIndex !== null) { savedAddresses[editingAddressIndex] = a; selectedAddressIndex = editingAddressIndex; } else { savedAddresses.push(a); selectedAddressIndex = savedAddresses.length - 1; } localStorage.setItem('th_saved_addresses', JSON.stringify(savedAddresses)); }
@@ -487,9 +443,6 @@ window.saveAddressFromForm = async function() {
 
 function clearAddressForm() { ['fname','lname','email','phone','add1','add2','city','state','pin'].forEach(id => document.getElementById('prof-'+id).value = ''); }
 
-// ==========================================
-// 🚨 CHECKOUT NAVIGATION & PAYMENT
-// ==========================================
 function calculateDynamicDelivery(sub, pin, items) {
     if (sub >= 2499 || sub === 0) return 0; let tw = 0;
     items.forEach(i => { let dw = 0.2, vw = 0.2; const c = i.mainCategory || i.category || '', q = parseInt(i.qty || 1); if (c.includes('Canvas')) { dw = 1.5; vw = (45 * 35 * 5) / 5000; } else if (c.includes('Clay')) { dw = 0.8; vw = (25 * 25 * 10) / 5000; } else { dw = 0.15; vw = (15 * 10 * 5) / 5000; } tw += Math.max(dw, vw) * q; });
@@ -561,7 +514,7 @@ function updateCheckoutUI() {
     if (vipProgress) {
         if (nt) {
             const progressPercent = Math.min(100, (ss / nt.threshold) * 100);
-            vipProgress.innerHTML = `<div class="flex justify-between items-end mb-1"><span class="text-[9px] font-bold text-gray-500 uppercase tracking-widest">VIP Status</span><span class="text-[9px] font-bold text-luxury-rose uppercase tracking-widest">Add ₹${nt.threshold - ss} for ${nt.label} 🌸</span></div><div class="w-full bg-luxury-blush/30 h-1.5 rounded-full overflow-hidden"><div class="bg-luxury-rose h-full rounded-full transition-all duration-500" style="width: ${progressPercent}%"></div></div>`;
+            vipProgress.innerHTML = `<div class="flex justify-between items-end mb-1"><span class="text-[9px] font-bold text-gray-500 uppercase tracking-widest">VIP Status</span><span class="text-[9px] font-bold text-luxury-rose uppercase tracking-widest">Add ₹${nt.threshold - ss} for ${nt.label} 🎀</span></div><div class="w-full bg-luxury-blush/30 h-1.5 rounded-full overflow-hidden"><div class="bg-luxury-rose h-full rounded-full transition-all duration-500" style="width: ${progressPercent}%"></div></div>`;
             vipProgress.classList.remove('hidden');
         } else if (ct) {
             vipProgress.innerHTML = `<p class="text-[10px] font-bold text-luxury-rose uppercase tracking-widest text-center"><i class="fas fa-crown text-luxury-gold mr-1"></i> Maximum VIP Tier Unlocked!</p>`;
@@ -616,7 +569,7 @@ window.handleCheckoutAction = async function() {
         const f = document.getElementById('checkout-profile-form'); 
         if (f && !f.classList.contains('hidden')) { 
             const saved = await window.saveAddressFromForm();
-            if (!saved) return; // Wait until address is successfully saved
+            if (!saved) return; 
         } 
         if (savedAddresses.length === 0 || selectedAddressIndex === -1) { 
             return window.showToast("Please provide a delivery address.", "fa-exclamation-circle", "text-red-500"); 
@@ -647,37 +600,26 @@ window.preparePaymentGateway = function() {
 
 window.confirmPaymentAndOrder = async function() {
     if(!pendingOrderPayload) return; const b = document.getElementById('btn-confirm-payment'); if(b) { b.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Securing Order...'; b.disabled = true; }
-    
     const { error } = await _supabase.from('orders').insert([pendingOrderPayload]);
-    
     if (error) { window.showToast("Error: " + error.message, "fa-times", "text-red-500"); if(b) { b.innerHTML = 'I Have Completed Payment <i class="fas fa-check-circle"></i>'; b.disabled = false; } return; }
     document.getElementById('payment-gateway-view')?.classList.add('hidden'); document.getElementById('payment-gateway-view')?.classList.remove('flex'); if(document.getElementById('success-ref-note')) document.getElementById('success-ref-note').textContent = currentOrderReference; document.getElementById('payment-success-view')?.classList.remove('hidden'); document.getElementById('payment-success-view')?.classList.add('flex');
     cart = []; localStorage.setItem('th_cart', JSON.stringify(cart)); updateCartCount(); 
 };
 
-// ==========================================
-// 🚨 ORDER TRACKING LOGIC
-// ==========================================
 async function renderCustomerOrdersPipeline() {
     const c = document.getElementById('customer-orders-pipeline'); 
     if(!c || !currentSessionUser) return; 
-    
     c.innerHTML = '<div class="text-center py-8 text-gray-400 text-[11px] font-medium"><i class="fas fa-spinner fa-spin mr-2"></i> Fetching your archive...</div>';
-    
     try { 
         const { data } = await _supabase.from('orders').select('*').eq('user_id', currentSessionUser.id).order('created_at', { ascending: false }); 
-        
         if(!data || data.length === 0) { 
             c.innerHTML = '<div class="text-center p-10 text-gray-400 text-[11px] uppercase tracking-widest"><i class="fas fa-box-open text-3xl block mb-3 opacity-30"></i> No commissions found.</div>'; 
             return; 
         } 
-        
         let html = ''; 
         data.forEach(o => { 
             const dt = new Date(o.created_at).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' }); 
-            
-            let step = 1;
-            let statusText = "Verifying Payment";
+            let step = 1; let statusText = "Verifying Payment";
             if (o.status === 'curating') { step = 2; statusText = "Artisan is Crafting"; }
             else if (o.status === 'ready') { step = 3; statusText = "Dispatched"; }
             else if (o.status === 'completed') { step = 4; statusText = "Delivered"; }
@@ -687,52 +629,17 @@ async function renderCustomerOrdersPipeline() {
             const exId = idm ? idm[1].trim() : 'TH_ORDER'; 
 
             let itemsHtml = '';
-            try {
-                const items = JSON.parse(o.order_details);
-                items.forEach(i => { itemsHtml += `<img src="${i.image}" class="w-10 h-10 rounded-md object-cover border border-luxury-blush bg-luxury-bg shrink-0" title="${i.name} (x${i.qty})">`; });
-            } catch(e) {}
+            try { const items = JSON.parse(o.order_details); items.forEach(i => { itemsHtml += `<img src="${i.image}" class="w-10 h-10 rounded-md object-cover border border-luxury-blush bg-luxury-bg shrink-0" title="${i.name} (x${i.qty})">`; }); } catch(e) {}
 
             let progressBarHtml = '';
             if (step > 0) {
-                progressBarHtml = `
-                <div class="relative flex justify-between items-center w-full max-w-sm mx-auto mt-6 mb-2">
-                    <div class="absolute left-0 top-1/2 -translate-y-1/2 w-full h-1 bg-luxury-blush z-0 rounded-full"></div>
-                    <div class="absolute left-0 top-1/2 -translate-y-1/2 h-1 bg-luxury-rose z-0 rounded-full transition-all duration-700" style="width: ${(step-1) * 33.33}%"></div>
-                    <div class="relative z-10 flex flex-col items-center gap-2"><div class="w-6 h-6 rounded-full flex items-center justify-center text-[10px] ${step >= 1 ? 'bg-luxury-rose text-white shadow-md border-2 border-white' : 'bg-white border-2 border-luxury-blush text-gray-300'}"><i class="fas fa-receipt"></i></div><span class="text-[7px] font-bold uppercase tracking-widest ${step >= 1 ? 'text-luxury-dark' : 'text-gray-400'} absolute -bottom-5 w-max">Placed</span></div>
-                    <div class="relative z-10 flex flex-col items-center gap-2"><div class="w-6 h-6 rounded-full flex items-center justify-center text-[10px] ${step >= 2 ? 'bg-luxury-rose text-white shadow-md border-2 border-white' : 'bg-white border-2 border-luxury-blush text-gray-300'}"><i class="fas fa-paint-brush"></i></div><span class="text-[7px] font-bold uppercase tracking-widest ${step >= 2 ? 'text-luxury-dark' : 'text-gray-400'} absolute -bottom-5 w-max">Crafting</span></div>
-                    <div class="relative z-10 flex flex-col items-center gap-2"><div class="w-6 h-6 rounded-full flex items-center justify-center text-[10px] ${step >= 3 ? 'bg-luxury-rose text-white shadow-md border-2 border-white' : 'bg-white border-2 border-luxury-blush text-gray-300'}"><i class="fas fa-box"></i></div><span class="text-[7px] font-bold uppercase tracking-widest ${step >= 3 ? 'text-luxury-dark' : 'text-gray-400'} absolute -bottom-5 w-max">Shipped</span></div>
-                    <div class="relative z-10 flex flex-col items-center gap-2"><div class="w-6 h-6 rounded-full flex items-center justify-center text-[10px] ${step >= 4 ? 'bg-green-500 text-white shadow-md border-2 border-white' : 'bg-white border-2 border-luxury-blush text-gray-300'}"><i class="fas fa-check"></i></div><span class="text-[7px] font-bold uppercase tracking-widest ${step >= 4 ? 'text-green-600' : 'text-gray-400'} absolute -bottom-5 w-max">Delivered</span></div>
-                </div>`;
-            } else {
-                progressBarHtml = `<div class="text-center text-red-500 font-bold text-[9px] uppercase tracking-widest py-3">Order Cancelled</div>`;
-            }
+                progressBarHtml = `<div class="relative flex justify-between items-center w-full max-w-sm mx-auto mt-6 mb-2"><div class="absolute left-0 top-1/2 -translate-y-1/2 w-full h-1 bg-luxury-blush z-0 rounded-full"></div><div class="absolute left-0 top-1/2 -translate-y-1/2 h-1 bg-luxury-rose z-0 rounded-full transition-all duration-700" style="width: ${(step-1) * 33.33}%"></div><div class="relative z-10 flex flex-col items-center gap-2"><div class="w-6 h-6 rounded-full flex items-center justify-center text-[10px] ${step >= 1 ? 'bg-luxury-rose text-white shadow-md border-2 border-white' : 'bg-white border-2 border-luxury-blush text-gray-300'}"><i class="fas fa-receipt"></i></div><span class="text-[7px] font-bold uppercase tracking-widest ${step >= 1 ? 'text-luxury-dark' : 'text-gray-400'} absolute -bottom-5 w-max">Placed</span></div><div class="relative z-10 flex flex-col items-center gap-2"><div class="w-6 h-6 rounded-full flex items-center justify-center text-[10px] ${step >= 2 ? 'bg-luxury-rose text-white shadow-md border-2 border-white' : 'bg-white border-2 border-luxury-blush text-gray-300'}"><i class="fas fa-paint-brush"></i></div><span class="text-[7px] font-bold uppercase tracking-widest ${step >= 2 ? 'text-luxury-dark' : 'text-gray-400'} absolute -bottom-5 w-max">Crafting</span></div><div class="relative z-10 flex flex-col items-center gap-2"><div class="w-6 h-6 rounded-full flex items-center justify-center text-[10px] ${step >= 3 ? 'bg-luxury-rose text-white shadow-md border-2 border-white' : 'bg-white border-2 border-luxury-blush text-gray-300'}"><i class="fas fa-box"></i></div><span class="text-[7px] font-bold uppercase tracking-widest ${step >= 3 ? 'text-luxury-dark' : 'text-gray-400'} absolute -bottom-5 w-max">Shipped</span></div><div class="relative z-10 flex flex-col items-center gap-2"><div class="w-6 h-6 rounded-full flex items-center justify-center text-[10px] ${step >= 4 ? 'bg-green-500 text-white shadow-md border-2 border-white' : 'bg-white border-2 border-luxury-blush text-gray-300'}"><i class="fas fa-check"></i></div><span class="text-[7px] font-bold uppercase tracking-widest ${step >= 4 ? 'text-green-600' : 'text-gray-400'} absolute -bottom-5 w-max">Delivered</span></div></div>`;
+            } else { progressBarHtml = `<div class="text-center text-red-500 font-bold text-[9px] uppercase tracking-widest py-3">Order Cancelled</div>`; }
 
-            html += `
-            <details class="bg-white border border-luxury-blush rounded-2xl shadow-sm group overflow-hidden cursor-pointer mb-3">
-                <summary class="p-4 sm:p-5 list-none flex flex-col sm:flex-row justify-between sm:items-center gap-4 outline-none">
-                    <div class="flex flex-col">
-                        <span class="text-[9px] text-gray-400 uppercase tracking-widest font-bold mb-1">Order ${exId}</span>
-                        <h4 class="font-poppins font-bold ${step === 0 ? 'text-red-500' : 'text-luxury-dark'} text-sm mb-1">${statusText}</h4>
-                        <p class="text-gray-400 text-[10px]">${dt} • <span class="font-bold text-luxury-dark">₹${o.total}</span></p>
-                    </div>
-                    <div class="flex items-center justify-between sm:justify-end w-full sm:w-auto gap-4">
-                        <div class="flex gap-2 overflow-x-auto max-w-[150px] scrollbar-hide py-1">${itemsHtml}</div>
-                        <i class="fas fa-chevron-down text-gray-300 transition-transform group-open:rotate-180"></i>
-                    </div>
-                </summary>
-                <div class="p-4 sm:p-5 pt-0 border-t border-luxury-blush mt-2 bg-luxury-bg/50">
-                    ${progressBarHtml}
-                    <div class="mt-6 bg-white border border-luxury-blush p-3 rounded-xl text-[10px] text-gray-500 whitespace-pre-wrap font-medium">
-                        <p class="font-bold text-luxury-dark mb-1 uppercase tracking-widest text-[8px]">Request Details</p>
-                        ${o.customer_reqs}
-                    </div>
-                </div>
-            </details>`; 
+            html += `<details class="bg-white border border-luxury-blush rounded-2xl shadow-sm group overflow-hidden cursor-pointer mb-3"><summary class="p-4 sm:p-5 list-none flex flex-col sm:flex-row justify-between sm:items-center gap-4 outline-none"><div class="flex flex-col"><span class="text-[9px] text-gray-400 uppercase tracking-widest font-bold mb-1">Order ${exId}</span><h4 class="font-poppins font-bold ${step === 0 ? 'text-red-500' : 'text-luxury-dark'} text-sm mb-1">${statusText}</h4><p class="text-gray-400 text-[10px]">${dt} • <span class="font-bold text-luxury-dark">₹${o.total}</span></p></div><div class="flex items-center justify-between sm:justify-end w-full sm:w-auto gap-4"><div class="flex gap-2 overflow-x-auto max-w-[150px] scrollbar-hide py-1">${itemsHtml}</div><i class="fas fa-chevron-down text-gray-300 transition-transform group-open:rotate-180"></i></div></summary><div class="p-4 sm:p-5 pt-0 border-t border-luxury-blush mt-2 bg-luxury-bg/50">${progressBarHtml}<div class="mt-6 bg-white border border-luxury-blush p-3 rounded-xl text-[10px] text-gray-500 whitespace-pre-wrap font-medium"><p class="font-bold text-luxury-dark mb-1 uppercase tracking-widest text-[8px]">Request Details</p>${o.customer_reqs}</div></div></details>`; 
         }); 
         c.innerHTML = html; 
-    } catch(err) { 
-        c.innerHTML = '<div class="text-center text-red-500 py-4 text-xs">Failed to load archive.</div>'; 
-    }
+    } catch(err) { c.innerHTML = '<div class="text-center text-red-500 py-4 text-xs">Failed to load archive.</div>'; }
 }
 
 window.openTrackOrderModal = function() { document.getElementById('track-order-id-guest').value = ''; document.getElementById('track-result-container-guest').classList.add('hidden'); window.openPolicyModal('track-order-modal', 'track-order-box'); };
@@ -748,9 +655,6 @@ async function handleTrackOrderGuest(e) {
     try { const { data, error } = await _supabase.from('orders').select('status').ilike('customer_reqs', `%${oid}%`).limit(1); if (error) throw error; const rc = document.getElementById('track-result-container-guest'), rs = document.getElementById('track-result-status-guest'), rd = document.getElementById('track-result-desc-guest'); if(data && data.length > 0) { const s = data[0].status; rc.classList.remove('hidden'); if(s === 'new' || s === 'pending') { rs.textContent = "Verifying Payment"; rs.className = "font-poppins font-bold text-yellow-600 text-lg tracking-wide mb-2"; rd.textContent = "We have received your request and are verifying the transaction with our bank. We will begin crafting shortly!"; } else if (s === 'curating') { rs.textContent = "Artisan is Crafting"; rs.className = "font-poppins font-bold text-luxury-gold text-lg tracking-wide mb-2"; rd.textContent = "Your payment is verified and our artisan is currently pouring love into your handcrafted piece."; } else if (s === 'ready') { rs.textContent = "Ready for Dispatch"; rs.className = "font-poppins font-bold text-purple-600 text-lg tracking-wide mb-2"; rd.textContent = "Your masterpiece is complete, securely packaged, and awaiting courier pickup."; } else if (s === 'completed') { rs.textContent = "Elegantly Delivered"; rs.className = "font-poppins font-bold text-green-600 text-lg tracking-wide mb-2"; rd.textContent = "Your order has been successfully delivered. Thank you for curating your space!"; } } else { rc.classList.remove('hidden'); rs.textContent = "Not Found"; rs.className = "font-poppins font-bold text-red-500 text-lg tracking-wide mb-2"; rd.textContent = "We couldn't find an active order with that reference ID."; } } catch(err) { window.showToast("Network Error", "fa-times", "text-red-500"); } b.innerHTML = oTxt; b.disabled = false;
 }
 
-// ==========================================
-// 🚨 CACHED UI NAVIGATION (Lightbox / Carousel)
-// ==========================================
 window.openLightboxFromCarousel = function() { currentLightboxIndex = currentSlideIndex; const lb = document.getElementById('lightbox-modal'); const tr = document.getElementById('lightbox-track'); if(!lb || !tr) return; tr.innerHTML = ''; modalImages.forEach((src) => { tr.innerHTML += `<div class="w-full h-full flex-shrink-0 flex items-center justify-center p-2 md:p-8"><img loading="lazy" decoding="async" src="${src}" class="w-full max-h-full object-contain"></div>`; }); tr.style.transition = 'none'; tr.style.transform = `translateX(-${currentLightboxIndex * 100}%)`; document.getElementById('lightbox-counter').textContent = `${currentLightboxIndex + 1} / ${modalImages.length}`; currentModalLevel = 2; window.safePushState(2); lb.classList.remove('hidden'); requestAnimationFrame(() => { lb.classList.remove('opacity-0'); }); setupLightboxTouch(); };
 window.forceCloseLightbox = function() { const lb = document.getElementById('lightbox-modal'); if(!lb) return; requestAnimationFrame(() => { lb.classList.add('opacity-0'); setTimeout(() => { lb.classList.add('hidden'); }, 200); }); };
 window.moveLightboxSlide = function(dir) { if (isLightboxAnimating) return; isLightboxAnimating = true; currentLightboxIndex += dir; if (currentLightboxIndex < 0) currentLightboxIndex = modalImages.length - 1; if (currentLightboxIndex >= modalImages.length) currentLightboxIndex = 0; const tr = document.getElementById('lightbox-track'); if(!tr) return; requestAnimationFrame(() => { tr.style.transition = 'transform 0.4s ease-out'; tr.style.transform = `translateX(-${currentLightboxIndex * 100}%)`; }); document.getElementById('lightbox-counter').textContent = `${currentLightboxIndex + 1} / ${modalImages.length}`; setTimeout(() => { isLightboxAnimating = false; }, 400); };
@@ -760,9 +664,6 @@ function setupTouchCarousel() { let sX = 0, eX = 0; const tr = document.getEleme
 function setupLightboxTouch() { let lsX = 0, leX = 0; const tr = document.getElementById('lightbox-track'); if(tr) { tr.replaceWith(tr.cloneNode(true)); const nt = document.getElementById('lightbox-track'); nt.addEventListener('touchstart', (e) => { lsX = e.changedTouches[0].screenX; }, {passive: true}); nt.addEventListener('touchend', (e) => { leX = e.changedTouches[0].screenX; requestAnimationFrame(() => { if (leX < lsX - 30) window.moveLightboxSlide(1); else if (leX > lsX + 30) window.moveLightboxSlide(-1); }); }, {passive: true}); } }
 function updateActiveThumb(aIdx, tot) { requestAnimationFrame(() => { for(let i = 0; i < tot; i++) { const th = document.getElementById(`thumb-${i}`); if(th) { if(i === aIdx) { th.classList.add('border-luxury-rose', 'scale-105', 'opacity-100'); th.classList.remove('border-transparent', 'opacity-60'); } else { th.classList.remove('border-luxury-rose', 'scale-105', 'opacity-100'); th.classList.add('border-transparent', 'opacity-60'); } } } }); }
 
-// ==========================================
-// 🚨 SEARCH, SORT & FILTER
-// ==========================================
 function syncSearch(val) { currentSearchQuery = val; if(document.getElementById('searchInputDesk') && document.getElementById('searchInputDesk').value !== val) document.getElementById('searchInputDesk').value = val; if(document.getElementById('searchInputMob') && document.getElementById('searchInputMob').value !== val) document.getElementById('searchInputMob').value = val; clearTimeout(searchTimeout); searchTimeout = setTimeout(() => { requestAnimationFrame(() => renderProducts(val)); }, 250); }
 function setSortMode(val) { currentSortMode = val; if(document.getElementById('sortInputDesk')) document.getElementById('sortInputDesk').value = val; if(document.getElementById('sortInputMob')) document.getElementById('sortInputMob').value = val; renderProducts(currentSearchQuery); }
 function filterMainCategory(cat) { currentMainCategory = cat; activeSubCategories = []; renderFilters(); renderProducts(currentSearchQuery); }
@@ -776,215 +677,37 @@ function renderFilters() {
     const scd = document.getElementById('desktop-checkbox-filters'); if(scd) { let hDesk = ''; subs.forEach(c => { const isC = activeSubCategories.includes(c); hDesk += `<label class="flex items-center gap-3 cursor-pointer group w-full p-2 hover:bg-white rounded-lg transition-colors border border-transparent hover:border-luxury-blush"><div class="relative flex items-center justify-center w-[14px] h-[14px] rounded border border-luxury-rose/50 bg-white group-hover:border-luxury-rose transition-colors shrink-0 overflow-hidden shadow-sm"><input type="checkbox" value="${c}" class="peer sr-only" onchange="window.th_toggleSubCategory('${c}')" ${isC ? 'checked' : ''}><div class="absolute inset-0 bg-luxury-rose scale-0 peer-checked:scale-100 transition-transform duration-300 origin-center"></div><i class="fas fa-check text-[7px] text-white opacity-0 peer-checked:opacity-100 transition-opacity duration-300 absolute z-10"></i></div><span class="text-[10px] font-bold text-luxury-dark tracking-[0.1em] transition-colors truncate uppercase ${isC ? 'text-luxury-rose' : ''}">${c}</span></label>`; }); scd.innerHTML = hDesk || `<p class="text-[9px] text-gray-400 italic px-2 pt-2">No sub-categories</p>`; }
 }
 
-// ==========================================
-// 🚨 SMART ADDRESS AUTO-FILL
-// ==========================================
 let pincodeTimeout;
-
 function handlePincodeInput(e) {
-    // 1. Trigger the delivery fee UI update immediately
-    if (document.getElementById('checkout-overlay') && !document.getElementById('checkout-overlay').classList.contains('hidden')) {
-        updateCheckoutUI();
-    }
-
+    if (document.getElementById('checkout-overlay') && !document.getElementById('checkout-overlay').classList.contains('hidden')) updateCheckoutUI();
     const pin = e.target.value.trim();
-    
-    // Only process if it's exactly 6 digits
     if (pin.length === 6 && /^\d+$/.test(pin)) {
-        clearTimeout(pincodeTimeout);
-        pincodeTimeout = setTimeout(() => fetchCityStateFromPin(pin), 400);
-    } else {
-        // Clear fields if the pincode is altered or invalid
-        document.getElementById('prof-city').value = '';
-        document.getElementById('prof-state').value = '';
-    }
+        clearTimeout(pincodeTimeout); pincodeTimeout = setTimeout(() => fetchCityStateFromPin(pin), 400);
+    } else { document.getElementById('prof-city').value = ''; document.getElementById('prof-state').value = ''; }
 }
 
 async function fetchCityStateFromPin(pincode) {
-    const loader = document.getElementById('pin-loader');
-    const cityInput = document.getElementById('prof-city');
-    const stateInput = document.getElementById('prof-state');
-
+    const loader = document.getElementById('pin-loader'), cityInput = document.getElementById('prof-city'), stateInput = document.getElementById('prof-state');
     if (loader) loader.classList.remove('hidden');
-
     try {
-        const response = await fetch(`https://api.postalpincode.in/pincode/${pincode}`);
-        const data = await response.json();
-
+        const response = await fetch(`https://api.postalpincode.in/pincode/${pincode}`); const data = await response.json();
         if (data && data[0].Status === "Success") {
-            // Extract the first PostOffice details
             const postOffice = data[0].PostOffice[0];
-            
-            cityInput.value = postOffice.District || postOffice.Region;
-            stateInput.value = postOffice.State;
-            
-            // Visual feedback for auto-fill
-            cityInput.classList.add('bg-green-50', 'border-green-200');
-            stateInput.classList.add('bg-green-50', 'border-green-200');
-            
-            setTimeout(() => {
-                cityInput.classList.remove('bg-green-50', 'border-green-200');
-                stateInput.classList.remove('bg-green-50', 'border-green-200');
-            }, 1500);
-
-        } else {
-            window.showToast("Invalid Pincode entered.", "fa-exclamation-circle", "text-red-500");
-            cityInput.value = '';
-            stateInput.value = '';
-        }
-    } catch (error) {
-        console.error("Postal API Error:", error);
-        window.showToast("Network error while fetching location.", "fa-wifi", "text-yellow-500");
-    } finally {
-        if (loader) loader.classList.add('hidden');
-    }
+            cityInput.value = postOffice.District || postOffice.Region; stateInput.value = postOffice.State;
+            cityInput.classList.add('bg-green-50', 'border-green-200'); stateInput.classList.add('bg-green-50', 'border-green-200');
+            setTimeout(() => { cityInput.classList.remove('bg-green-50', 'border-green-200'); stateInput.classList.remove('bg-green-50', 'border-green-200'); }, 1500);
+        } else { window.showToast("Invalid Pincode entered.", "fa-exclamation-circle", "text-red-500"); cityInput.value = ''; stateInput.value = ''; }
+    } catch (error) { window.showToast("Network error while fetching location.", "fa-wifi", "text-yellow-500"); } finally { if (loader) loader.classList.add('hidden'); }
 }
 
-// ==========================================
-// 🚨 SMART CART UPSELL LOGIC
-// ==========================================
-function renderCartUpsells() {
-    const uc = document.getElementById('cart-upsell-container');
-    if (!uc) return;
-
-    if (cart.length === 0) {
-        uc.classList.add('hidden');
-        return;
-    }
-
-    // 1. Gather IDs currently in the cart to avoid suggesting them
-    const cartIds = cart.map(i => String(i.id));
-
-    // 2. Prioritize suggesting lower-cost/giftable items like 'Pipe Cleaner Crafts'
-    let upsells = products.filter(p => !cartIds.includes(String(p.id)) && p.mainCategory === 'Pipe Cleaner Crafts');
-    
-    // 3. Fallback: If no Pipe Cleaners are left, suggest the cheapest available product not in cart
-    if (upsells.length === 0) {
-        upsells = products.filter(p => !cartIds.includes(String(p.id))).sort((a, b) => a.price - b.price);
-    }
-
-    // 4. Hide if nothing left to suggest
-    if (upsells.length === 0) {
-        uc.classList.add('hidden');
-        return;
-    }
-
-    // 5. Select the top recommendation
-    const suggestion = upsells[0];
-    const img = (typeof suggestion.image1 === 'string' && suggestion.image1.trim() !== '') ? suggestion.image1 : 'https://placehold.co/150/F8E9EA/423133';
-
-    uc.innerHTML = `
-        <div class="bg-gradient-to-r from-luxury-blush/30 to-transparent border border-luxury-blush rounded-2xl p-4 sm:p-5 shadow-sm flex items-center justify-between gap-4">
-            <div class="flex items-center gap-4 cursor-pointer" onclick="window.openProductPage('${suggestion.id}')">
-                <img src="${img}" class="w-14 h-14 sm:w-16 sm:h-16 object-cover rounded-xl border border-luxury-blush shadow-sm bg-luxury-bg shrink-0">
-                <div class="flex flex-col">
-                    <span class="text-[8px] sm:text-[9px] font-bold text-luxury-rose uppercase tracking-widest mb-0.5"><i class="fas fa-sparkles"></i> Perfect Pairing</span>
-                    <h4 class="font-bitter font-semibold text-[12px] sm:text-[14px] text-luxury-dark leading-tight line-clamp-1">${suggestion.name}</h4>
-                    <span class="font-poppins font-bold text-[11px] sm:text-[13px] text-luxury-dark mt-1">₹${suggestion.price}</span>
-                </div>
-            </div>
-            <button type="button" onclick="window.th_updateCartQty('${suggestion.id}', 1, event)" class="shrink-0 bg-white border border-luxury-dark text-luxury-dark hover:bg-luxury-dark hover:text-white font-bold px-4 py-2.5 rounded-full text-[9px] uppercase tracking-widest transition-colors shadow-sm">
-                Add
-            </button>
-        </div>
-    `;
-    uc.classList.remove('hidden');
-}
-
-window.th_submitReview = async function(pid, rating, comment) {
+window.prepareReviewForm = async function() {
     if(!currentSessionUser) return window.openCustomerAuthModal();
+    const pid = document.getElementById('product-view').getAttribute('data-current-id');
+    const { data: verified } = await _supabase.from('orders').select('status').eq('user_id', currentSessionUser.id).ilike('order_details', `%${pid}%`);
+    const isDelivered = verified && verified.some(o => o.status === 'completed');
     
-    // Check if the user has a completed order containing this product_id
-    const { data: verified } = await _supabase.from('orders')
-        .select('id')
-        .eq('user_id', currentSessionUser.id)
-        .eq('status', 'completed')
-        .ilike('order_details', `%${pid}%`);
-
-    if (!verified || verified.length === 0) {
-        return window.showToast("Only verified buyers can review", "fa-lock", "text-red-500");
-    }
-
-    const { error } = await _supabase.from('reviews').insert([{
-        product_id: pid,
-        user_id: currentSessionUser.id,
-        rating: rating,
-        comment: comment
-    }]);
-
-    if(error) window.showToast("Failed to post review", "fa-times", "text-red-500");
-    else window.showToast("Review Posted!", "fa-star", "text-luxury-gold");
-};
-
-// ==========================================
-// 🚨 VISUAL CUSTOMIZER STUDIO
-// ==========================================
-function renderVisualCustomizer(product) {
-    const vc = document.getElementById('visual-customizer-studio');
-    if (!vc) return;
-
-    const isBouquet = product.name.toLowerCase().includes('bouquet');
-    if (product.mainCategory !== 'Pipe Cleaner Crafts' || !isBouquet) {
-        vc.classList.add('hidden');
-        return;
-    }
-
-    const flowerOptions = ['Crimson Rose', 'Blush Peony', 'Ivory Lily', 'Golden Sunflower', 'Lilac Tulip', 'Blue Hydrangea', 'Sunset Carnation', 'Classic Daisy'];
-    const fillerOptions = ['Baby\'s Breath', 'Eucalyptus Leaves', 'Lavender Sprigs', 'Golden Fern', 'Pearl Branches'];
-    const wrapOptions = ['Vintage Kraft', 'Midnight Matte', 'Frosted Pearl', 'Blushing Silk', 'Holographic Clear'];
-    const ribbonOptions = ['Satin Bow', 'Lace Ribbon', 'Rustic Twine', 'Velvet Ribbon'];
-
-    const generateChips = (options, activeArrayOrString, toggleFunc, isMulti) => {
-        return options.map(opt => {
-            const isSelected = isMulti ? activeArrayOrString.includes(opt) : activeArrayOrString === opt;
-            const activeClass = isMulti ? 'bg-luxury-rose text-white border-luxury-rose shadow-sm' : 'bg-luxury-dark text-white border-luxury-dark shadow-sm';
-            const inactiveClass = isMulti ? 'bg-white text-gray-500 border-luxury-blush hover:border-luxury-rose' : 'bg-white text-gray-500 border-luxury-blush hover:border-luxury-dark';
-            return `<button type="button" onclick="window.${toggleFunc}('${opt.replace(/'/g, "\\'")}')" class="px-3 py-1.5 rounded-full text-[10px] font-bold border transition-all ${isSelected ? activeClass : inactiveClass}">${opt}</button>`;
-        }).join('');
-    };
-
-    vc.innerHTML = `
-        <h4 class="font-bold text-[11px] uppercase tracking-widest text-luxury-dark mb-4 border-b border-luxury-blush pb-2"><i class="fas fa-magic text-luxury-rose mr-1"></i> Custom Bouquet Studio</h4>
-        
-        <div class="mb-5">
-            <span class="block text-[9px] font-bold text-gray-400 uppercase tracking-widest mb-2">1. Primary Flowers (Select multiple)</span>
-            <div class="flex flex-wrap gap-2">${generateChips(flowerOptions, activeBuild.flowers, 'th_toggleBuildArray("flowers", ', true)}</div>
-        </div>
-        
-        <div class="mb-5">
-            <span class="block text-[9px] font-bold text-gray-400 uppercase tracking-widest mb-2">2. Filler Foliage (Select multiple)</span>
-            <div class="flex flex-wrap gap-2">${generateChips(fillerOptions, activeBuild.fillers, 'th_toggleBuildArray("fillers", ', true)}</div>
-        </div>
-        
-        <div class="mb-5">
-            <span class="block text-[9px] font-bold text-gray-400 uppercase tracking-widest mb-2">3. Wrapping Style</span>
-            <div class="flex flex-wrap gap-2">${generateChips(wrapOptions, activeBuild.wrapping, 'th_setBuildString("wrapping", ', false)}</div>
-        </div>
-        
-        <div>
-            <span class="block text-[9px] font-bold text-gray-400 uppercase tracking-widest mb-2">4. Ribbon Accent</span>
-            <div class="flex flex-wrap gap-2">${generateChips(ribbonOptions, activeBuild.ribbon, 'th_setBuildString("ribbon", ', false)}</div>
-        </div>
-    `;
-    vc.classList.remove('hidden');
-}
-
-window.th_toggleBuildArray = function(category, value) {
-    const idx = activeBuild[category].indexOf(value);
-    if (idx > -1) activeBuild[category].splice(idx, 1);
-    else activeBuild[category].push(value);
-    const p = products.find(x => x.id == document.getElementById('product-view').getAttribute('data-current-id'));
-    if(p) renderVisualCustomizer(p);
-};
-
-window.th_setBuildString = function(category, value) {
-    activeBuild[category] = value;
-    const p = products.find(x => x.id == document.getElementById('product-view').getAttribute('data-current-id'));
-    if(p) renderVisualCustomizer(p);
-};
-
-window.prepareReviewForm = function() {
-    if(!currentSessionUser) return window.openCustomerAuthModal();
+    if (!isDelivered) { return window.showToast("Reviews unlock after delivery! 🎁", "fa-lock", "text-luxury-rose"); }
+    
     window.setReviewRating(5);
     document.getElementById('review-comment').value = '';
     window.openPolicyModal('review-modal', 'review-box');
@@ -995,9 +718,7 @@ window.closeReviewModal = function() { window.closePolicyModal('review-modal', '
 window.setReviewRating = function(rating) {
     document.getElementById('review-rating-val').value = rating;
     const stars = document.getElementById('review-stars-container').children;
-    for(let i=0; i<5; i++) { 
-        stars[i].className = i < rating ? "fas fa-star cursor-pointer text-luxury-gold transition-colors" : "fas fa-star cursor-pointer text-gray-300 transition-colors hover:text-luxury-gold"; 
-    }
+    for(let i=0; i<5; i++) { stars[i].className = i < rating ? "fas fa-star cursor-pointer text-luxury-gold transition-colors" : "fas fa-star cursor-pointer text-gray-300 transition-colors hover:text-luxury-gold"; }
 };
 
 document.getElementById('review-form')?.addEventListener('submit', function(e) {
@@ -1009,10 +730,10 @@ document.getElementById('review-form')?.addEventListener('submit', function(e) {
     window.closeReviewModal();
 });
 
-window.th_toggleSubCategory = function(cat) { const idx = activeSubCategories.indexOf(cat); if(idx > -1) { activeSubCategories.splice(idx, 1); } else { activeSubCategories.push(cat); } renderFilters(); renderProducts(currentSearchQuery); };
-
-window.openPolicyModal = function(mId, bId) { currentModalLevel = 2; window.safePushState(2); const mod = document.getElementById(mId); const bx = document.getElementById(bId); if(!mod || !bx) return; mod.classList.remove('hidden'); document.body.classList.add('overflow-hidden'); requestAnimationFrame(() => { mod.classList.remove('opacity-0'); bx.classList.remove('scale-95', 'translate-y-2'); bx.classList.add('scale-100', 'translate-y-0'); }); };
-window.closePolicyModal = function(mId, bId) { const mod = document.getElementById(mId); const bx = document.getElementById(bId); if(!mod || !bx) return; requestAnimationFrame(() => { mod.classList.add('opacity-0'); bx.classList.remove('scale-100', 'translate-y-0'); bx.classList.add('scale-95', 'translate-y-2'); setTimeout(() => { mod.classList.add('hidden'); if(document.getElementById('checkout-overlay')?.classList.contains('hidden')) { document.body.classList.remove('overflow-hidden'); } }, 200); }); };
-
+window.th_submitReview = async function(pid, rating, comment) {
+    const { error } = await _supabase.from('reviews').insert([{ product_id: pid, user_id: currentSessionUser.id, rating: rating, comment: comment }]);
+    if(error) window.showToast("Failed to post review", "fa-times", "text-red-500");
+    else window.showToast("Review Posted!", "fa-star", "text-luxury-gold");
+};
 
 // --- END OF FILE ---
