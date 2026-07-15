@@ -57,14 +57,20 @@ function unlockDashboard() {
     });
 }
 
-window.th_addPromoLine = function(val) {
+window.th_addPromoCode = function(code, type, val) {
     try {
-        const textVal = (typeof val === 'string') ? val : "";
-        const container = document.getElementById('promo-lines-container'); if(!container) return;
-        const div = document.createElement('div'); div.className = "flex items-center gap-2 promo-row";
-        div.innerHTML = `<input type="text" value="${textVal}" placeholder="e.g. Free Shipping..." class="promo-line-input w-full bg-white border border-luxury-blush rounded-lg px-3 py-2 text-[11px] font-medium outline-none focus:ring-2 focus:ring-luxury-rose/30"><button type="button" onclick="this.parentElement.remove()" class="text-red-400 hover:text-red-600 w-8 h-8 flex items-center justify-center shrink-0 border border-luxury-blush rounded-lg bg-white shadow-sm"><i class="fas fa-times"></i></button>`;
+        const container = document.getElementById('promo-codes-container'); if(!container) return;
+        const div = document.createElement('div'); div.className = "flex items-center gap-2 coupon-row";
+        const t = type || 'percent';
+        div.innerHTML = `<input type="text" value="${code || ''}" placeholder="PROMO CODE" class="coupon-code-input w-full bg-white border border-luxury-blush rounded-lg px-3 py-2 text-[11px] font-bold outline-none uppercase">
+        <select class="coupon-type-input bg-white border border-luxury-blush rounded-lg px-2 py-2 text-[11px] font-medium outline-none cursor-pointer">
+            <option value="percent" ${t==='percent'?'selected':''}>% Off</option>
+            <option value="flat" ${t==='flat'?'selected':''}>₹ Off</option>
+        </select>
+        <input type="number" value="${val || ''}" placeholder="Value" class="coupon-val-input w-24 bg-white border border-luxury-blush rounded-lg px-3 py-2 text-[11px] font-medium outline-none">
+        <button type="button" onclick="this.parentElement.remove()" class="text-red-400 hover:text-red-600 w-8 h-8 flex items-center justify-center shrink-0 border border-luxury-blush rounded-lg bg-white shadow-sm"><i class="fas fa-times"></i></button>`;
         container.appendChild(div);
-    } catch(e) { console.error("Error adding promo line", e); }
+    } catch(e) { console.error("Error adding code", e); }
 };
 
 window.th_addPromoCode = function(code, type, val) {

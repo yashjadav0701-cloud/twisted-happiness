@@ -692,7 +692,12 @@ window.confirmPaymentAndOrder = async function() {
         const { error } = await _supabase.from('orders').insert([pendingOrderPayload]);
         if (error) throw error;
         document.getElementById('payment-gateway-view')?.classList.add('hidden'); document.getElementById('payment-gateway-view')?.classList.remove('flex'); if(document.getElementById('success-ref-note')) document.getElementById('success-ref-note').textContent = currentOrderReference; document.getElementById('payment-success-view')?.classList.remove('hidden'); document.getElementById('payment-success-view')?.classList.add('flex');
-        cart = []; localStorage.setItem('th_cart', JSON.stringify(cart)); updateCartCount(); 
+        
+        // ONLY clear the cart if the user didn't use the isolated "Buy Now" button
+        if (!window.buyNowPayload) {
+            cart = []; localStorage.setItem('th_cart', JSON.stringify(cart)); updateCartCount(); 
+        }
+        window.buyNowPayload = null;
     } catch(err) {
         window.showToast("Error Securing Order", "fa-times", "text-red-500");
         if(b) { b.innerHTML = 'I Have Completed Payment <i class="fas fa-check-circle"></i>'; b.disabled = false; }
