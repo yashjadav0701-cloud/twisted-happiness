@@ -57,7 +57,7 @@
     </div>
 
     <!-- MAIN STOREFRONT VIEW -->
-    <main id="customer-view" class="w-full relative block flex flex-col min-h-screen">
+    <main id="customer-view" class="w-full relative flex flex-col min-h-screen">
         <header class="fixed top-0 left-0 w-full bg-white/95 backdrop-blur-md shadow-sm z-[999] border-b border-luxury-blush/50">
             <div class="w-full flex flex-col bg-transparent">
                 <div class="max-w-[1600px] mx-auto w-full px-4 sm:px-8 py-3 flex items-center justify-between gap-4">
@@ -305,21 +305,29 @@
                     <!-- Smart Cart Upsell Container -->
                     <div id="cart-upsell-container" class="hidden mb-8 transition-all duration-500 animate-fade-in"></div>
                     
-                    <div class="bg-luxury-bg border border-luxury-rose/30 rounded-2xl p-5 md:p-6 mb-8 relative overflow-hidden shadow-inner">
-                        <div class="absolute top-0 right-0 bg-luxury-rose text-white text-[7px] font-bold uppercase tracking-widest px-3 py-1 rounded-bl-xl">Offers</div>
-                        <h4 class="font-bold text-[10px] text-luxury-dark uppercase tracking-widest mb-3"><i class="fas fa-ticket-alt text-luxury-rose mr-1.5"></i> Apply Studio Coupon</h4>
-                        <div class="flex gap-2 mb-3">
-                            <input type="text" id="checkout-promo-input" placeholder="e.g. WELCOME10" class="flex-grow bg-white border border-luxury-blush rounded-xl px-4 py-3 uppercase font-poppins font-bold text-[12px] tracking-wider outline-none focus:border-luxury-rose">
-                            <button type="button" onclick="window.applyCouponCode()" class="bg-luxury-dark text-white hover:bg-luxury-rose px-5 py-3 rounded-xl text-[10px] font-bold uppercase tracking-widest transition-colors shadow-sm">Apply</button>
+                    <div class="bg-luxury-bg border border-luxury-rose/30 rounded-2xl p-5 md:p-6 mb-8 relative shadow-inner">
+                        <div class="absolute top-0 right-0 bg-luxury-rose text-white text-[7px] font-bold uppercase tracking-widest px-3 py-1 rounded-bl-xl rounded-tr-2xl">Offers</div>
+                        
+                        <!-- VIP Tiers Modern UI -->
+                        <div id="vip-progress-container" class="w-full hidden mb-4"></div>
+                        <div id="active-best-offer" class="hidden w-full bg-white border border-luxury-rose/40 rounded-xl p-3 flex justify-between items-center shadow-sm mb-4">
+                            <div class="flex items-center gap-3">
+                                <div class="w-8 h-8 rounded-full bg-[#FFF0F2] text-luxury-rose flex items-center justify-center"><i class="fas fa-gem text-xs"></i></div>
+                                <div>
+                                    <p id="best-offer-title" class="font-bold text-[11px] text-luxury-dark uppercase tracking-widest"></p>
+                                    <p id="best-offer-desc" class="text-[9px] text-gray-500 font-medium"></p>
+                                </div>
+                            </div>
+                            <button type="button" onclick="window.openPolicyModal('offers-modal', 'offers-box')" class="text-luxury-rose text-[9px] font-bold uppercase tracking-widest hover:text-luxury-dark transition-colors whitespace-nowrap">View All <i class="fas fa-chevron-right ml-1"></i></button>
+                        </div>
+                        
+                        <div class="flex items-center gap-3 mb-3"><div class="h-px bg-luxury-blush flex-grow"></div><span class="text-[8px] text-gray-400 font-bold uppercase tracking-[0.2em]">Or use code</span><div class="h-px bg-luxury-blush flex-grow"></div></div>
+
+                        <div class="relative w-full h-[46px] rounded-xl overflow-hidden border border-luxury-blush bg-white shadow-sm focus-within:border-luxury-rose transition-colors mb-1">
+                            <input type="text" id="checkout-promo-input" placeholder="E.G. WELCOME10" class="absolute inset-0 w-full h-full pl-4 pr-24 outline-none text-[12px] font-bold uppercase tracking-wider text-luxury-dark bg-transparent">
+                            <button type="button" onclick="window.applyCouponCode()" class="absolute right-0 top-0 bottom-0 px-6 bg-luxury-dark text-white hover:bg-luxury-rose text-[10px] font-bold uppercase tracking-widest transition-colors">Apply</button>
                         </div>
                         <span id="checkout-promo-feedback" class="text-[9px] font-bold uppercase tracking-wide hidden"></span>
-                        
-                        <div class="border-t border-luxury-blush/50 pt-4 mt-3">
-                        <div id="vip-progress-container" class="w-full hidden mb-3"></div>
-                        <div class="w-full bg-[#FFF0F2] border border-[#fce4e8] rounded-full py-2.5 px-4 flex items-center justify-center gap-2 shadow-sm mx-auto">
-                            <i class="far fa-gem text-[#D9778A] text-[10px]"></i>
-                            <span class="text-[8px] sm:text-[9px] font-bold text-luxury-dark uppercase tracking-widest whitespace-nowrap overflow-hidden text-ellipsis">SPEND ₹499: 8% | ₹999: 10% | ₹2499: 12% | ₹4999: 15%</span>
-                        </div>
                     </div>
                 </div>
 
@@ -365,7 +373,7 @@
                     <div id="address-book-container" class="flex flex-col gap-4 mb-4"></div>
                     <button type="button" id="btn-show-add-address" onclick="window.showAddressForm()" class="text-[#D9778A] text-[10px] font-bold uppercase tracking-widest flex items-center gap-2 mb-6 w-max hidden hover:text-luxury-dark transition-colors"><i class="fas fa-plus"></i> Add New Address</button>
 
-                    <form id="checkout-profile-form" class="space-y-4 font-sans hidden">
+                    <form id="checkout-profile-form" class="space-y-4 font-sans hidden" onsubmit="window.saveAddressFromForm(event)">
                         <div class="grid grid-cols-2 gap-4">
                             <div><label class="block text-[9px] font-bold text-gray-400 uppercase tracking-widest mb-1.5 pl-1">First Name *</label><input type="text" id="prof-fname" required class="w-full px-4 py-3 bg-luxury-bg border border-luxury-blush rounded-xl outline-none text-[12px] font-medium text-luxury-dark focus:ring-2 focus:ring-luxury-rose/30 transition-all"></div>
                             <div><label class="block text-[9px] font-bold text-gray-400 uppercase tracking-widest mb-1.5 pl-1">Last Name *</label><input type="text" id="prof-lname" required class="w-full px-4 py-3 bg-luxury-bg border border-luxury-blush rounded-xl outline-none text-[12px] font-medium text-luxury-dark focus:ring-2 focus:ring-luxury-rose/30 transition-all"></div>
@@ -394,7 +402,7 @@
                             <div><label class="block text-[9px] font-bold text-gray-400 uppercase tracking-widest mb-1.5 pl-1">State *</label><input type="text" id="prof-state" required class="w-full px-4 py-3 bg-luxury-bg border border-luxury-blush rounded-xl outline-none text-[12px] font-medium text-luxury-dark focus:ring-2 focus:ring-luxury-rose/30 transition-all"></div>
                         </div>
                         <div class="flex gap-3 pt-3 mb-4">
-                            <button type="button" onclick="window.saveAddressFromForm()" class="bg-luxury-dark text-white hover:bg-[#D9778A] px-6 py-3 rounded-xl font-bold text-[10px] uppercase tracking-widest transition-colors shadow-sm">Save Address</button>
+                            <button type="submit" class="bg-luxury-dark text-white hover:bg-[#D9778A] px-6 py-3 rounded-xl font-bold text-[10px] uppercase tracking-widest transition-colors shadow-sm">Save Address</button>
                             <button type="button" onclick="window.hideAddressForm()" id="btn-cancel-address" class="border border-luxury-blush text-gray-500 hover:text-luxury-dark px-6 py-3 rounded-xl font-bold text-[10px] uppercase tracking-widest hidden transition-colors">Cancel</button>
                         </div>
                     </form>
@@ -629,6 +637,46 @@
             </div>
         </div>
     </div>
+
+    <!-- OFFERS MODAL -->
+    <div id="offers-modal" role="dialog" aria-modal="true" class="hidden transition-opacity duration-200 opacity-0 fixed inset-0 bg-luxury-dark/70 p-4 flex flex-col justify-end sm:items-center sm:justify-center z-[4000]">
+        <div class="transform scale-95 translate-y-2 transition-all duration-300 bg-white rounded-t-3xl sm:rounded-3xl w-full max-w-md shadow-2xl relative border border-luxury-blush overflow-hidden flex flex-col max-h-[80vh]" id="offers-box">
+            <div class="p-6 pb-4 border-b border-luxury-blush flex justify-between items-center bg-[#FFF0F2]">
+                <h2 class="font-logo font-normal text-2xl text-luxury-dark">Available Offers</h2>
+                <button type="button" onclick="window.closePolicyModal('offers-modal', 'offers-box')" class="text-gray-400 w-8 h-8 bg-white rounded-full flex items-center justify-center border border-[#fce4e8] hover:text-luxury-rose"><i class="fas fa-times text-xs"></i></button>
+            </div>
+            <div class="p-6 overflow-y-auto custom-scroll flex flex-col gap-4 bg-luxury-bg/30" id="offers-modal-list">
+                <!-- Offers will be injected here automatically by Javascript -->
+            </div>
+        </div>
+    </div>
+    
+    <script>
+        // Inject this tiny script at the bottom of your HTML body to auto-render the offers
+        document.addEventListener('DOMContentLoaded', () => {
+            const target = document.getElementById('offers-modal-list');
+            if(!target) return;
+            const i = setInterval(() => {
+                if (window.settings && window.settings.promoCodes) {
+                    clearInterval(i);
+                    let all = []; try { all = JSON.parse(window.settings.promoCodes); } catch(e){}
+                    const offers = all.filter(d => d.type === 'offer' && d.isActive).sort((a,b) => a.condVal - b.condVal);
+                    if(offers.length === 0) { target.innerHTML = '<p class="text-[11px] text-gray-500 text-center py-4">No special offers available at the moment.</p>'; return; }
+                    let h = '';
+                    offers.forEach(o => {
+                        const valStr = o.discountType === 'percent' ? `${o.val}% OFF` : `₹${o.val} OFF`;
+                        h += `<div class="bg-white border border-luxury-blush rounded-2xl p-4 shadow-sm flex items-start gap-4">
+                                <div class="w-10 h-10 rounded-full bg-luxury-rose/10 text-luxury-rose flex items-center justify-center shrink-0 border border-luxury-rose/20"><i class="fas fa-gift"></i></div>
+                                <div><h4 class="font-bold text-[12px] text-luxury-dark uppercase tracking-widest mb-1">${o.name}</h4><p class="text-[10px] text-gray-500 font-medium">Enjoy ${valStr} automatically applied at checkout when you spend ₹${o.condVal} or more.</p></div>
+                              </div>`;
+                    });
+                    target.innerHTML = h;
+                }
+            }, 500);
+        });
+    </script>
+
+
     <!-- REVIEW MODAL -->
         <div id="review-modal" role="dialog" aria-modal="true" class="hidden transition-opacity duration-200 opacity-0 fixed inset-0 bg-luxury-dark/70 p-4 flex items-center justify-center z-[4000]">
             <div class="transform scale-95 translate-y-2 transition-all duration-300 bg-white rounded-3xl w-full max-w-sm p-6 sm:p-8 shadow-2xl relative border border-luxury-blush" id="review-box">

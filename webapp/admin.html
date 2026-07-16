@@ -114,11 +114,13 @@
                             <button type="button" onclick="window.th_addPromoLine('')" class="text-[9px] bg-white border border-luxury-blush px-3 py-1.5 rounded-md shadow-sm font-bold text-luxury-dark uppercase tracking-widest hover:text-luxury-rose transition-colors"><i class="fas fa-plus"></i> Add Line</button>
                         </div>
 
-                        <!-- ADDED: Promo Codes Manager -->
-                        <div class="bg-luxury-bg/50 border border-luxury-blush rounded-xl p-3 mt-4">
-                            <label class="block font-bold mb-2 text-luxury-rose text-[8px] uppercase tracking-[0.1em]"><i class="fas fa-ticket-alt mr-1"></i> Discount Codes</label>
-                            <div id="promo-codes-container" class="space-y-2 mb-3"></div>
-                            <button type="button" onclick="window.th_addPromoCode()" class="text-[9px] bg-white border border-luxury-blush px-3 py-1.5 rounded-md shadow-sm font-bold text-luxury-dark uppercase tracking-widest hover:text-luxury-rose transition-colors"><i class="fas fa-plus"></i> Add Code</button>
+                        <!-- PREMIUM DISCOUNT ENGINE -->
+                        <div class="bg-luxury-bg border border-luxury-blush rounded-xl p-4 mt-4">
+                            <div class="flex justify-between items-center mb-3">
+                                <label class="font-bold text-luxury-rose text-[9px] uppercase tracking-[0.1em]"><i class="fas fa-gift mr-1"></i> VIP Offers & Coupons</label>
+                                <button type="button" onclick="window.th_openDiscountModal()" class="text-[8px] bg-luxury-dark text-white px-3 py-1.5 rounded-md shadow-sm font-bold uppercase tracking-widest hover:bg-luxury-rose transition-colors"><i class="fas fa-plus mr-1"></i> Create New</button>
+                            </div>
+                            <div id="premium-discounts-container" class="space-y-2 flex flex-col"></div>
                         </div>
                         <div><label class="block font-bold mb-1.5 text-gray-400 text-[8px] uppercase tracking-[0.1em]">Instagram URL</label><input type="url" id="admin-ig" placeholder="https://instagram.com/..." class="w-full bg-luxury-bg border border-luxury-blush rounded-lg px-3 py-2.5 text-[11px] font-medium outline-none focus:ring-2 focus:ring-luxury-rose/30"></div>
                         <div><label class="block font-bold mb-1.5 text-gray-400 text-[8px] uppercase tracking-[0.1em]">Default Country Code</label><select id="admin-country-code" class="w-full bg-luxury-bg border border-luxury-blush rounded-lg px-3 py-2.5 text-[11px] font-medium outline-none focus:ring-2 focus:ring-luxury-rose/30 cursor-pointer"></select></div>
@@ -189,6 +191,79 @@
                 <div id="admin-completed-orders" class="flex flex-col gap-4 hidden"></div>
             </div>
         </section>
+    </div>
+
+    <!-- PREMIUM DISCOUNT MODAL BUILDER -->
+    <div id="discount-engine-modal" class="fixed inset-0 bg-luxury-dark/70 z-[3000] hidden flex items-center justify-center p-4 transition-opacity duration-300 opacity-0">
+        <div class="bg-white rounded-3xl w-full max-w-lg p-6 sm:p-8 shadow-2xl relative border border-luxury-blush overflow-y-auto max-h-[90vh] custom-scroll">
+            <button type="button" onclick="window.th_closeDiscountModal()" class="absolute top-4 right-4 text-gray-400 w-8 h-8 bg-luxury-bg rounded-full flex items-center justify-center border border-luxury-blush hover:text-luxury-dark"><i class="fas fa-times text-xs"></i></button>
+            <h2 class="font-logo font-normal text-2xl text-luxury-dark mb-4 border-b border-luxury-blush pb-3"><i class="fas fa-magic text-luxury-rose mr-2"></i> Discount Studio</h2>
+            
+            <input type="hidden" id="disc-index" value="-1">
+            
+            <div class="space-y-4">
+                <div class="grid grid-cols-2 gap-4">
+                    <div class="col-span-2">
+                        <label class="block text-[9px] font-bold text-gray-400 uppercase tracking-widest mb-1 pl-1">Rule Name (Internal/Public)</label>
+                        <input type="text" id="disc-name" placeholder="e.g. Summer VIP Offer" class="w-full px-4 py-2.5 bg-luxury-bg border border-luxury-blush rounded-xl outline-none text-[11px] font-bold text-luxury-dark focus:border-luxury-rose">
+                    </div>
+                    <div>
+                        <label class="block text-[9px] font-bold text-gray-400 uppercase tracking-widest mb-1 pl-1">Behavior</label>
+                        <select id="disc-type" onchange="window.th_toggleDiscountFields()" class="w-full px-4 py-2.5 bg-luxury-bg border border-luxury-blush rounded-xl outline-none text-[11px] font-bold text-luxury-dark focus:border-luxury-rose cursor-pointer">
+                            <option value="offer">VIP Auto-Offer (Visible)</option>
+                            <option value="coupon">Hidden Coupon (Needs Code)</option>
+                        </select>
+                    </div>
+                    <div id="wrap-code">
+                        <label class="block text-[9px] font-bold text-gray-400 uppercase tracking-widest mb-1 pl-1">Coupon Code</label>
+                        <input type="text" id="disc-code" placeholder="e.g. WELCOME10" class="w-full px-4 py-2.5 bg-white border border-luxury-blush rounded-xl outline-none text-[11px] font-bold uppercase text-luxury-rose focus:border-luxury-rose">
+                    </div>
+                </div>
+
+                <div class="bg-[#FFF0F2] border border-[#fce4e8] p-4 rounded-xl grid grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-[9px] font-bold text-luxury-dark uppercase tracking-widest mb-1 pl-1">Discount Type</label>
+                        <select id="disc-discount-type" onchange="window.th_toggleDiscountFields()" class="w-full px-4 py-2.5 bg-white border border-luxury-blush rounded-xl outline-none text-[11px] font-bold text-luxury-dark focus:border-luxury-rose cursor-pointer">
+                            <option value="percent">% Percentage Off</option>
+                            <option value="flat">₹ Flat Amount Off</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-[9px] font-bold text-luxury-dark uppercase tracking-widest mb-1 pl-1">Discount Value</label>
+                        <input type="number" id="disc-val" min="1" placeholder="e.g. 15" class="w-full px-4 py-2.5 bg-white border border-luxury-blush rounded-xl outline-none text-[11px] font-bold text-luxury-dark focus:border-luxury-rose">
+                    </div>
+                    <div id="wrap-max" class="col-span-2">
+                        <label class="block text-[9px] font-bold text-luxury-dark uppercase tracking-widest mb-1 pl-1">Maximum Discount Cap (₹) [Optional]</label>
+                        <input type="number" id="disc-max" placeholder="e.g. 500" class="w-full px-4 py-2.5 bg-white border border-luxury-blush rounded-xl outline-none text-[11px] font-bold text-luxury-dark focus:border-luxury-rose">
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-[9px] font-bold text-gray-400 uppercase tracking-widest mb-1 pl-1">Condition</label>
+                        <select id="disc-cond-type" onchange="window.th_toggleDiscountFields()" class="w-full px-4 py-2.5 bg-luxury-bg border border-luxury-blush rounded-xl outline-none text-[11px] font-bold text-luxury-dark focus:border-luxury-rose cursor-pointer">
+                            <option value="none">No Minimum Condition</option>
+                            <option value="min_spend">Minimum Spend (₹)</option>
+                            <option value="first_order">First Order Only</option>
+                        </select>
+                    </div>
+                    <div id="wrap-cond-val">
+                        <label class="block text-[9px] font-bold text-gray-400 uppercase tracking-widest mb-1 pl-1">Condition Value</label>
+                        <input type="number" id="disc-cond-val" min="0" placeholder="e.g. 999" class="w-full px-4 py-2.5 bg-luxury-bg border border-luxury-blush rounded-xl outline-none text-[11px] font-bold text-luxury-dark focus:border-luxury-rose">
+                    </div>
+                </div>
+
+                <div class="flex items-center justify-between border-t border-luxury-blush pt-4 mt-2">
+                    <label class="flex items-center gap-2 cursor-pointer">
+                        <input type="checkbox" id="disc-active" class="w-4 h-4 accent-luxury-rose rounded">
+                        <span class="text-[10px] font-bold uppercase tracking-widest text-luxury-dark">Status: Active</span>
+                    </label>
+                    <input type="date" id="disc-expiry" class="px-3 py-1.5 bg-luxury-bg border border-luxury-blush rounded-lg text-[9px] font-bold text-gray-500 uppercase tracking-widest outline-none">
+                </div>
+
+                <button type="button" onclick="window.th_saveDiscountRule()" class="w-full bg-luxury-dark text-white hover:bg-luxury-rose py-3.5 rounded-xl font-bold text-[10px] uppercase tracking-widest transition-colors shadow-sm mt-4">Save Configuration</button>
+            </div>
+        </div>
     </div>
 
     <!-- Global Toast Notification -->

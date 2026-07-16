@@ -7,13 +7,7 @@ const SUPABASE_URL = "https://gvrfucjtnyqfkdynrmqs.supabase.co";
 const SUPABASE_ANON_KEY = "sb_publishable_8jru2BqvTdE9bcwNOLIHAA_dx6aUCM0";
 let _supabase;
 
-const DISCOUNT_TIERS = [
-    { threshold: 4999, type: 'percent', value: 15, label: '15% OFF VIP' },
-    { threshold: 2499, type: 'percent', value: 12, label: '12% OFF VIP' },
-    { threshold: 999,  type: 'percent', value: 10, label: '10% OFF VIP' },
-    { threshold: 499,  type: 'percent', value: 8,  label: '8% OFF VIP' },
-    { threshold: 299,  type: 'flat',    value: 30, label: '₹30 OFF VIP' }
-];
+// DISCOUNT_TIERS removed. Now dynamically fetched from the Admin Premium Discount Engine.
 
 function safeJSONParse(key, fallback) { 
     try { const item = localStorage.getItem(key); return item ? JSON.parse(item) : fallback; } 
@@ -21,6 +15,7 @@ function safeJSONParse(key, fallback) {
 }
 
 let settings = safeJSONParse('th_settings', { storeName: "Twisted Happiness", instagram: "https://www.instagram.com/khushiified_art?igsh=aW1vZ2N4cTl2OWo=", whatsapp: "9909310501", upiId: "khushisj315@oksbi", countryCode: "+91" });
+window.settings = settings; // Exposes settings to inline HTML scripts
 let cart = safeJSONParse('th_cart', []); 
 let localWishlist = safeJSONParse('th_wishlist', []);
 let savedAddresses = safeJSONParse('th_saved_addresses', []);
@@ -47,6 +42,7 @@ async function fetchRuntimeSettings() {
             const cloud = data[0];
             settings = { promoText: cloud.promo_text, promoCodes: cloud.promo_codes, storeName: cloud.store_name, instagram: cloud.instagram_url, whatsapp: cloud.whatsapp_num, upiId: cloud.upi_id, countryCode: cloud.country_code || "+91" };
             localStorage.setItem('th_settings', JSON.stringify(settings));
+            window.settings = settings; // Keep the window object synced after cloud fetch
         }
     } catch(e) { console.warn("Local storage fallback active"); }
     applyDynamicSettings(); bindDOMEvents(); injectSkeletons(); fetchDatabase(); setupSocialLinks();
@@ -129,6 +125,31 @@ function bindDOMEvents() {
             return msg;
         }
     });
+    
+    // 📱 Native Mobile Hardware Back Button Handling
+    window.addEventListener('popstate', (e) => {
+        const level = e.state ? e.state.level : 0;
+        
+        if (level < 2) {
+            if(window.forceCloseLightbox) window.forceCloseLightbox();
+            window.closePolicyModal('return-policy-modal', 'return-policy-box');
+            window.closePolicyModal('privacy-policy-modal', 'privacy-policy-box');
+            window.closePolicyModal('offers-modal', 'offers-box');
+            window.closePolicyModal('review-modal', 'review-box');
+            if(window.closeCustomerAuthModal) window.closeCustomerAuthModal();
+            if(window.closeTrackOrderModal) window.closeTrackOrderModal();
+        }
+        
+        if (level < 1) {
+            window.closeProductPage();
+            
+            const chk = document.getElementById('checkout-overlay');
+            if (chk && !chk.classList.contains('hidden')) { chk.classList.remove('opacity-100'); chk.classList.add('opacity-0'); setTimeout(() => { chk.classList.add('hidden'); document.body.classList.remove('overflow-hidden'); }, 300); }
+            
+            const prof = document.getElementById('customer-profile-overlay');
+            if (prof && !prof.classList.contains('hidden')) { prof.classList.remove('opacity-100'); prof.classList.add('opacity-0'); setTimeout(() => { prof.classList.add('hidden'); document.body.classList.remove('overflow-hidden'); }, 300); }
+        }
+    });
 
     document.addEventListener('keydown', (e) => { if (e.ctrlKey && e.shiftKey && e.key.toLowerCase() === 'k') { e.preventDefault(); window.location.href = '/admin.html'; } });
     document.getElementById('prof-pin')?.addEventListener('input', handlePincodeInput);
@@ -136,13 +157,13 @@ function bindDOMEvents() {
     // Quick enter key submission
     document.getElementById('searchInputDesk')?.addEventListener('keypress', (e) => { if(e.key === 'Enter') e.target.blur(); });
     document.getElementById('searchInputMob')?.addEventListener('keypress', (e) => { if(e.key === 'Enter') e.target.blur(); });
+    document.getElementById('checkout-promo-input')?.addEventListener('keypress', (e) => { if(e.key === 'Enter') { e.preventDefault(); window.applyCouponCode(); } });
     
     document.getElementById('searchInputDesk')?.addEventListener('input', (e) => syncSearch(e.target.value));
     document.getElementById('searchInputMob')?.addEventListener('input', (e) => syncSearch(e.target.value));
     document.getElementById('sortInputMob')?.addEventListener('change', (e) => setSortMode(e.target.value));
     document.getElementById('sortInputDesk')?.addEventListener('change', (e) => setSortMode(e.target.value));
     document.getElementById('sub-category-filters-mob')?.addEventListener('change', (e) => filterSubCategory(e.target.value));
-    document.getElementById('track-order-form-guest')?.addEventListener('submit', handleTrackOrderGuest);
     document.getElementById('track-order-form-guest')?.addEventListener('submit', handleTrackOrderGuest);
     document.getElementById('customer-auth-form')?.addEventListener('submit', handleAuthFormSubmit);
     setupTouchCarousel(); setupLightboxTouch();
@@ -326,7 +347,33 @@ function updateWishlistUIElements(id, isA) {
 }
 
 function getDiscountPercent(idStr) { let h = 0; for (let i = 0; i < idStr.length; i++) h = idStr.charCodeAt(i) + ((h << 5) - h); return (Math.abs(h) % 31) + 10; }
-function calculateCartDiscount(sub) { let d = 0, cTier = null, nTier = null; for (let i = 0; i < DISCOUNT_TIERS.length; i++) { if (sub >= DISCOUNT_TIERS[i].threshold) { cTier = DISCOUNT_TIERS[i]; nTier = i > 0 ? DISCOUNT_TIERS[i - 1] : null; break; } } if (!cTier && sub > 0) nTier = DISCOUNT_TIERS[DISCOUNT_TIERS.length - 1]; if (cTier) { if (cTier.type === 'percent') d = Math.round(sub * (cTier.value / 100)); else d = cTier.value; } return { discount: d, currentTier: cTier, nextTier: nTier, amountNeeded: nTier ? nTier.threshold - sub : 0 }; }
+function getActiveOffers() {
+    let all = [];
+    try { all = JSON.parse(settings.promoCodes || '[]'); } catch(e) {}
+    return all.filter(d => d.type === 'offer' && d.isActive).sort((a, b) => b.condVal - a.condVal);
+}
+
+function calculateCartDiscount(sub) { 
+    let d = 0, cTier = null, nTier = null; 
+    
+    // MUTUAL EXCLUSIVITY: If a manual coupon is applied, VIP offers are disabled.
+    if (activeCouponValue > 0) return { discount: 0, currentTier: null, nextTier: null, amountNeeded: 0 };
+    
+    const offers = getActiveOffers();
+    for (let i = 0; i < offers.length; i++) { 
+        if (sub >= offers[i].condVal) { 
+            cTier = offers[i]; 
+            nTier = i > 0 ? offers[i - 1] : null; 
+            break; 
+        } 
+    } 
+    if (!cTier && sub > 0 && offers.length > 0) nTier = offers[offers.length - 1]; 
+    if (cTier) { 
+        if (cTier.discountType === 'percent') d = Math.round(sub * (cTier.val / 100)); 
+        else if (cTier.discountType === 'flat') d = cTier.val; 
+    } 
+    return { discount: d, currentTier: cTier, nextTier: nTier, amountNeeded: nTier ? nTier.condVal - sub : 0 }; 
+}
 function calculateTotalPrepTime(items) { let minD = 999; items.forEach(i => { const pt = i.prepTime || '3'; const m = pt.match(/\d+/g); if(m && m.length >= 1) { let mp = parseInt(m[0]); if (mp < minD) minD = mp; } else { if (3 < minD) minD = 3; } }); if (minD === 999) minD = 3; const tq = items.reduce((s, i) => s + parseInt(i.qty || 1), 0); return `${minD * tq} Days`; }
 function updateCartCount() { requestAnimationFrame(() => { const c = cart.reduce((s, i) => s + parseInt(i.qty || 1), 0); document.querySelectorAll('#cart-count, #product-page-cart-count').forEach(el => { if(el) el.textContent = c; }); }); }
 function calculateEDDBracket(pt) { 
@@ -610,7 +657,8 @@ window.showAddressForm = function() { editingAddressIndex = null; clearAddressFo
 window.hideAddressForm = function() { document.getElementById('checkout-profile-form').classList.add('hidden'); document.getElementById('btn-show-add-address').classList.remove('hidden'); editingAddressIndex = null; updateCheckoutUI(); };
 window.editAddress = function(i, e) { e.stopPropagation(); editingAddressIndex = i; const a = savedAddresses[i]; document.getElementById('prof-fname').value = a.first_name || ''; document.getElementById('prof-lname').value = a.last_name || ''; document.getElementById('prof-email').value = a.email || ''; document.getElementById('prof-phone').value = a.phone || ''; document.getElementById('prof-add1').value = a.address_1 || ''; document.getElementById('prof-add2').value = a.address_2 || ''; document.getElementById('prof-city').value = a.city || ''; document.getElementById('prof-state').value = a.state || ''; document.getElementById('prof-pin').value = a.pincode || ''; document.getElementById('checkout-profile-form').classList.remove('hidden'); document.getElementById('btn-show-add-address').classList.add('hidden'); document.getElementById('btn-cancel-address')?.classList.remove('hidden'); updateCheckoutUI(); };
 
-window.saveAddressFromForm = async function() {
+window.saveAddressFromForm = async function(e) {
+    if(e) e.preventDefault(); // Prevents page reload when pressing "Enter"
     const a = { first_name: document.getElementById('prof-fname').value.trim(), last_name: document.getElementById('prof-lname').value.trim(), email: document.getElementById('prof-email').value.trim(), phone: document.getElementById('prof-phone').value.trim(), address_1: document.getElementById('prof-add1').value.trim(), address_2: document.getElementById('prof-add2').value.trim(), city: document.getElementById('prof-city').value.trim(), state: document.getElementById('prof-state').value.trim(), pincode: document.getElementById('prof-pin').value.trim() };
     if(!a.first_name || !a.phone || !a.address_1 || !a.city || !a.pincode) { window.showToast("Please fill all required fields", "fa-exclamation-circle", "text-red-500"); return false; }
     showInteractionLoader("Saving Address...");
@@ -694,16 +742,35 @@ function updateCheckoutUI() {
     }
     
     const vipProgress = document.getElementById('vip-progress-container');
-    if (vipProgress) {
-        if (nt) {
-            const progressPercent = Math.min(100, (ss / nt.threshold) * 100);
-            vipProgress.innerHTML = `<div class="flex justify-between items-end mb-1"><span class="text-[9px] font-bold text-gray-500 uppercase tracking-widest">VIP Status</span><span class="text-[9px] font-bold text-luxury-rose uppercase tracking-widest">Add ₹${nt.threshold - ss} for ${nt.label} 🎀</span></div><div class="w-full bg-luxury-blush/30 h-1.5 rounded-full overflow-hidden"><div class="bg-luxury-rose h-full rounded-full transition-all duration-500" style="width: ${progressPercent}%"></div></div>`;
-            vipProgress.classList.remove('hidden');
-        } else if (ct) {
-            vipProgress.innerHTML = `<p class="text-[10px] font-bold text-luxury-rose uppercase tracking-widest text-center"><i class="fas fa-crown text-luxury-gold mr-1"></i> Maximum VIP Tier Unlocked!</p>`;
-            vipProgress.classList.remove('hidden');
-        } else {
-            vipProgress.classList.add('hidden');
+    const bestOfferUI = document.getElementById('active-best-offer');
+    
+    // Hide VIP UI if a manual coupon is applied (Mutual Exclusivity)
+    if (activeCouponValue > 0) {
+        if(vipProgress) vipProgress.classList.add('hidden');
+        if(bestOfferUI) bestOfferUI.classList.add('hidden');
+    } else {
+        if (bestOfferUI) {
+            const allOffers = getActiveOffers();
+            if (allOffers.length > 0) {
+                bestOfferUI.classList.remove('hidden');
+                document.getElementById('best-offer-title').textContent = ct ? ct.name : "Available Offers";
+                document.getElementById('best-offer-desc').textContent = ct ? `Applied to your cart!` : `Spend ₹${nt ? nt.condVal - ss : 0} more to unlock.`;
+            } else {
+                bestOfferUI.classList.add('hidden');
+            }
+        }
+
+        if (vipProgress) {
+            if (nt) {
+                const progressPercent = Math.min(100, (ss / nt.condVal) * 100);
+                vipProgress.innerHTML = `<div class="flex justify-between items-end mb-1"><span class="text-[9px] font-bold text-gray-500 uppercase tracking-widest">VIP Status</span><span class="text-[9px] font-bold text-luxury-rose uppercase tracking-widest">Add ₹${nt.condVal - ss} for ${nt.name} 🎀</span></div><div class="w-full bg-luxury-blush/30 h-1.5 rounded-full overflow-hidden"><div class="bg-luxury-rose h-full rounded-full transition-all duration-500" style="width: ${progressPercent}%"></div></div>`;
+                vipProgress.classList.remove('hidden');
+            } else if (ct) {
+                vipProgress.innerHTML = `<p class="text-[10px] font-bold text-luxury-rose uppercase tracking-widest text-center"><i class="fas fa-crown text-luxury-gold mr-1"></i> Maximum VIP Tier Unlocked!</p>`;
+                vipProgress.classList.remove('hidden');
+            } else {
+                vipProgress.classList.add('hidden');
+            }
         }
     }
 
@@ -1065,8 +1132,8 @@ window.generateGirlyInvoice = function(encodedOrder) {
         // Fetch current date as Delivery Date
         // Use the actual delivery date from the database, fallback to current date only if missing
 const deliveryDate = encodedOrder.delivery_date 
-    ? new Date(encodedOrder.delivery_date).toLocaleDateString('en-US') 
-    : new Date().toLocaleDateString('en-US');
+    ? new Date(encodedOrder.delivery_date).toLocaleDateString('en-IN') 
+    : new Date().toLocaleDateString('en-IN');
         
         const printWindow = window.open('', '_blank');
         printWindow.document.write(`

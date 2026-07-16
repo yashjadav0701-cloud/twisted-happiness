@@ -2,6 +2,30 @@
 @tailwind components;
 @tailwind utilities;
 
+@layer components {
+  /* Amazon-Style Swipe Gallery */
+  .product-carousel {
+    @apply w-full overflow-hidden relative touch-pan-y max-w-[600px];
+  }
+  .carousel-track {
+    @apply flex transition-transform duration-300 ease-out;
+    will-change: transform;
+  }
+  .carousel-slide {
+    @apply min-w-full w-full h-auto object-contain select-none;
+    -webkit-user-drag: none;
+  }
+  .carousel-dots {
+    @apply flex justify-center gap-2 mt-3;
+  }
+  .dot {
+    @apply w-2 h-2 bg-gray-300 rounded-full transition-colors duration-200;
+  }
+  .dot.active {
+    @apply bg-luxury-dark; /* Tied into your custom theme */
+  }
+}
+
 @layer utilities {
   /* Premium Scrollbar */
   .scrollbar-hide::-webkit-scrollbar { display: none; }

@@ -69,33 +69,110 @@ window.th_addPromoLine = function(text = '') {
     container.appendChild(div);
 };
 
-window.th_addPromoCode = function(code = '', type = 'percent', val = '', condType = 'none', condVal = '') {
-    const container = document.getElementById('promo-codes-container');
-    if (!container) return;
+// Premium Discount Engine Logic
+window.th_openDiscountModal = function(index = -1) {
+    let d = { id: Date.now().toString(), name: '', type: 'offer', code: '', discountType: 'percent', val: '', maxDiscount: '', condType: 'min_spend', condVal: '', isActive: true, expiry: '' };
+    if (index >= 0) {
+        try { const arr = JSON.parse(settings.promoCodes || '[]'); d = arr[index]; document.getElementById('disc-index').value = index; } catch(e){}
+    } else { document.getElementById('disc-index').value = -1; }
     
-    const row = document.createElement('div');
-    row.className = "coupon-row flex flex-col gap-2 bg-white p-3 rounded-lg border border-luxury-blush shadow-sm";
-    row.innerHTML = `
-        <div class="flex gap-2 items-center">
-            <input type="text" placeholder="CODE (e.g. SAVE10)" value="${code}" class="coupon-code-input flex-1 bg-transparent border-none text-[10px] font-bold text-luxury-dark uppercase outline-none placeholder-gray-300">
-            <select class="coupon-type-input bg-luxury-bg border border-luxury-blush rounded text-[9px] px-1 py-1 outline-none text-luxury-dark">
-                <option value="percent" ${type === 'percent' ? 'selected' : ''}>% OFF</option>
-                <option value="flat" ${type === 'flat' ? 'selected' : ''}>₹ OFF</option>
-            </select>
-            <input type="number" placeholder="Val" value="${val}" class="coupon-val-input w-16 bg-transparent border-none text-[10px] font-bold text-luxury-dark outline-none text-right">
-            <button type="button" onclick="this.parentElement.parentElement.remove()" class="text-gray-400 hover:text-red-500 px-2 transition-colors"><i class="fas fa-times text-[10px]"></i></button>
-        </div>
-        <div class="flex gap-2 items-center border-t border-luxury-blush pt-2">
-            <span class="text-[8px] font-bold text-gray-400 uppercase tracking-widest shrink-0">Condition:</span>
-            <select class="coupon-cond-type-input bg-luxury-bg border border-luxury-blush rounded text-[9px] px-1 py-1 outline-none text-luxury-dark flex-1">
-                <option value="none" ${condType === 'none' ? 'selected' : ''}>None</option>
-                <option value="min_spend" ${condType === 'min_spend' ? 'selected' : ''}>Min Spend (₹)</option>
-                <option value="first_order" ${condType === 'first_order' ? 'selected' : ''}>First Order Only</option>
-            </select>
-            <input type="number" placeholder="Cond. Val" value="${condVal}" class="coupon-cond-val-input w-20 bg-luxury-bg border border-luxury-blush rounded text-[9px] px-1 py-1 outline-none text-right">
-        </div>
-    `;
-    container.appendChild(row);
+    document.getElementById('disc-name').value = d.name || '';
+    document.getElementById('disc-type').value = d.type || 'offer';
+    document.getElementById('disc-code').value = d.code || '';
+    document.getElementById('disc-discount-type').value = d.discountType || 'percent';
+    document.getElementById('disc-val').value = d.val || '';
+    document.getElementById('disc-max').value = d.maxDiscount || '';
+    document.getElementById('disc-cond-type').value = d.condType || 'min_spend';
+    document.getElementById('disc-cond-val').value = d.condVal || '';
+    document.getElementById('disc-active').checked = d.isActive !== false;
+    document.getElementById('disc-expiry').value = d.expiry || '';
+    
+    window.th_toggleDiscountFields();
+    
+    const m = document.getElementById('discount-engine-modal');
+    m.classList.remove('hidden'); requestAnimationFrame(() => m.classList.remove('opacity-0'));
+};
+
+window.th_closeDiscountModal = function() {
+    const m = document.getElementById('discount-engine-modal');
+    m.classList.add('opacity-0'); setTimeout(() => m.classList.add('hidden'), 300);
+};
+
+window.th_toggleDiscountFields = function() {
+    const type = document.getElementById('disc-type').value;
+    const dType = document.getElementById('disc-discount-type').value;
+    const cType = document.getElementById('disc-cond-type').value;
+    
+    document.getElementById('wrap-code').style.display = type === 'coupon' ? 'block' : 'none';
+    document.getElementById('wrap-max').style.display = dType === 'percent' ? 'block' : 'none';
+    document.getElementById('wrap-cond-val').style.display = (cType === 'min_spend' || cType === 'min_qty') ? 'block' : 'none';
+};
+
+window.th_saveDiscountRule = function() {
+    const name = document.getElementById('disc-name').value.trim();
+    if (!name) return alert("Name is required.");
+    const val = parseFloat(document.getElementById('disc-val').value) || 0;
+    if (val < 0) return alert("Value cannot be negative.");
+    
+    const obj = {
+        id: Date.now().toString(),
+        name: name,
+        type: document.getElementById('disc-type').value,
+        code: document.getElementById('disc-code').value.trim().toUpperCase(),
+        discountType: document.getElementById('disc-discount-type').value,
+        val: val,
+        maxDiscount: parseFloat(document.getElementById('disc-max').value) || null,
+        condType: document.getElementById('disc-cond-type').value,
+        condVal: parseFloat(document.getElementById('disc-cond-val').value) || 0,
+        isActive: document.getElementById('disc-active').checked,
+        expiry: document.getElementById('disc-expiry').value || null
+    };
+    
+    let arr = []; try { arr = JSON.parse(settings.promoCodes || '[]'); } catch(e){}
+    const idx = parseInt(document.getElementById('disc-index').value);
+    if (idx >= 0) arr[idx] = obj; else arr.push(obj);
+    
+    settings.promoCodes = JSON.stringify(arr);
+    window.th_renderDiscountsList();
+    window.th_closeDiscountModal();
+};
+
+window.th_deleteDiscount = function(index) {
+    if(!confirm("Delete this discount rule?")) return;
+    let arr = []; try { arr = JSON.parse(settings.promoCodes || '[]'); } catch(e){}
+    arr.splice(index, 1);
+    settings.promoCodes = JSON.stringify(arr);
+    window.th_renderDiscountsList();
+};
+
+window.th_renderDiscountsList = function() {
+    const c = document.getElementById('premium-discounts-container');
+    if (!c) return;
+    let arr = []; try { arr = JSON.parse(settings.promoCodes || '[]'); } catch(e){}
+    c.innerHTML = '';
+    
+    if (arr.length === 0) {
+        c.innerHTML = '<p class="text-[9px] text-gray-400 italic">No offers or coupons active.</p>';
+        return;
+    }
+    
+    arr.forEach((d, i) => {
+        const valStr = d.discountType === 'percent' ? `${d.val}%` : `₹${d.val}`;
+        const badge = d.type === 'coupon' ? `<span class="bg-purple-50 text-purple-600 border border-purple-200 px-2 py-0.5 rounded text-[7px] uppercase font-bold">Coupon: ${d.code}</span>` : `<span class="bg-luxury-rose/10 text-luxury-rose border border-luxury-rose/20 px-2 py-0.5 rounded text-[7px] uppercase font-bold">Auto VIP Offer</span>`;
+        const status = d.isActive ? '<i class="fas fa-circle text-green-500 text-[6px]"></i> Active' : '<i class="fas fa-circle text-red-500 text-[6px]"></i> Inactive';
+        
+        c.innerHTML += `
+        <div class="bg-white border border-luxury-blush p-3 rounded-xl shadow-sm flex justify-between items-center hover:border-luxury-rose transition-colors cursor-pointer" onclick="window.th_openDiscountModal(${i})">
+            <div>
+                <div class="flex items-center gap-2 mb-1">
+                    <h4 class="font-bold text-[11px] text-luxury-dark uppercase tracking-widest">${d.name}</h4>
+                    ${badge}
+                </div>
+                <p class="text-[9px] text-gray-500 font-medium">${valStr} OFF | Min Spend: ₹${d.condVal} <span class="ml-2 ${d.isActive ? 'text-green-600' : 'text-red-500'} font-bold">${status}</span></p>
+            </div>
+            <button type="button" onclick="event.stopPropagation(); window.th_deleteDiscount(${i})" class="text-gray-300 hover:text-red-500 w-8 h-8 rounded-full flex items-center justify-center transition-colors"><i class="fas fa-trash text-[10px]"></i></button>
+        </div>`;
+    });
 };
 
 async function fetchRuntimeSettings() {
@@ -117,12 +194,7 @@ async function fetchRuntimeSettings() {
         lines.forEach(l => window.th_addPromoLine(l));
     }
 
-    const codeContainer = document.getElementById('promo-codes-container');
-    if(codeContainer) {
-        codeContainer.innerHTML = ''; let codes = [];
-        try { codes = JSON.parse(settings.promoCodes || '[]'); } catch(e) {}
-        if (Array.isArray(codes)) codes.forEach(c => window.th_addPromoCode(c.code, c.type, c.val, c.condType, c.condVal));
-    }
+    window.th_renderDiscountsList();
 
     if(document.getElementById('admin-wa')) document.getElementById('admin-wa').value = settings.whatsapp || ''; 
     if(document.getElementById('admin-country-code')) document.getElementById('admin-country-code').value = settings.countryCode || '+91'; 
@@ -136,17 +208,8 @@ async function saveSettings(e) {
     const pArray = Array.from(inputs).map(inp => inp.value.trim()).filter(val => val !== "");
     const pStr = JSON.stringify(pArray);
 
-    const cInputs = document.querySelectorAll('.coupon-row');
-    let codesArr = [];
-    cInputs.forEach(row => {
-        let cCode = row.querySelector('.coupon-code-input').value.trim().toUpperCase();
-        let cType = row.querySelector('.coupon-type-input').value;
-        let cVal = row.querySelector('.coupon-val-input').value.trim();
-        let cCondType = row.querySelector('.coupon-cond-type-input').value;
-        let cCondVal = row.querySelector('.coupon-cond-val-input').value.trim();
-        if(cCode && cVal) codesArr.push({code: cCode, type: cType, val: parseFloat(cVal), condType: cCondType, condVal: parseFloat(cCondVal) || 0});
-    });
-    const cStr = JSON.stringify(codesArr);
+    // Using the centralized object for discounts directly from memory
+    const cStr = settings.promoCodes || '[]';
 
     const i = document.getElementById('admin-ig').value.trim(), w = document.getElementById('admin-wa').value.trim(), c = document.getElementById('admin-country-code').value, u = document.getElementById('admin-upi-id').value.trim();
     const payload = { id: 1, promo_text: pStr, promo_codes: cStr, instagram_url: i, whatsapp_num: w, country_code: c, upi_id: u };
