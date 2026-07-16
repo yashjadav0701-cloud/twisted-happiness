@@ -120,8 +120,23 @@ function injectSkeletons() {
 }
 
 function bindDOMEvents() {
+    // 🎀 Emotional "Leaving" Prompt
+    window.addEventListener('beforeunload', function (e) {
+        if (cart.length > 0 || window.buyNowPayload) {
+            const msg = "Wait! Are you sure you want to leave me behind with your beautiful cart? 🥺🎀";
+            e.preventDefault();
+            e.returnValue = msg;
+            return msg;
+        }
+    });
+
     document.addEventListener('keydown', (e) => { if (e.ctrlKey && e.shiftKey && e.key.toLowerCase() === 'k') { e.preventDefault(); window.location.href = '/admin.html'; } });
     document.getElementById('prof-pin')?.addEventListener('input', handlePincodeInput);
+    
+    // Quick enter key submission
+    document.getElementById('searchInputDesk')?.addEventListener('keypress', (e) => { if(e.key === 'Enter') e.target.blur(); });
+    document.getElementById('searchInputMob')?.addEventListener('keypress', (e) => { if(e.key === 'Enter') e.target.blur(); });
+    
     document.getElementById('searchInputDesk')?.addEventListener('input', (e) => syncSearch(e.target.value));
     document.getElementById('searchInputMob')?.addEventListener('input', (e) => syncSearch(e.target.value));
     document.getElementById('sortInputMob')?.addEventListener('change', (e) => setSortMode(e.target.value));
@@ -323,14 +338,44 @@ function calculateEDDBracket(pt) {
     return `Estimated Delivery by ${dt.toLocaleDateString('en-IN', opt)}. Great art takes time! 🎨✨`; 
 }
 
-window.applyCouponCode = function() {
+window.applyCouponCode = async function() {
     const i = document.getElementById('checkout-promo-input'), f = document.getElementById('checkout-promo-feedback'); if(!i || !f) return; const c = i.value.trim().toUpperCase();
+    f.textContent = "Validating..."; f.className = "text-[9px] font-bold uppercase tracking-wide mt-1.5 text-luxury-gold block";
+    
     let validCodes = [];
     try { validCodes = JSON.parse(settings.promoCodes || '[]'); } catch(e) {}
-    
     const matched = validCodes.find(x => x.code === c);
-    if (matched) { activeCouponValue = matched.val; activeCouponCode = matched.code; f.textContent = `${matched.code} applied! Extra ${matched.val}% OFF.`; f.className = "text-[9px] font-bold uppercase tracking-wide mt-1.5 text-green-600 block"; } 
-    else { activeCouponValue = 0; activeCouponCode = ""; f.textContent = "Invalid Coupon Code."; f.className = "text-[9px] font-bold uppercase tracking-wide mt-1.5 text-red-500 block"; }
+    
+    if (matched) { 
+        let isValid = true; let errMsg = "";
+        let ss = 0;
+        const listToRender = window.buyNowPayload ? [window.buyNowPayload] : cart;
+        listToRender.forEach((item) => { ss += (Number(String(item.price || 0).replace(/[^0-9.,]/g, '')) * parseInt(item.qty || 1)); }); 
+
+        if (matched.condType === 'min_spend' && ss < matched.condVal) {
+            isValid = false; errMsg = `Spend ₹${matched.condVal - ss} more to unlock.`;
+        } else if (matched.condType === 'first_order') {
+            if (!currentSessionUser) { isValid = false; errMsg = "Please sign in to verify first purchase."; } 
+            else {
+                try {
+                    const { count } = await _supabase.from('orders').select('*', { count: 'exact', head: true }).eq('user_id', currentSessionUser.id);
+                    if (count > 0) { isValid = false; errMsg = "Valid for first purchase only."; }
+                } catch(e) { isValid = false; errMsg = "Network error validating coupon."; }
+            }
+        }
+        
+        if (isValid) {
+            activeCouponValue = matched.val; activeCouponCode = matched.code; window.activeCouponType = matched.type;
+            f.textContent = `${matched.code} applied! ${matched.type === 'percent' ? matched.val + '% OFF' : '₹' + matched.val + ' OFF'}.`; 
+            f.className = "text-[9px] font-bold uppercase tracking-wide mt-1.5 text-green-600 block";
+        } else {
+            activeCouponValue = 0; activeCouponCode = ""; window.activeCouponType = null;
+            f.textContent = errMsg; f.className = "text-[9px] font-bold uppercase tracking-wide mt-1.5 text-red-500 block";
+        }
+    } else { 
+        activeCouponValue = 0; activeCouponCode = ""; window.activeCouponType = null; 
+        f.textContent = "Invalid Coupon Code."; f.className = "text-[9px] font-bold uppercase tracking-wide mt-1.5 text-red-500 block"; 
+    }
     updateCheckoutUI();
 };
 
@@ -406,17 +451,30 @@ window.openProductPage = async function(id) {
             else document.getElementById('art-badges-container').classList.add('hidden');
         }
 
-        // 4. Images & Carousel Setup
+        // 4. Images & Native Carousel Setup
         modalImages = [p.image1, p.image2, p.image3, p.image4, p.image5].filter(img => img && img.trim() !== '');
         if(modalImages.length === 0) modalImages = ['https://placehold.co/400x500/F8E9EA/423133'];
         
         const tr = document.getElementById('modal-carousel-track');
         if(tr) {
+            tr.className = "flex w-full h-full relative overflow-x-auto scrollbar-hide snap-x snap-mandatory scroll-smooth touch-pan-x";
             tr.innerHTML = '';
-            modalImages.forEach((src) => {
-                tr.innerHTML += `<img loading="lazy" decoding="async" src="${src}" class="w-full h-full flex-shrink-0 object-cover cursor-pointer" onclick="window.openLightboxFromCarousel()">`;
+            modalImages.forEach((src, idx) => {
+                tr.innerHTML += `<img id="slide-${idx}" loading="lazy" decoding="async" src="${src}" class="w-full h-full flex-shrink-0 object-cover cursor-zoom-in snap-center" onclick="window.openLightboxFromCarousel()">`;
             });
-            tr.style.transform = `translateX(0%)`;
+            tr.scrollTo(0, 0);
+            
+            // Native Intersection Observer to highlight thumbnails automatically on swipe
+            const observer = new IntersectionObserver((entries) => {
+                entries.forEach(entry => {
+                    if(entry.isIntersecting) {
+                        const i = parseInt(entry.target.id.split('-')[1]);
+                        currentSlideIndex = i;
+                        updateActiveThumb(i, modalImages.length);
+                    }
+                });
+            }, { root: tr, threshold: 0.6 });
+            setTimeout(() => { document.querySelectorAll('#modal-carousel-track img').forEach(img => observer.observe(img)); }, 100);
         }
         currentSlideIndex = 0;
         
@@ -611,7 +669,11 @@ function updateCheckoutUI() {
     }
     
     const { discount: vd, currentTier: ct, nextTier: nt } = calculateCartDiscount(ss); 
-    let cd = activeCouponValue > 0 ? Math.round(ss * (activeCouponValue / 100)) : 0; 
+    let cd = 0;
+    if (activeCouponValue > 0) {
+        if (window.activeCouponType === 'flat') { cd = activeCouponValue; } 
+        else { cd = Math.round(ss * (activeCouponValue / 100)); }
+    } 
     
     const rc = document.getElementById('qo-coupon-row'); 
     if (rc) { 
@@ -773,8 +835,9 @@ async function renderCustomerOrdersPipeline() {
             const dt = new Date(o.created_at).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' }); 
             let step = 1; let statusText = "Verifying Payment";
             if (o.status === 'curating') { step = 2; statusText = "Artisan is Crafting"; }
-            else if (o.status === 'ready') { step = 3; statusText = "Shipped"; }
-            else if (o.status === 'completed') { step = 4; statusText = "Delivered"; }
+            else if (o.status === 'ready') { step = 3; statusText = "Ready for Dispatch"; }
+            else if (o.status === 'shipped' || o.status === 'dispatched' || o.status === 'out_for_delivery') { step = 3; statusText = "Shipped / In Transit"; }
+            else if (o.status === 'completed' || o.status === 'delivered') { step = 4; statusText = "Delivered"; }
             else if (o.status === 'cancelled') { step = 0; statusText = "Cancelled / Denied"; }
 
             const idm = (o.customer_reqs || '').match(/ID:\s*([^|]+)/); 
@@ -784,7 +847,28 @@ async function renderCustomerOrdersPipeline() {
             try { const items = JSON.parse(o.order_details); items.forEach(i => { itemsHtml += `<img src="${i.image}" class="w-10 h-10 rounded-md object-cover border border-luxury-blush bg-luxury-bg shrink-0" title="${i.name} (x${i.qty})">`; }); } catch(e) {}
 
             let invoiceBtnHtml = '';
-            if (step === 4) {
+            if (step >= 3 && step < 4) {
+                let trackUrl = "#";
+                let awb = "Pending Sync";
+                if (o.tracking_data) {
+                    try {
+                        const t = typeof o.tracking_data === 'string' ? JSON.parse(o.tracking_data) : o.tracking_data;
+                        if (t.awb && t.awb !== 'Pending') { awb = t.awb; trackUrl = `https://shiprocket.co/tracking/${awb}`; }
+                    } catch(e) {}
+                }
+                
+                invoiceBtnHtml = `
+                <div class="mt-4 w-full bg-blue-50/50 border border-blue-100 py-4 px-4 rounded-xl flex flex-col items-center shadow-sm gap-3">
+                    <div class="text-center">
+                        <h5 class="font-bold text-[11px] text-luxury-dark uppercase tracking-widest mb-1"><i class="fas fa-truck-fast mr-1 text-blue-500"></i> ${o.status === 'out_for_delivery' ? 'Out for Delivery' : 'Order Dispatched'}</h5>
+                        <p class="text-[9px] text-gray-500 uppercase tracking-widest">AWB: ${awb}</p>
+                    </div>
+                    ${awb !== 'Pending Sync' 
+                        ? `<a href="${trackUrl}" target="_blank" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold text-[10px] uppercase tracking-widest py-3 rounded-lg shadow-sm transition-colors text-center flex justify-center items-center gap-2"><i class="fas fa-location-arrow"></i> Track Live Status</a>` 
+                        : `<div class="w-full bg-gray-200 text-gray-500 font-bold text-[10px] uppercase tracking-widest py-3 rounded-lg text-center flex justify-center items-center gap-2"><i class="fas fa-spinner fa-spin"></i> Generating Tracking Link...</div>`
+                    }
+                </div>`;
+            } else if (step === 4) {
                 const encodedOrder = encodeURIComponent(JSON.stringify({id: exId, date: dt, items: o.order_details, total: o.total, reqs: o.customer_reqs}));
                 invoiceBtnHtml = `<button type="button" onclick="window.generateGirlyInvoice('${encodedOrder}')" class="mt-4 w-full bg-[#FFF0F2] text-luxury-rose hover:bg-luxury-rose hover:text-white border border-luxury-rose/30 py-3 rounded-xl font-bold text-[10px] uppercase tracking-widest transition-colors shadow-sm flex justify-center items-center gap-2"><i class="fas fa-file-download"></i> Download Official Invoice</button>`;
             } else if (step === 3) {
@@ -882,9 +966,21 @@ async function handleTrackOrderGuest(e) {
 window.openLightboxFromCarousel = function() { currentLightboxIndex = currentSlideIndex; const lb = document.getElementById('lightbox-modal'); const tr = document.getElementById('lightbox-track'); if(!lb || !tr) return; tr.innerHTML = ''; modalImages.forEach((src) => { tr.innerHTML += `<div class="w-full h-full flex-shrink-0 flex items-center justify-center p-2 md:p-8"><img loading="lazy" decoding="async" src="${src}" class="w-full max-h-full object-contain"></div>`; }); tr.style.transition = 'none'; tr.style.transform = `translateX(-${currentLightboxIndex * 100}%)`; document.getElementById('lightbox-counter').textContent = `${currentLightboxIndex + 1} / ${modalImages.length}`; currentModalLevel = 2; window.safePushState(2); lb.classList.remove('hidden'); requestAnimationFrame(() => { lb.classList.remove('opacity-0'); }); setupLightboxTouch(); };
 window.forceCloseLightbox = function() { const lb = document.getElementById('lightbox-modal'); if(!lb) return; requestAnimationFrame(() => { lb.classList.add('opacity-0'); setTimeout(() => { lb.classList.add('hidden'); }, 200); }); };
 window.moveLightboxSlide = function(dir) { if (isLightboxAnimating) return; isLightboxAnimating = true; currentLightboxIndex += dir; if (currentLightboxIndex < 0) currentLightboxIndex = modalImages.length - 1; if (currentLightboxIndex >= modalImages.length) currentLightboxIndex = 0; const tr = document.getElementById('lightbox-track'); if(!tr) return; requestAnimationFrame(() => { tr.style.transition = 'transform 0.4s ease-out'; tr.style.transform = `translateX(-${currentLightboxIndex * 100}%)`; }); document.getElementById('lightbox-counter').textContent = `${currentLightboxIndex + 1} / ${modalImages.length}`; setTimeout(() => { isLightboxAnimating = false; }, 400); };
-function moveSlide(dir) { if (isAnimating) return; isAnimating = true; currentSlideIndex += dir; if (currentSlideIndex < 0) currentSlideIndex = modalImages.length - 1; if (currentSlideIndex >= modalImages.length) currentSlideIndex = 0; const tr = document.getElementById('modal-carousel-track'); if(!tr) return; requestAnimationFrame(() => { tr.style.transition = 'transform 0.4s ease-out'; tr.style.transform = `translateX(-${currentSlideIndex * 100}%)`; }); updateActiveThumb(currentSlideIndex, modalImages.length); setTimeout(() => { isAnimating = false; }, 400); }
-window.goToSlide = function(idx) { if (isAnimating || idx === currentSlideIndex) return; isAnimating = true; currentSlideIndex = idx; const tr = document.getElementById('modal-carousel-track'); if(!tr) return; requestAnimationFrame(() => { tr.style.transition = 'transform 0.4s ease-out'; tr.style.transform = `translateX(-${currentSlideIndex * 100}%)`; }); updateActiveThumb(currentSlideIndex, modalImages.length); setTimeout(() => { isAnimating = false; }, 400); };
-function setupTouchCarousel() { let sX = 0, eX = 0; const tr = document.getElementById('modal-carousel-track'); if(tr) { tr.replaceWith(tr.cloneNode(true)); const nt = document.getElementById('modal-carousel-track'); nt.addEventListener('touchstart', (e) => { sX = e.changedTouches[0].screenX; }, {passive: true}); nt.addEventListener('touchend', (e) => { eX = e.changedTouches[0].screenX; requestAnimationFrame(() => { if (eX < sX - 30) moveSlide(1); else if (eX > sX + 30) moveSlide(-1); }); }, {passive: true}); } }
+function moveSlide(dir) { 
+    currentSlideIndex += dir; 
+    if (currentSlideIndex < 0) currentSlideIndex = 0; // Prevent rewind, behave like Amazon
+    if (currentSlideIndex >= modalImages.length) currentSlideIndex = modalImages.length - 1; 
+    const target = document.getElementById(`slide-${currentSlideIndex}`); 
+    if(target) target.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'center' }); 
+}
+window.goToSlide = function(idx) { 
+    currentSlideIndex = idx; 
+    const target = document.getElementById(`slide-${currentSlideIndex}`); 
+    if(target) target.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'center' }); 
+};
+function setupTouchCarousel() { 
+    // Stripped custom touch math. Browser native snap scrolling handles swiping perfectly now.
+}
 function setupLightboxTouch() { let lsX = 0, leX = 0; const tr = document.getElementById('lightbox-track'); if(tr) { tr.replaceWith(tr.cloneNode(true)); const nt = document.getElementById('lightbox-track'); nt.addEventListener('touchstart', (e) => { lsX = e.changedTouches[0].screenX; }, {passive: true}); nt.addEventListener('touchend', (e) => { leX = e.changedTouches[0].screenX; requestAnimationFrame(() => { if (leX < lsX - 30) window.moveLightboxSlide(1); else if (leX > lsX + 30) window.moveLightboxSlide(-1); }); }, {passive: true}); } }
 function updateActiveThumb(aIdx, tot) { requestAnimationFrame(() => { for(let i = 0; i < tot; i++) { const th = document.getElementById(`thumb-${i}`); if(th) { if(i === aIdx) { th.classList.add('border-luxury-rose', 'scale-105', 'opacity-100'); th.classList.remove('border-transparent', 'opacity-60'); } else { th.classList.remove('border-luxury-rose', 'scale-105', 'opacity-100'); th.classList.add('border-transparent', 'opacity-60'); } } } }); }
 

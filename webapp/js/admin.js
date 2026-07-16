@@ -69,20 +69,31 @@ window.th_addPromoLine = function(text = '') {
     container.appendChild(div);
 };
 
-window.th_addPromoCode = function(code = '', type = 'percent', val = '') {
+window.th_addPromoCode = function(code = '', type = 'percent', val = '', condType = 'none', condVal = '') {
     const container = document.getElementById('promo-codes-container');
     if (!container) return;
     
     const row = document.createElement('div');
-    row.className = "coupon-row flex gap-2 items-center bg-white p-2 rounded-lg border border-luxury-blush shadow-sm";
+    row.className = "coupon-row flex flex-col gap-2 bg-white p-3 rounded-lg border border-luxury-blush shadow-sm";
     row.innerHTML = `
-        <input type="text" placeholder="CODE (e.g. SAVE10)" value="${code}" class="coupon-code-input flex-1 bg-transparent border-none text-[10px] font-bold text-luxury-dark uppercase outline-none placeholder-gray-300">
-        <select class="coupon-type-input bg-luxury-bg border border-luxury-blush rounded text-[9px] px-1 py-1 outline-none text-luxury-dark">
-            <option value="percent" ${type === 'percent' ? 'selected' : ''}>% OFF</option>
-            <option value="flat" ${type === 'flat' ? 'selected' : ''}>₹ OFF</option>
-        </select>
-        <input type="number" placeholder="Val" value="${val}" class="coupon-val-input w-16 bg-transparent border-none text-[10px] font-bold text-luxury-dark outline-none text-right">
-        <button type="button" onclick="this.parentElement.remove()" class="text-gray-400 hover:text-red-500 px-2 transition-colors"><i class="fas fa-times text-[10px]"></i></button>
+        <div class="flex gap-2 items-center">
+            <input type="text" placeholder="CODE (e.g. SAVE10)" value="${code}" class="coupon-code-input flex-1 bg-transparent border-none text-[10px] font-bold text-luxury-dark uppercase outline-none placeholder-gray-300">
+            <select class="coupon-type-input bg-luxury-bg border border-luxury-blush rounded text-[9px] px-1 py-1 outline-none text-luxury-dark">
+                <option value="percent" ${type === 'percent' ? 'selected' : ''}>% OFF</option>
+                <option value="flat" ${type === 'flat' ? 'selected' : ''}>₹ OFF</option>
+            </select>
+            <input type="number" placeholder="Val" value="${val}" class="coupon-val-input w-16 bg-transparent border-none text-[10px] font-bold text-luxury-dark outline-none text-right">
+            <button type="button" onclick="this.parentElement.parentElement.remove()" class="text-gray-400 hover:text-red-500 px-2 transition-colors"><i class="fas fa-times text-[10px]"></i></button>
+        </div>
+        <div class="flex gap-2 items-center border-t border-luxury-blush pt-2">
+            <span class="text-[8px] font-bold text-gray-400 uppercase tracking-widest shrink-0">Condition:</span>
+            <select class="coupon-cond-type-input bg-luxury-bg border border-luxury-blush rounded text-[9px] px-1 py-1 outline-none text-luxury-dark flex-1">
+                <option value="none" ${condType === 'none' ? 'selected' : ''}>None</option>
+                <option value="min_spend" ${condType === 'min_spend' ? 'selected' : ''}>Min Spend (₹)</option>
+                <option value="first_order" ${condType === 'first_order' ? 'selected' : ''}>First Order Only</option>
+            </select>
+            <input type="number" placeholder="Cond. Val" value="${condVal}" class="coupon-cond-val-input w-20 bg-luxury-bg border border-luxury-blush rounded text-[9px] px-1 py-1 outline-none text-right">
+        </div>
     `;
     container.appendChild(row);
 };
@@ -110,7 +121,7 @@ async function fetchRuntimeSettings() {
     if(codeContainer) {
         codeContainer.innerHTML = ''; let codes = [];
         try { codes = JSON.parse(settings.promoCodes || '[]'); } catch(e) {}
-        if (Array.isArray(codes)) codes.forEach(c => window.th_addPromoCode(c.code, c.type, c.val));
+        if (Array.isArray(codes)) codes.forEach(c => window.th_addPromoCode(c.code, c.type, c.val, c.condType, c.condVal));
     }
 
     if(document.getElementById('admin-wa')) document.getElementById('admin-wa').value = settings.whatsapp || ''; 
@@ -131,7 +142,9 @@ async function saveSettings(e) {
         let cCode = row.querySelector('.coupon-code-input').value.trim().toUpperCase();
         let cType = row.querySelector('.coupon-type-input').value;
         let cVal = row.querySelector('.coupon-val-input').value.trim();
-        if(cCode && cVal) codesArr.push({code: cCode, type: cType, val: parseInt(cVal)});
+        let cCondType = row.querySelector('.coupon-cond-type-input').value;
+        let cCondVal = row.querySelector('.coupon-cond-val-input').value.trim();
+        if(cCode && cVal) codesArr.push({code: cCode, type: cType, val: parseFloat(cVal), condType: cCondType, condVal: parseFloat(cCondVal) || 0});
     });
     const cStr = JSON.stringify(codesArr);
 
@@ -391,7 +404,10 @@ function renderActiveOrders() {
             actionButton = `<button type="button" onclick="window.th_markOrderReady('${order.id}')" class="px-5 py-2.5 rounded-full bg-luxury-gold text-white font-bold text-[9px] uppercase tracking-widest hover:bg-white hover:text-luxury-gold shadow-sm"><i class="fas fa-paint-brush mr-2"></i> ✨ Masterpiece Crafted</button>`;
         } else if (order.status === 'ready') {
             statusBadge = `<span class="bg-purple-100 text-purple-700 text-[8px] font-bold uppercase tracking-widest px-2.5 py-1 rounded-md">Awaiting Dispatch</span>`;
-            actionButton = `<button type="button" onclick="window.th_pushToShiprocket('${order.id}', event)" class="px-5 py-2.5 rounded-full bg-[#E0F2FE] text-[#1E3A8A] font-bold text-[9px] uppercase tracking-widest shadow-sm"><i class="fas fa-rocket mr-1.5"></i> Push to Shiprocket</button><button type="button" onclick="window.th_markOrderDelivered('${order.id}')" class="px-5 py-2.5 rounded-full bg-luxury-rose text-white font-bold text-[9px] uppercase tracking-widest shadow-sm"><i class="fas fa-dove mr-2"></i> 🕊️ Delivered</button>`;
+            actionButton = `<button type="button" onclick="window.th_pushToShiprocket('${order.id}', event)" class="px-5 py-2.5 rounded-full bg-[#E0F2FE] text-[#1E3A8A] font-bold text-[9px] uppercase tracking-widest shadow-sm"><i class="fas fa-rocket mr-1.5"></i> Push to Shiprocket</button>`;
+        } else if (order.status === 'shipped') {
+            statusBadge = `<span class="bg-blue-100 text-blue-700 text-[8px] font-bold uppercase tracking-widest px-2.5 py-1 rounded-md">Shipped via Shiprocket</span>`;
+            actionButton = `<span class="text-[10px] text-blue-500 font-bold uppercase tracking-widest"><i class="fas fa-truck-fast"></i> Auto-Syncing Tracking</span>`;
         }
 
         container.innerHTML += `<div class="border border-luxury-blush rounded-xl p-5 bg-luxury-bg shadow-sm relative overflow-hidden group hover:border-luxury-rose/50 transition-colors"><div class="absolute top-0 left-0 w-1.5 h-full ${order.status === 'new' || order.status === 'pending' ? 'bg-yellow-400' : (order.status === 'curating' ? 'bg-luxury-gold' : 'bg-luxury-rose')}"></div><div class="flex justify-between items-start mb-4"><div><h4 class="font-logo font-normal text-xl text-luxury-dark mb-0.5">${customerData.name}</h4><span class="text-[8px] font-bold text-gray-400 uppercase tracking-widest"><i class="far fa-clock mr-1"></i> ${date} | ${customerData.orderId}</span></div>${statusBadge}</div><div class="mb-5">${visualItems}<div class="bg-white border border-luxury-blush p-3 rounded-lg text-gray-500 text-[10px] sm:text-[11px] leading-relaxed font-sans shadow-inner whitespace-pre-wrap">${order.customer_reqs || ''}</div></div><div class="flex flex-col xl:flex-row xl:justify-between xl:items-center border-t border-luxury-blush pt-4 mt-2 gap-4"><div><p class="text-[8px] font-bold text-gray-400 uppercase tracking-widest mb-0.5">Final Invoice Total</p><p class="font-poppins font-extrabold text-luxury-dark text-xl">₹${order.total}</p></div><div class="flex gap-2 w-full xl:w-auto justify-start xl:justify-end flex-wrap">${actionButton}</div></div></div>`;
@@ -423,7 +439,7 @@ window.th_startCrafting = async function(id) {
 };
 
 window.th_markOrderReady = async function(id) { showToast("Updating status...", "fa-spinner fa-spin"); try { await _supabase.from('orders').update({ status: 'ready' }).eq('id', id); showToast("Marked as Curated", "fa-check"); fetchOrders(); } catch(e) { showToast("Error", "fa-times", "text-red-500"); } };
-window.th_markOrderDelivered = async function(id) { showToast("Archiving commission...", "fa-spinner fa-spin"); try { await _supabase.from('orders').update({ status: 'completed' }).eq('id', id); showToast("Commission Archived", "fa-check"); fetchOrders(); } catch(e) { showToast("Error", "fa-times", "text-red-500"); } };
+// Manual mark delivered removed for Shiprocket Webhook Automation
 
 window.th_purgeOrder = async function(id) { 
     if(!confirm("Permanently delete this order? The customer will no longer see it.")) return; 
