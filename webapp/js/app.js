@@ -586,7 +586,7 @@ window.openProductPage = async function(id) {
             tr.className = "flex w-full h-full relative overflow-x-auto scrollbar-hide snap-x snap-mandatory scroll-smooth touch-pan-x";
             tr.innerHTML = '';
             modalImages.forEach((src, idx) => {
-                tr.innerHTML += `<img id="slide-${idx}" loading="lazy" decoding="async" src="${src}" class="w-full h-full flex-shrink-0 object-cover cursor-zoom-in snap-center" onclick="window.openLightboxFromCarousel()">`;
+                tr.innerHTML += `<img id="slide-${idx}" loading="lazy" decoding="async" src="${src}" class="w-full h-full flex-shrink-0 object-cover cursor-zoom-in snap-center snap-always" onclick="window.openLightboxFromCarousel()">`;
             });
             tr.scrollTo(0, 0);
             
@@ -1143,20 +1143,31 @@ async function handleTrackOrderGuest(e) {
 window.openLightboxFromCarousel = function() { currentLightboxIndex = currentSlideIndex; const lb = document.getElementById('lightbox-modal'); const tr = document.getElementById('lightbox-track'); if(!lb || !tr) return; tr.innerHTML = ''; modalImages.forEach((src) => { tr.innerHTML += `<div class="w-full h-full flex-shrink-0 flex items-center justify-center p-2 md:p-8"><img loading="lazy" decoding="async" src="${src}" class="w-full max-h-full object-contain"></div>`; }); tr.style.transition = 'none'; tr.style.transform = `translateX(-${currentLightboxIndex * 100}%)`; document.getElementById('lightbox-counter').textContent = `${currentLightboxIndex + 1} / ${modalImages.length}`; currentModalLevel = 2; window.safePushState(2); lb.classList.remove('hidden'); requestAnimationFrame(() => { lb.classList.remove('opacity-0'); }); setupLightboxTouch(); };
 window.forceCloseLightbox = function() { const lb = document.getElementById('lightbox-modal'); if(!lb) return; requestAnimationFrame(() => { lb.classList.add('opacity-0'); setTimeout(() => { lb.classList.add('hidden'); }, 200); }); };
 window.moveLightboxSlide = function(dir) { if (isLightboxAnimating) return; isLightboxAnimating = true; currentLightboxIndex += dir; if (currentLightboxIndex < 0) currentLightboxIndex = modalImages.length - 1; if (currentLightboxIndex >= modalImages.length) currentLightboxIndex = 0; const tr = document.getElementById('lightbox-track'); if(!tr) return; requestAnimationFrame(() => { tr.style.transition = 'transform 0.4s ease-out'; tr.style.transform = `translateX(-${currentLightboxIndex * 100}%)`; }); document.getElementById('lightbox-counter').textContent = `${currentLightboxIndex + 1} / ${modalImages.length}`; setTimeout(() => { isLightboxAnimating = false; }, 400); };
-function moveSlide(dir) { 
+window.moveSlide = function(dir) { 
     currentSlideIndex += dir; 
-    if (currentSlideIndex < 0) currentSlideIndex = 0; // Prevent rewind, behave like Amazon
-    if (currentSlideIndex >= modalImages.length) currentSlideIndex = modalImages.length - 1; 
+    if (currentSlideIndex < 0) currentSlideIndex = modalImages.length - 1; 
+    if (currentSlideIndex >= modalImages.length) currentSlideIndex = 0; 
     const target = document.getElementById(`slide-${currentSlideIndex}`); 
     if(target) target.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'center' }); 
-}
+};
 window.goToSlide = function(idx) { 
     currentSlideIndex = idx; 
     const target = document.getElementById(`slide-${currentSlideIndex}`); 
     if(target) target.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'center' }); 
 };
 function setupTouchCarousel() { 
-    // Stripped custom touch math. Browser native snap scrolling handles swiping perfectly now.
+    const tr = document.getElementById('modal-carousel-track');
+    if(!tr) return;
+    let tsX = 0, teX = 0;
+    tr.addEventListener('touchstart', (e) => { tsX = e.changedTouches[0].screenX; }, {passive: true});
+    tr.addEventListener('touchend', (e) => { 
+        teX = e.changedTouches[0].screenX; 
+        if (tsX - teX > 40 && currentSlideIndex === modalImages.length - 1) { 
+            window.goToSlide(0); 
+        } else if (teX - tsX > 40 && currentSlideIndex === 0) { 
+            window.goToSlide(modalImages.length - 1); 
+        } 
+    }, {passive: true});
 }
 function setupLightboxTouch() { let lsX = 0, leX = 0; const tr = document.getElementById('lightbox-track'); if(tr) { tr.replaceWith(tr.cloneNode(true)); const nt = document.getElementById('lightbox-track'); nt.addEventListener('touchstart', (e) => { lsX = e.changedTouches[0].screenX; }, {passive: true}); nt.addEventListener('touchend', (e) => { leX = e.changedTouches[0].screenX; requestAnimationFrame(() => { if (leX < lsX - 30) window.moveLightboxSlide(1); else if (leX > lsX + 30) window.moveLightboxSlide(-1); }); }, {passive: true}); } }
 function updateActiveThumb(aIdx, tot) { requestAnimationFrame(() => { for(let i = 0; i < tot; i++) { const th = document.getElementById(`thumb-${i}`); if(th) { if(i === aIdx) { th.classList.add('border-luxury-rose', 'scale-105', 'opacity-100'); th.classList.remove('border-transparent', 'opacity-60'); } else { th.classList.remove('border-luxury-rose', 'scale-105', 'opacity-100'); th.classList.add('border-transparent', 'opacity-60'); } } } }); }
