@@ -577,29 +577,54 @@ window.openProductPage = async function(id) {
             else document.getElementById('art-badges-container').classList.add('hidden');
         }
 
-        // 4. Images & Native Carousel Setup
+        // 4. Images & Native Carousel Setup (Amazon-Style Infinite Loop)
         modalImages = [p.image1, p.image2, p.image3, p.image4, p.image5].filter(img => img && img.trim() !== '');
         if(modalImages.length === 0) modalImages = ['https://placehold.co/400x500/F8E9EA/423133'];
         
         const tr = document.getElementById('modal-carousel-track');
         if(tr) {
-            tr.className = "flex w-full h-full relative overflow-x-auto scrollbar-hide snap-x snap-mandatory scroll-smooth touch-pan-x";
+            tr.className = "flex w-full h-full relative overflow-x-auto scrollbar-hide snap-x snap-mandatory touch-pan-x";
+            tr.style.scrollBehavior = 'smooth';
             tr.innerHTML = '';
+            
+            // Clone the LAST image and put it at the very beginning
+            if (modalImages.length > 1) { tr.innerHTML += `<img id="slide-clone-last" loading="lazy" decoding="async" src="${modalImages[modalImages.length-1]}" class="w-full h-full flex-shrink-0 object-cover cursor-zoom-in snap-center snap-always">`; }
+            
+            // Render actual images (with strict snap-always)
             modalImages.forEach((src, idx) => {
                 tr.innerHTML += `<img id="slide-${idx}" loading="lazy" decoding="async" src="${src}" class="w-full h-full flex-shrink-0 object-cover cursor-zoom-in snap-center snap-always" onclick="window.openLightboxFromCarousel()">`;
             });
-            tr.scrollTo(0, 0);
             
-            // Native Intersection Observer to highlight thumbnails automatically on swipe
+            // Clone the FIRST image and put it at the very end
+            if (modalImages.length > 1) { tr.innerHTML += `<img id="slide-clone-first" loading="lazy" decoding="async" src="${modalImages[0]}" class="w-full h-full flex-shrink-0 object-cover cursor-zoom-in snap-center snap-always">`; }
+            
+            // Jump to the ACTUAL first image immediately on load
+            requestAnimationFrame(() => {
+                tr.style.scrollBehavior = 'auto'; 
+                const realFirst = document.getElementById('slide-0');
+                if (realFirst) tr.scrollLeft = realFirst.offsetLeft;
+                setTimeout(() => { tr.style.scrollBehavior = 'smooth'; }, 50);
+            });
+            
             const observer = new IntersectionObserver((entries) => {
                 entries.forEach(entry => {
                     if(entry.isIntersecting) {
-                        const i = parseInt(entry.target.id.split('-')[1]);
-                        currentSlideIndex = i;
-                        updateActiveThumb(i, modalImages.length);
+                        let targetIdx = -1;
+                        if (entry.target.id === 'slide-clone-first') {
+                            targetIdx = 0;
+                            // Silently teleport from the clone back to the start!
+                            setTimeout(() => { tr.style.scrollBehavior = 'auto'; tr.scrollLeft = document.getElementById('slide-0').offsetLeft; requestAnimationFrame(() => tr.style.scrollBehavior = 'smooth'); }, 150);
+                        } else if (entry.target.id === 'slide-clone-last') {
+                            targetIdx = modalImages.length - 1;
+                            // Silently teleport from the clone back to the end!
+                            setTimeout(() => { tr.style.scrollBehavior = 'auto'; tr.scrollLeft = document.getElementById(`slide-${targetIdx}`).offsetLeft; requestAnimationFrame(() => tr.style.scrollBehavior = 'smooth'); }, 150);
+                        } else {
+                            targetIdx = parseInt(entry.target.id.split('-')[1]);
+                        }
+                        if (targetIdx !== -1) { currentSlideIndex = targetIdx; updateActiveThumb(targetIdx, modalImages.length); }
                     }
                 });
-            }, { root: tr, threshold: 0.6 });
+            }, { root: tr, threshold: 0.85 });
             setTimeout(() => { document.querySelectorAll('#modal-carousel-track img').forEach(img => observer.observe(img)); }, 100);
         }
         currentSlideIndex = 0;
@@ -1144,30 +1169,30 @@ window.openLightboxFromCarousel = function() { currentLightboxIndex = currentSli
 window.forceCloseLightbox = function() { const lb = document.getElementById('lightbox-modal'); if(!lb) return; requestAnimationFrame(() => { lb.classList.add('opacity-0'); setTimeout(() => { lb.classList.add('hidden'); }, 200); }); };
 window.moveLightboxSlide = function(dir) { if (isLightboxAnimating) return; isLightboxAnimating = true; currentLightboxIndex += dir; if (currentLightboxIndex < 0) currentLightboxIndex = modalImages.length - 1; if (currentLightboxIndex >= modalImages.length) currentLightboxIndex = 0; const tr = document.getElementById('lightbox-track'); if(!tr) return; requestAnimationFrame(() => { tr.style.transition = 'transform 0.4s ease-out'; tr.style.transform = `translateX(-${currentLightboxIndex * 100}%)`; }); document.getElementById('lightbox-counter').textContent = `${currentLightboxIndex + 1} / ${modalImages.length}`; setTimeout(() => { isLightboxAnimating = false; }, 400); };
 window.moveSlide = function(dir) { 
-    currentSlideIndex += dir; 
-    if (currentSlideIndex < 0) currentSlideIndex = modalImages.length - 1; 
-    if (currentSlideIndex >= modalImages.length) currentSlideIndex = 0; 
-    const target = document.getElementById(`slide-${currentSlideIndex}`); 
+    let targetId = '';
+    // If clicking left on the first slide, slide smoothly into the clone!
+    if (currentSlideIndex === 0 && dir === -1 && modalImages.length > 1) { targetId = 'slide-clone-last'; } 
+    // If clicking right on the last slide, slide smoothly into the clone!
+    else if (currentSlideIndex === modalImages.length - 1 && dir === 1 && modalImages.length > 1) { targetId = 'slide-clone-first'; } 
+    else { 
+        currentSlideIndex += dir; 
+        if (currentSlideIndex < 0) currentSlideIndex = 0; 
+        if (currentSlideIndex >= modalImages.length) currentSlideIndex = modalImages.length - 1; 
+        targetId = `slide-${currentSlideIndex}`; 
+    }
+    const target = document.getElementById(targetId); 
     if(target) target.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'center' }); 
 };
+
 window.goToSlide = function(idx) { 
     currentSlideIndex = idx; 
     const target = document.getElementById(`slide-${currentSlideIndex}`); 
     if(target) target.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'center' }); 
 };
+
 function setupTouchCarousel() { 
-    const tr = document.getElementById('modal-carousel-track');
-    if(!tr) return;
-    let tsX = 0, teX = 0;
-    tr.addEventListener('touchstart', (e) => { tsX = e.changedTouches[0].screenX; }, {passive: true});
-    tr.addEventListener('touchend', (e) => { 
-        teX = e.changedTouches[0].screenX; 
-        if (tsX - teX > 40 && currentSlideIndex === modalImages.length - 1) { 
-            window.goToSlide(0); 
-        } else if (teX - tsX > 40 && currentSlideIndex === 0) { 
-            window.goToSlide(modalImages.length - 1); 
-        } 
-    }, {passive: true});
+    // The Amazon loop is now handled natively via DOM cloning in openProductPage!
+    // No custom drag math needed.
 }
 function setupLightboxTouch() { let lsX = 0, leX = 0; const tr = document.getElementById('lightbox-track'); if(tr) { tr.replaceWith(tr.cloneNode(true)); const nt = document.getElementById('lightbox-track'); nt.addEventListener('touchstart', (e) => { lsX = e.changedTouches[0].screenX; }, {passive: true}); nt.addEventListener('touchend', (e) => { leX = e.changedTouches[0].screenX; requestAnimationFrame(() => { if (leX < lsX - 30) window.moveLightboxSlide(1); else if (leX > lsX + 30) window.moveLightboxSlide(-1); }); }, {passive: true}); } }
 function updateActiveThumb(aIdx, tot) { requestAnimationFrame(() => { for(let i = 0; i < tot; i++) { const th = document.getElementById(`thumb-${i}`); if(th) { if(i === aIdx) { th.classList.add('border-luxury-rose', 'scale-105', 'opacity-100'); th.classList.remove('border-transparent', 'opacity-60'); } else { th.classList.remove('border-luxury-rose', 'scale-105', 'opacity-100'); th.classList.add('border-transparent', 'opacity-60'); } } } }); }
