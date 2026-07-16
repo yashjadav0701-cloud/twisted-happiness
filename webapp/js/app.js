@@ -37,14 +37,23 @@ document.addEventListener('DOMContentLoaded', initApp);
 
 async function fetchRuntimeSettings() {
     try {
-        const { data } = await _supabase.from('store_config').select('*').limit(1);
-        if(data && data.length > 0) {
-            const cloud = data[0];
-            settings = { promoText: cloud.promo_text, promoCodes: cloud.promo_codes, storeName: cloud.store_name, instagram: cloud.instagram_url, whatsapp: cloud.whatsapp_num, upiId: cloud.upi_id, countryCode: cloud.country_code || "+91" };
+        const { data, error } = await _supabase.rpc('get_public_config');
+        if(data && !error) {
+            const cloud = data;
+            // We stringify public_offers back into promoCodes so the UI's VIP logic works natively, but coupons are completely omitted!
+            settings = { 
+                promoText: cloud.promo_text, 
+                promoCodes: JSON.stringify(cloud.public_offers || []), 
+                storeName: cloud.store_name, 
+                instagram: cloud.instagram_url, 
+                whatsapp: cloud.whatsapp_num, 
+                upiId: cloud.upi_id, 
+                countryCode: cloud.country_code || "+91" 
+            };
             localStorage.setItem('th_settings', JSON.stringify(settings));
-            window.settings = settings; // Keep the window object synced after cloud fetch
+            window.settings = settings; 
         }
-    } catch(e) { console.warn("Local storage fallback active"); }
+    } catch(e) { console.warn("Local storage fallback active", e); }
     applyDynamicSettings(); bindDOMEvents(); injectSkeletons(); fetchDatabase(); setupSocialLinks();
 }
 
@@ -389,39 +398,44 @@ window.applyCouponCode = async function() {
     const i = document.getElementById('checkout-promo-input'), f = document.getElementById('checkout-promo-feedback'); if(!i || !f) return; const c = i.value.trim().toUpperCase();
     f.textContent = "Validating..."; f.className = "text-[9px] font-bold uppercase tracking-wide mt-1.5 text-luxury-gold block";
     
-    let validCodes = [];
-    try { validCodes = JSON.parse(settings.promoCodes || '[]'); } catch(e) {}
-    const matched = validCodes.find(x => x.code === c);
-    
-    if (matched) { 
-        let isValid = true; let errMsg = "";
-        let ss = 0;
-        const listToRender = window.buyNowPayload ? [window.buyNowPayload] : cart;
-        listToRender.forEach((item) => { ss += (Number(String(item.price || 0).replace(/[^0-9.,]/g, '')) * parseInt(item.qty || 1)); }); 
+    if (!c) {
+        activeCouponValue = 0; activeCouponCode = ""; window.activeCouponType = null;
+        f.textContent = "Please enter a code."; f.className = "text-[9px] font-bold uppercase tracking-wide mt-1.5 text-red-500 block";
+        updateCheckoutUI(); return;
+    }
 
-        if (matched.condType === 'min_spend' && ss < matched.condVal) {
-            isValid = false; errMsg = `Spend ₹${matched.condVal - ss} more to unlock.`;
-        } else if (matched.condType === 'first_order') {
-            if (!currentSessionUser) { isValid = false; errMsg = "Please sign in to verify first purchase."; } 
-            else {
-                try {
-                    const { count } = await _supabase.from('orders').select('*', { count: 'exact', head: true }).eq('user_id', currentSessionUser.id);
-                    if (count > 0) { isValid = false; errMsg = "Valid for first purchase only."; }
-                } catch(e) { isValid = false; errMsg = "Network error validating coupon."; }
-            }
-        }
+    let ss = 0;
+    const listToRender = window.buyNowPayload ? [window.buyNowPayload] : cart;
+    listToRender.forEach((item) => { ss += (Number(String(item.price || 0).replace(/[^0-9.,]/g, '')) * parseInt(item.qty || 1)); }); 
+
+    try {
+        // Prepare auth header if user is signed in (needed for first_order logic)
+        const authHeaders = currentSessionUser ? { Authorization: `Bearer ${(await _supabase.auth.getSession()).data.session?.access_token}` } : {};
         
-        if (isValid) {
-            activeCouponValue = matched.val; activeCouponCode = matched.code; window.activeCouponType = matched.type;
-            f.textContent = `${matched.code} applied! ${matched.type === 'percent' ? matched.val + '% OFF' : '₹' + matched.val + ' OFF'}.`; 
+        const { data, error } = await _supabase.functions.invoke('validate-coupon', {
+            body: { couponCode: c, subtotal: ss },
+            headers: authHeaders
+        });
+
+        if (error) throw error;
+        if (data && data.error) throw new Error(data.error);
+
+        if (data && data.valid) {
+            activeCouponValue = data.discountValue; 
+            activeCouponCode = data.code; 
+            window.activeCouponType = data.type; 
+            f.textContent = `${data.code} applied! ${data.type === 'percent' ? data.val + '% OFF' : '₹' + data.val + ' OFF'}.`; 
             f.className = "text-[9px] font-bold uppercase tracking-wide mt-1.5 text-green-600 block";
         } else {
             activeCouponValue = 0; activeCouponCode = ""; window.activeCouponType = null;
-            f.textContent = errMsg; f.className = "text-[9px] font-bold uppercase tracking-wide mt-1.5 text-red-500 block";
+            f.textContent = data?.message || "Invalid Coupon Code."; 
+            f.className = "text-[9px] font-bold uppercase tracking-wide mt-1.5 text-red-500 block";
         }
-    } else { 
-        activeCouponValue = 0; activeCouponCode = ""; window.activeCouponType = null; 
-        f.textContent = "Invalid Coupon Code."; f.className = "text-[9px] font-bold uppercase tracking-wide mt-1.5 text-red-500 block"; 
+    } catch (err) {
+        console.error("Coupon Error:", err);
+        activeCouponValue = 0; activeCouponCode = ""; window.activeCouponType = null;
+        f.textContent = err.message || "Error validating coupon."; 
+        f.className = "text-[9px] font-bold uppercase tracking-wide mt-1.5 text-red-500 block";
     }
     updateCheckoutUI();
 };
@@ -871,18 +885,49 @@ const scc = (settings.countryCode || '+91'), fcp = scc + " " + rawPhone; let fa 
 };
 
 window.confirmPaymentAndOrder = async function() {
-    if(!pendingOrderPayload) return; const b = document.getElementById('btn-confirm-payment'); if(b) { b.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Securing Order...'; b.disabled = true; }
+    if(!pendingOrderPayload) return; 
+    const b = document.getElementById('btn-confirm-payment'); 
+    if(b) { b.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Securing Order...'; b.disabled = true; }
+    
+    const listToRender = window.buyNowPayload ? [window.buyNowPayload] : cart;
+    const itemsToProcess = listToRender.map(i => ({ id: i.id, qty: i.qty }));
+    const currentAddress = savedAddresses[selectedAddressIndex];
+    
+    // Extract raw non-financial details to allow the backend to build the order strictly
+    const commType = document.getElementById('comm-type') ? document.getElementById('comm-type').value : 'Standard Order';
+    const commColors = document.getElementById('comm-colors') ? document.getElementById('comm-colors').value.trim() : 'No notes';
+    const dims = document.getElementById('comm-dimensions') ? document.getElementById('comm-dimensions').value.trim() : '';
+    const giftNote = document.getElementById('is-gift-toggle')?.checked ? document.getElementById('comm-gift-note').value.trim() : '';
+    
+    const securePayload = {
+        items: itemsToProcess,
+        address: currentAddress,
+        orderReference: currentOrderReference,
+        couponCode: typeof activeCouponCode !== 'undefined' ? activeCouponCode : '',
+        notes: { type: commType, colors: commColors, dimensions: dims, gift: giftNote }
+    };
+
     try {
-        const { error } = await _supabase.from('orders').insert([pendingOrderPayload]);
+        const { data, error } = await _supabase.functions.invoke('create-order', {
+            body: securePayload
+        });
+        
         if (error) throw error;
-        document.getElementById('payment-gateway-view')?.classList.add('hidden'); document.getElementById('payment-gateway-view')?.classList.remove('flex'); if(document.getElementById('success-ref-note')) document.getElementById('success-ref-note').textContent = currentOrderReference; document.getElementById('payment-success-view')?.classList.remove('hidden'); document.getElementById('payment-success-view')?.classList.add('flex');
+        if (data && data.error) throw new Error(data.error);
+
+        document.getElementById('payment-gateway-view')?.classList.add('hidden'); 
+        document.getElementById('payment-gateway-view')?.classList.remove('flex'); 
+        if(document.getElementById('success-ref-note')) document.getElementById('success-ref-note').textContent = currentOrderReference; 
+        document.getElementById('payment-success-view')?.classList.remove('hidden'); 
+        document.getElementById('payment-success-view')?.classList.add('flex');
         
         if (!window.buyNowPayload) {
             cart = []; localStorage.setItem('th_cart', JSON.stringify(cart)); updateCartCount(); 
         }
         window.buyNowPayload = null;
     } catch(err) {
-        window.showToast("Error Securing Order", "fa-times", "text-red-500");
+        console.error("Order Error:", err);
+        window.showToast(err.message || "Error Securing Order", "fa-times", "text-red-500");
         if(b) { b.innerHTML = 'I Have Completed Payment <i class="fas fa-check-circle"></i>'; b.disabled = false; }
     }
 };
@@ -1118,9 +1163,28 @@ document.getElementById('review-form')?.addEventListener('submit', function(e) {
 });
 
 window.th_submitReview = async function(pid, rating, comment) {
-    const { error } = await _supabase.from('reviews').insert([{ product_id: pid, user_id: currentSessionUser.id, rating: rating, comment: comment }]);
-    if(error) window.showToast("Failed to post review", "fa-times", "text-red-500");
-    else window.showToast("Review Posted!", "fa-star", "text-luxury-gold");
+    if (!currentSessionUser) {
+        window.showToast("Please sign in to leave a review.", "fa-user-lock", "text-luxury-rose");
+        return;
+    }
+
+    try {
+        const { error } = await _supabase.from('reviews').insert([{ 
+            product_id: pid, 
+            user_id: currentSessionUser.id, 
+            rating: parseInt(rating), 
+            comment: comment.trim() 
+        }]);
+        
+        if (error) {
+            console.error("Review Security Rejection:", error);
+            window.showToast("Failed to verify qualifying purchase.", "fa-times", "text-red-500");
+        } else {
+            window.showToast("Review Posted!", "fa-star", "text-luxury-gold");
+        }
+    } catch(err) {
+        window.showToast("Network error submitting review.", "fa-wifi", "text-red-500");
+    }
 };
 
 window.generateGirlyInvoice = function(encodedOrder) {
