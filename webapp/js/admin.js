@@ -33,13 +33,14 @@ function populateCountryCodes() {
 
 async function checkSession() {
     const { data: { session } } = await _supabase.auth.getSession();
-    if (session) unlockDashboard(); else document.getElementById('login-view').classList.remove('hidden');
+    if (session) { const { data } = await _supabase.from('store_config').select('id').limit(1); if (data && data.length > 0) return unlockDashboard(); else await _supabase.auth.signOut(); } 
+    document.getElementById('login-view').classList.remove('hidden');
 }
 
 async function attemptLogin(e) { 
     e.preventDefault(); const email = document.getElementById('admin-user').value.trim(), pass = document.getElementById('admin-pass').value.trim(), btn = document.getElementById('login-btn'); 
     if(!email || !pass) return; btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Verifying...'; btn.disabled = true; 
-    try { const { data, error } = await _supabase.auth.signInWithPassword({ email: email, password: pass }); if (error) throw error; if (data.session) unlockDashboard(); } 
+    try { const { data, error } = await _supabase.auth.signInWithPassword({ email: email, password: pass }); if (error) throw error; if (data.session) { const { data: chk } = await _supabase.from('store_config').select('id').limit(1); if (chk && chk.length > 0) return unlockDashboard(); else { await _supabase.auth.signOut(); throw new Error("Unauthorized"); } } } 
     catch (err) { alert("Access Denied: Check your credentials."); btn.innerHTML = 'Enter Studio'; btn.disabled = false; }
 }
 
@@ -333,7 +334,7 @@ window.th_removeSelectedImage = function(index, event) { event.stopPropagation()
 async function saveProduct(e) { 
     e.preventDefault();
     const btn = document.getElementById('btn-save-product'), name = document.getElementById('p-name').value; 
-    if(!editModeId && selectedFilesData.length === 0) return alert("Provide at least one image."); 
+    if(selectedFilesData.length === 0) return alert("Provide at least one image."); 
     btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Uploading...'; btn.disabled = true; 
     if (mainImageIndex !== 0 && selectedFilesData.length > 1) { const mainImg = selectedFilesData.splice(mainImageIndex, 1)[0]; selectedFilesData.unshift(mainImg); }
 

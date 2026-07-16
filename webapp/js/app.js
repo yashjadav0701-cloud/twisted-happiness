@@ -281,14 +281,7 @@ window.th_updateUserProfile = async function(e) {
     btn.innerHTML = 'Update'; btn.disabled = false;
 };
 
-window.th_saveProfileAddress = async function(e) {
-    e.preventDefault();
-    const a = { first_name: document.getElementById('padd-fname').value.trim(), last_name: document.getElementById('padd-lname').value.trim(), phone: document.getElementById('padd-phone').value.trim(), address_1: document.getElementById('padd-add1').value.trim(), address_2: document.getElementById('padd-add2').value.trim(), city: document.getElementById('padd-city').value.trim(), state: document.getElementById('padd-state').value.trim(), pincode: document.getElementById('padd-pin').value.trim(), user_id: currentSessionUser.id };
-    showInteractionLoader("Saving Address...");
-    try { await _supabase.from('addresses').insert([a]); await syncCloudAddresses(); document.getElementById('profile-add-address-form').reset(); document.getElementById('profile-add-address-form').classList.add('hidden'); window.showToast("Address Saved", "fa-check"); } 
-    catch (err) { window.showToast("Failed to save", "fa-times", "text-red-500"); }
-    hideInteractionLoader();
-};
+
 
 window.th_editProfileAddress = function(i) {
     editingAddressIndex = i; const a = savedAddresses[i];
@@ -326,7 +319,9 @@ window.th_deleteAddress = async function(addressId) {
     if(!confirm("Delete this saved address?")) return;
     showInteractionLoader("Deleting...");
     try {
-        await _supabase.from('addresses').delete().eq('id', addressId);
+        if (!currentSessionUser) throw new Error("Unauthorized");
+        const { error } = await _supabase.from('addresses').delete().eq('id', addressId).eq('user_id', currentSessionUser.id);
+        if (error) throw error;
         await syncCloudAddresses();
         renderProfileAddressBook();
         window.showToast("Address deleted", "fa-trash");
@@ -334,6 +329,76 @@ window.th_deleteAddress = async function(addressId) {
         window.showToast("Error deleting address", "fa-times", "text-red-500");
     }
     hideInteractionLoader();
+};
+
+window.th_saveProfileAddress = async function(e) {
+    if(e) e.preventDefault();
+    const a = { first_name: document.getElementById('padd-fname').value.trim(), last_name: document.getElementById('padd-lname').value.trim(), email: currentSessionUser ? currentSessionUser.email : '', phone: document.getElementById('padd-phone').value.trim(), address_1: document.getElementById('padd-add1').value.trim(), address_2: document.getElementById('padd-add2').value.trim(), city: document.getElementById('padd-city').value.trim(), state: document.getElementById('padd-state').value.trim(), pincode: document.getElementById('padd-pin').value.trim() };
+    if(!a.first_name || !a.phone || !a.address_1 || !a.city || !a.pincode) { window.showToast("Please fill all required fields", "fa-exclamation-circle", "text-red-500"); return false; }
+    showInteractionLoader("Saving Address...");
+    if (currentSessionUser) { try { a.user_id = currentSessionUser.id; let err; if (editingAddressIndex !== null) { const { error } = await _supabase.from('addresses').update(a).eq('id', savedAddresses[editingAddressIndex].id).eq('user_id', currentSessionUser.id); err = error; } else { const { error } = await _supabase.from('addresses').insert([a]); err = error; } if (err) throw err; await syncCloudAddresses(); renderProfileAddressBook(); } catch (err) { alert("Failed to save address: " + err.message); hideInteractionLoader(); return false; } } 
+    else { if (editingAddressIndex !== null) { savedAddresses[editingAddressIndex] = a; } else { savedAddresses.push(a); } localStorage.setItem('th_saved_addresses', JSON.stringify(savedAddresses)); renderProfileAddressBook(); }
+    editingAddressIndex = null; document.getElementById('profile-add-address-form').reset(); document.getElementById('profile-add-address-form').classList.add('hidden'); hideInteractionLoader(); window.showToast("Address Saved", "fa-check"); return true;
+};
+
+window.th_saveProfileAddress = async function(e) {
+    if(e) e.preventDefault();
+    const a = { first_name: document.getElementById('padd-fname').value.trim(), last_name: document.getElementById('padd-lname').value.trim(), email: currentSessionUser ? currentSessionUser.email : '', phone: document.getElementById('padd-phone').value.trim(), address_1: document.getElementById('padd-add1').value.trim(), address_2: document.getElementById('padd-add2').value.trim(), city: document.getElementById('padd-city').value.trim(), state: document.getElementById('padd-state').value.trim(), pincode: document.getElementById('padd-pin').value.trim() };
+    if(!a.first_name || !a.phone || !a.address_1 || !a.city || !a.pincode) { window.showToast("Please fill all required fields", "fa-exclamation-circle", "text-red-500"); return false; }
+    showInteractionLoader("Saving Address...");
+    if (currentSessionUser) { try { a.user_id = currentSessionUser.id; let err; if (editingAddressIndex !== null) { const { error } = await _supabase.from('addresses').update(a).eq('id', savedAddresses[editingAddressIndex].id).eq('user_id', currentSessionUser.id); err = error; } else { const { error } = await _supabase.from('addresses').insert([a]); err = error; } if (err) throw err; await syncCloudAddresses(); renderProfileAddressBook(); } catch (err) { alert("Failed to save address: " + err.message); hideInteractionLoader(); return false; } } 
+    else { if (editingAddressIndex !== null) { savedAddresses[editingAddressIndex] = a; } else { savedAddresses.push(a); } localStorage.setItem('th_saved_addresses', JSON.stringify(savedAddresses)); renderProfileAddressBook(); }
+    editingAddressIndex = null; document.getElementById('profile-add-address-form').reset(); document.getElementById('profile-add-address-form').classList.add('hidden'); hideInteractionLoader(); window.showToast("Address Saved", "fa-check"); return true;
+};
+
+window.th_saveProfileAddress = async function(e) {
+    if(e) e.preventDefault();
+    const a = { first_name: document.getElementById('padd-fname').value.trim(), last_name: document.getElementById('padd-lname').value.trim(), email: currentSessionUser ? currentSessionUser.email : '', phone: document.getElementById('padd-phone').value.trim(), address_1: document.getElementById('padd-add1').value.trim(), address_2: document.getElementById('padd-add2').value.trim(), city: document.getElementById('padd-city').value.trim(), state: document.getElementById('padd-state').value.trim(), pincode: document.getElementById('padd-pin').value.trim() };
+    if(!a.first_name || !a.phone || !a.address_1 || !a.city || !a.pincode) { window.showToast("Please fill all required fields", "fa-exclamation-circle", "text-red-500"); return false; }
+    showInteractionLoader("Saving Address...");
+    if (currentSessionUser) { try { a.user_id = currentSessionUser.id; let err; if (editingAddressIndex !== null) { const { error } = await _supabase.from('addresses').update(a).eq('id', savedAddresses[editingAddressIndex].id).eq('user_id', currentSessionUser.id); err = error; } else { const { error } = await _supabase.from('addresses').insert([a]); err = error; } if (err) throw err; await syncCloudAddresses(); renderProfileAddressBook(); } catch (err) { alert("Failed to save address: " + err.message); hideInteractionLoader(); return false; } } 
+    else { if (editingAddressIndex !== null) { savedAddresses[editingAddressIndex] = a; } else { savedAddresses.push(a); } localStorage.setItem('th_saved_addresses', JSON.stringify(savedAddresses)); renderProfileAddressBook(); }
+    editingAddressIndex = null; document.getElementById('profile-add-address-form').reset(); document.getElementById('profile-add-address-form').classList.add('hidden'); hideInteractionLoader(); window.showToast("Address Saved", "fa-check"); return true;
+};
+
+window.th_saveProfileAddress = async function(e) {
+    if(e) e.preventDefault();
+    const a = { first_name: document.getElementById('padd-fname').value.trim(), last_name: document.getElementById('padd-lname').value.trim(), email: currentSessionUser ? currentSessionUser.email : '', phone: document.getElementById('padd-phone').value.trim(), address_1: document.getElementById('padd-add1').value.trim(), address_2: document.getElementById('padd-add2').value.trim(), city: document.getElementById('padd-city').value.trim(), state: document.getElementById('padd-state').value.trim(), pincode: document.getElementById('padd-pin').value.trim() };
+    if(!a.first_name || !a.phone || !a.address_1 || !a.city || !a.pincode) { window.showToast("Please fill all required fields", "fa-exclamation-circle", "text-red-500"); return false; }
+    showInteractionLoader("Saving Address...");
+    if (currentSessionUser) { try { a.user_id = currentSessionUser.id; let err; if (editingAddressIndex !== null) { const { error } = await _supabase.from('addresses').update(a).eq('id', savedAddresses[editingAddressIndex].id).eq('user_id', currentSessionUser.id); err = error; } else { const { error } = await _supabase.from('addresses').insert([a]); err = error; } if (err) throw err; await syncCloudAddresses(); renderProfileAddressBook(); } catch (err) { alert("Failed to save address: " + err.message); hideInteractionLoader(); return false; } } 
+    else { if (editingAddressIndex !== null) { savedAddresses[editingAddressIndex] = a; } else { savedAddresses.push(a); } localStorage.setItem('th_saved_addresses', JSON.stringify(savedAddresses)); renderProfileAddressBook(); }
+    editingAddressIndex = null; document.getElementById('profile-add-address-form').reset(); document.getElementById('profile-add-address-form').classList.add('hidden'); hideInteractionLoader(); window.showToast("Address Saved", "fa-check"); return true;
+};
+
+window.th_saveProfileAddress = async function(e) {
+    if(e) e.preventDefault();
+    const a = { first_name: document.getElementById('padd-fname').value.trim(), last_name: document.getElementById('padd-lname').value.trim(), email: currentSessionUser ? currentSessionUser.email : '', phone: document.getElementById('padd-phone').value.trim(), address_1: document.getElementById('padd-add1').value.trim(), address_2: document.getElementById('padd-add2').value.trim(), city: document.getElementById('padd-city').value.trim(), state: document.getElementById('padd-state').value.trim(), pincode: document.getElementById('padd-pin').value.trim() };
+    if(!a.first_name || !a.phone || !a.address_1 || !a.city || !a.pincode) { window.showToast("Please fill all required fields", "fa-exclamation-circle", "text-red-500"); return false; }
+    showInteractionLoader("Saving Address...");
+    if (currentSessionUser) { try { a.user_id = currentSessionUser.id; let err; if (editingAddressIndex !== null) { const { error } = await _supabase.from('addresses').update(a).eq('id', savedAddresses[editingAddressIndex].id).eq('user_id', currentSessionUser.id); err = error; } else { const { error } = await _supabase.from('addresses').insert([a]); err = error; } if (err) throw err; await syncCloudAddresses(); renderProfileAddressBook(); } catch (err) { alert("Failed to save address: " + err.message); hideInteractionLoader(); return false; } } 
+    else { if (editingAddressIndex !== null) { savedAddresses[editingAddressIndex] = a; } else { savedAddresses.push(a); } localStorage.setItem('th_saved_addresses', JSON.stringify(savedAddresses)); renderProfileAddressBook(); }
+    editingAddressIndex = null; document.getElementById('profile-add-address-form').reset(); document.getElementById('profile-add-address-form').classList.add('hidden'); hideInteractionLoader(); window.showToast("Address Saved", "fa-check"); return true;
+};
+
+window.th_saveProfileAddress = async function(e) {
+    if(e) e.preventDefault();
+    const a = { first_name: document.getElementById('padd-fname').value.trim(), last_name: document.getElementById('padd-lname').value.trim(), email: currentSessionUser ? currentSessionUser.email : '', phone: document.getElementById('padd-phone').value.trim(), address_1: document.getElementById('padd-add1').value.trim(), address_2: document.getElementById('padd-add2').value.trim(), city: document.getElementById('padd-city').value.trim(), state: document.getElementById('padd-state').value.trim(), pincode: document.getElementById('padd-pin').value.trim() };
+    if(!a.first_name || !a.phone || !a.address_1 || !a.city || !a.pincode) { window.showToast("Please fill all required fields", "fa-exclamation-circle", "text-red-500"); return false; }
+    showInteractionLoader("Saving Address...");
+    if (currentSessionUser) { try { a.user_id = currentSessionUser.id; let err; if (editingAddressIndex !== null) { const { error } = await _supabase.from('addresses').update(a).eq('id', savedAddresses[editingAddressIndex].id).eq('user_id', currentSessionUser.id); err = error; } else { const { error } = await _supabase.from('addresses').insert([a]); err = error; } if (err) throw err; await syncCloudAddresses(); renderProfileAddressBook(); } catch (err) { alert("Failed to save address: " + err.message); hideInteractionLoader(); return false; } } 
+    else { if (editingAddressIndex !== null) { savedAddresses[editingAddressIndex] = a; } else { savedAddresses.push(a); } localStorage.setItem('th_saved_addresses', JSON.stringify(savedAddresses)); renderProfileAddressBook(); }
+    editingAddressIndex = null; document.getElementById('profile-add-address-form').reset(); document.getElementById('profile-add-address-form').classList.add('hidden'); hideInteractionLoader(); window.showToast("Address Saved", "fa-check"); return true;
+};
+
+window.th_saveProfileAddress = async function(e) {
+    if(e) e.preventDefault();
+    const a = { first_name: document.getElementById('padd-fname').value.trim(), last_name: document.getElementById('padd-lname').value.trim(), email: currentSessionUser ? currentSessionUser.email : '', phone: document.getElementById('padd-phone').value.trim(), address_1: document.getElementById('padd-add1').value.trim(), address_2: document.getElementById('padd-add2').value.trim(), city: document.getElementById('padd-city').value.trim(), state: document.getElementById('padd-state').value.trim(), pincode: document.getElementById('padd-pin').value.trim() };
+    if(!a.first_name || !a.phone || !a.address_1 || !a.city || !a.pincode) { window.showToast("Please fill all required fields", "fa-exclamation-circle", "text-red-500"); return false; }
+    showInteractionLoader("Saving Address...");
+    if (currentSessionUser) { try { a.user_id = currentSessionUser.id; let err; if (editingAddressIndex !== null) { const { error } = await _supabase.from('addresses').update(a).eq('id', savedAddresses[editingAddressIndex].id).eq('user_id', currentSessionUser.id); err = error; } else { const { error } = await _supabase.from('addresses').insert([a]); err = error; } if (err) throw err; await syncCloudAddresses(); renderProfileAddressBook(); } catch (err) { alert("Failed to save address: " + err.message); hideInteractionLoader(); return false; } } 
+    else { if (editingAddressIndex !== null) { savedAddresses[editingAddressIndex] = a; } else { savedAddresses.push(a); } localStorage.setItem('th_saved_addresses', JSON.stringify(savedAddresses)); renderProfileAddressBook(); }
+    editingAddressIndex = null; document.getElementById('profile-add-address-form').reset(); document.getElementById('profile-add-address-form').classList.add('hidden'); hideInteractionLoader(); window.showToast("Address Saved", "fa-check"); return true;
 };
 
 window.closeCustomerProfile = function() { const o = document.getElementById('customer-profile-overlay'); requestAnimationFrame(() => { o.classList.remove('opacity-100'); o.classList.add('opacity-0'); setTimeout(() => { o.classList.add('hidden'); document.body.classList.remove('overflow-hidden'); }, 300); }); };
@@ -442,7 +507,7 @@ window.applyCouponCode = async function() {
 
 function fetchDatabase() { 
     _supabase.from('creations').select('*').order('created_at', { ascending: false }).then(({data, error}) => {
-        if(error) { dismissPreloader(); return; }
+        if(error) { const pg = document.getElementById('product-grid'); if(pg) { pg.innerHTML = '<div class="col-span-full text-center py-20 text-red-500 font-medium text-sm w-full"><i class="fas fa-wifi text-4xl block mb-3 opacity-50"></i> Unable to load collection. Please check your connection and try again.</div>'; } dismissPreloader(); return; }
         const getImg = (arr, idx) => (arr && arr.length > idx) ? (arr[idx].data || arr[idx] || '') : '';
         products = (data || []).map(r => { let pi = []; try { pi = typeof r.image_url === 'string' ? JSON.parse(r.image_url) : (r.image_url || []); } catch(e) {}
             return { id: r.id, name: r.name || 'Untitled Art', category: r.category || '', mainCategory: r.main_category || 'Pipe Cleaner Crafts', price: r.price || 0, prepTime: r.prep_time || '3-5', specs: r.specs || '', dimensions: r.dimensions || '', isCustomizable: r.is_customizable || false, image1: getImg(pi, 0), image2: getImg(pi, 1), image3: getImg(pi, 2), image4: getImg(pi, 3), image5: getImg(pi, 4) };
@@ -628,6 +693,7 @@ window.openCheckoutBase = function() {
 
 window.closeCheckout = function() {
     const o = document.getElementById('checkout-overlay'); if(!o) return;
+    activeCouponValue = 0; activeCouponCode = ""; window.activeCouponType = null; const pi = document.getElementById('checkout-promo-input'); if(pi) pi.value = ''; const pf = document.getElementById('checkout-promo-feedback'); if(pf) { pf.textContent = ''; pf.classList.add('hidden'); }
     requestAnimationFrame(() => { o.classList.remove('opacity-100'); o.classList.add('opacity-0'); setTimeout(() => { o.classList.add('hidden'); if(document.getElementById('return-policy-modal')?.classList.contains('hidden') && document.getElementById('privacy-policy-modal')?.classList.contains('hidden')){ document.body.classList.remove('overflow-hidden'); } pendingOrderPayload = null; window.buyNowPayload = null; renderProducts(currentSearchQuery); }, 300); });
 };
 
@@ -676,7 +742,7 @@ window.saveAddressFromForm = async function(e) {
     const a = { first_name: document.getElementById('prof-fname').value.trim(), last_name: document.getElementById('prof-lname').value.trim(), email: document.getElementById('prof-email').value.trim(), phone: document.getElementById('prof-phone').value.trim(), address_1: document.getElementById('prof-add1').value.trim(), address_2: document.getElementById('prof-add2').value.trim(), city: document.getElementById('prof-city').value.trim(), state: document.getElementById('prof-state').value.trim(), pincode: document.getElementById('prof-pin').value.trim() };
     if(!a.first_name || !a.phone || !a.address_1 || !a.city || !a.pincode) { window.showToast("Please fill all required fields", "fa-exclamation-circle", "text-red-500"); return false; }
     showInteractionLoader("Saving Address...");
-    if (currentSessionUser) { try { a.user_id = currentSessionUser.id; if (editingAddressIndex !== null) await _supabase.from('addresses').update(a).eq('id', savedAddresses[editingAddressIndex].id); else await _supabase.from('addresses').insert([a]); await syncCloudAddresses(); } catch (e) { alert("Failed to save address: " + e.message); hideInteractionLoader(); return false; } } 
+    if (currentSessionUser) { try { a.user_id = currentSessionUser.id; let err; if (editingAddressIndex !== null) { const { error } = await _supabase.from('addresses').update(a).eq('id', savedAddresses[editingAddressIndex].id).eq('user_id', currentSessionUser.id); err = error; } else { const { error } = await _supabase.from('addresses').insert([a]); err = error; } if (err) throw err; await syncCloudAddresses(); } catch (e) { alert("Failed to save address: " + e.message); hideInteractionLoader(); return false; } } 
     else { if (editingAddressIndex !== null) { savedAddresses[editingAddressIndex] = a; selectedAddressIndex = editingAddressIndex; } else { savedAddresses.push(a); selectedAddressIndex = savedAddresses.length - 1; } localStorage.setItem('th_saved_addresses', JSON.stringify(savedAddresses)); }
     editingAddressIndex = null; renderAddressBook(); hideInteractionLoader(); window.showToast("Address Saved", "fa-check"); return true;
 };
@@ -735,6 +801,7 @@ function updateCheckoutUI() {
     if (activeCouponValue > 0) {
         if (window.activeCouponType === 'flat') { cd = activeCouponValue; } 
         else { cd = Math.round(ss * (activeCouponValue / 100)); }
+        if (cd > ss) { cd = 0; activeCouponValue = 0; activeCouponCode = ""; window.activeCouponType = null; const f = document.getElementById('checkout-promo-feedback'); if(f) { f.textContent = "Coupon removed (subtotal too low)."; f.className = "text-[9px] font-bold uppercase tracking-wide mt-1.5 text-red-500 block"; } const pi = document.getElementById('checkout-promo-input'); if(pi) pi.value = ''; }
     } 
     
     const rc = document.getElementById('qo-coupon-row'); 
@@ -751,7 +818,7 @@ function updateCheckoutUI() {
     
     const vr = document.getElementById('qo-vip-row'); 
     if(vr) { 
-        if(vd > 0) { document.getElementById('qo-vip-label').textContent = ct.label; document.getElementById('qo-vip-discount').textContent = `- ₹${vd}`; vr.classList.remove('hidden'); } 
+        if(vd > 0) { document.getElementById('qo-vip-label').textContent = ct.name; document.getElementById('qo-vip-discount').textContent = `- ₹${vd}`; vr.classList.remove('hidden'); } 
         else { vr.classList.add('hidden'); } 
     }
     
@@ -814,15 +881,23 @@ function updateCheckoutUI() {
     }
     
     if(db) { 
-        if(checkoutStep === 1) { db.innerHTML = `Next: Delivery <i class="fas fa-arrow-right ml-1"></i>`; db.disabled = isCartEmpty; db.className=`hidden lg:flex w-full bg-luxury-dark text-white hover:bg-[#D9778A] py-4 rounded-xl font-bold text-[11px] uppercase tracking-[0.15em] transition-all shadow-float items-center justify-center gap-2 mt-2 ${isCartEmpty?'opacity-50 cursor-not-allowed':''}`; } 
-        else if (checkoutStep === 2) { db.innerHTML = `Next: Secure Payment <i class="fas fa-lock ml-1"></i>`; db.disabled = false; db.className="hidden lg:flex w-full bg-luxury-dark text-white hover:bg-[#D9778A] py-4 rounded-xl font-bold text-[11px] uppercase tracking-[0.15em] transition-all shadow-float items-center justify-center gap-2 mt-2"; } 
-        else if (checkoutStep === 3) { db.className = "hidden"; }
-    }
-    
-    if(sb) { 
-        if(window.innerWidth < 1024) { sb.className = (checkoutStep === 1) ? "block w-full mt-2" : "hidden w-full mt-2"; } 
-        else { sb.className = (checkoutStep === 1 || checkoutStep === 2) ? "block lg:col-span-4 w-full lg:mt-0" : "hidden lg:block lg:col-span-4 w-full lg:mt-0"; } 
-    }
+                if(checkoutStep === 1) { db.innerHTML = `Next: Delivery <i class="fas fa-arrow-right ml-1"></i>`; db.disabled = isCartEmpty; db.className=`hidden lg:flex w-full bg-luxury-dark text-white hover:bg-[#D9778A] py-4 rounded-xl font-bold text-[11px] uppercase tracking-[0.15em] transition-all shadow-float items-center justify-center gap-2 mt-2 ${isCartEmpty?'opacity-50 cursor-not-allowed':''}`; } 
+                else if (checkoutStep === 2) { db.innerHTML = `Next: Secure Payment <i class="fas fa-lock ml-1"></i>`; db.disabled = false; db.className="hidden lg:flex w-full bg-luxury-dark text-white hover:bg-[#D9778A] py-4 rounded-xl font-bold text-[11px] uppercase tracking-[0.15em] transition-all shadow-float items-center justify-center gap-2 mt-2"; } 
+            }
+            
+            if(sb) { 
+                if (checkoutStep === 3) { 
+                    sb.classList.add('hidden');
+                    sb.classList.remove('block', 'lg:block');
+                } else if (checkoutStep === 2 && window.innerWidth < 1024) {
+                    sb.classList.add('hidden');
+                    sb.classList.remove('block');
+                    sb.classList.add('lg:block');
+                } else {
+                    sb.classList.remove('hidden');
+                    sb.classList.add('block', 'lg:block');
+                }
+            }
     
     const aCl = "w-8 h-8 rounded-full flex items-center justify-center text-[12px] font-bold transition-colors bg-[#D9778A] text-white shadow-md border-2 border-white group-hover:scale-105", iCl = "w-8 h-8 rounded-full flex items-center justify-center text-[12px] font-bold transition-colors bg-white text-gray-400 border-2 border-luxury-blush group-hover:scale-105";
     if (checkoutStep === 1) { document.getElementById('checkout-step-1')?.classList.remove('hidden'); document.getElementById('checkout-step-2')?.classList.add('hidden'); document.getElementById('checkout-step-3')?.classList.add('hidden'); f.style.width = '0%'; if(i1) i1.className = aCl; if(i2) i2.className = iCl; if(i3) i3.className = iCl; } 
@@ -850,14 +925,7 @@ window.handleCheckoutAction = async function() {
     }
 };
 
-window.th_saveProfileAddress = async function(e) {
-    e.preventDefault();
-    const a = { first_name: document.getElementById('padd-fname').value.trim(), last_name: document.getElementById('padd-lname').value.trim(), phone: document.getElementById('padd-phone').value.trim(), address_1: document.getElementById('padd-add1').value.trim(), address_2: document.getElementById('padd-add2').value.trim(), city: document.getElementById('padd-city').value.trim(), state: document.getElementById('padd-state').value.trim(), pincode: document.getElementById('padd-pin').value.trim(), user_id: currentSessionUser.id };
-    showInteractionLoader("Saving Address...");
-    try { await _supabase.from('addresses').insert([a]); await syncCloudAddresses(); document.getElementById('profile-add-address-form').reset(); document.getElementById('profile-add-address-form').classList.add('hidden'); window.showToast("Address Saved", "fa-check"); } 
-    catch (err) { window.showToast("Failed to save", "fa-times", "text-red-500"); }
-    hideInteractionLoader();
-};
+
 
 window.preparePaymentGateway = function() {
     const t = document.getElementById('comm-type') ? document.getElementById('comm-type').value : 'Standard Order', c = document.getElementById('comm-colors') ? document.getElementById('comm-colors').value.trim() : 'No notes', dims = document.getElementById('comm-dimensions') ? document.getElementById('comm-dimensions').value.trim() : ''; 
@@ -976,7 +1044,7 @@ async function renderCustomerOrdersPipeline() {
                         <p class="text-[9px] text-gray-500 uppercase tracking-widest">AWB: ${awb}</p>
                     </div>
                     ${awb !== 'Pending Sync' 
-                        ? `<a href="${trackUrl}" target="_blank" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold text-[10px] uppercase tracking-widest py-3 rounded-lg shadow-sm transition-colors text-center flex justify-center items-center gap-2"><i class="fas fa-location-arrow"></i> Track Live Status</a>` 
+                        ? `<a href="${trackUrl}" target="_blank" rel="noopener noreferrer" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold text-[10px] uppercase tracking-widest py-3 rounded-lg shadow-sm transition-colors text-center flex justify-center items-center gap-2"><i class="fas fa-location-arrow"></i> Track Live Status</a>` 
                         : `<div class="w-full bg-gray-200 text-gray-500 font-bold text-[10px] uppercase tracking-widest py-3 rounded-lg text-center flex justify-center items-center gap-2"><i class="fas fa-spinner fa-spin"></i> Generating Tracking Link...</div>`
                     }
                 </div>`;
@@ -1000,7 +1068,7 @@ async function renderCustomerOrdersPipeline() {
                         <p class="text-[9px] text-gray-500 uppercase tracking-widest">AWB: ${awb}</p>
                     </div>
                     ${awb !== 'Pending' 
-                        ? `<a href="${trackUrl}" target="_blank" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold text-[10px] uppercase tracking-widest py-3 rounded-lg shadow-sm transition-colors text-center flex justify-center items-center gap-2"><i class="fas fa-location-arrow"></i> Track Your Order</a>` 
+                        ? `<a href="${trackUrl}" target="_blank" rel="noopener noreferrer" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold text-[10px] uppercase tracking-widest py-3 rounded-lg shadow-sm transition-colors text-center flex justify-center items-center gap-2"><i class="fas fa-location-arrow"></i> Track Your Order</a>` 
                         : `<div class="w-full bg-gray-200 text-gray-500 font-bold text-[10px] uppercase tracking-widest py-3 rounded-lg text-center flex justify-center items-center gap-2"><i class="fas fa-spinner fa-spin"></i> Generating Tracking Link...</div>`
                     }
                 </div>`;
@@ -1065,10 +1133,7 @@ async function renderCustomerOrdersPipeline() {
 window.openTrackOrderModal = function() { document.getElementById('track-order-id-guest').value = ''; document.getElementById('track-result-container-guest').classList.add('hidden'); window.openPolicyModal('track-order-modal', 'track-order-box'); };
 window.closeTrackOrderModal = function() { window.closePolicyModal('track-order-modal', 'track-order-box'); };
 
-async function handleTrackOrder(e) {
-    e.preventDefault(); const oid = document.getElementById('track-order-id').value.trim(); if(!oid) return; const b = document.getElementById('btn-track-submit'); const oTxt = b.innerHTML; b.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Searching...'; b.disabled = true;
-    try { const { data, error } = await _supabase.from('orders').select('status').ilike('customer_reqs', `%${oid}%`).limit(1); if (error) throw error; const rc = document.getElementById('track-result-container'), rs = document.getElementById('track-result-status'), rd = document.getElementById('track-result-desc'); if(data && data.length > 0) { const s = data[0].status; rc.classList.remove('hidden'); if(s === 'new' || s === 'pending') { rs.textContent = "Verifying Payment"; rs.className = "font-poppins font-bold text-yellow-600 text-lg tracking-wide mb-2"; rd.textContent = "We have received your request and are verifying the transaction with our bank. We will begin crafting shortly!"; } else if (s === 'curating') { rs.textContent = "Artisan is Crafting"; rs.className = "font-poppins font-bold text-luxury-gold text-lg tracking-wide mb-2"; rd.textContent = "Your payment is verified and our artisan is currently pouring love into your handcrafted piece."; } else if (s === 'ready') { rs.textContent = "Ready for Dispatch"; rs.className = "font-poppins font-bold text-purple-600 text-lg tracking-wide mb-2"; rd.textContent = "Your masterpiece is complete, securely packaged, and awaiting courier pickup."; } else if (s === 'completed') { rs.textContent = "Elegantly Delivered"; rs.className = "font-poppins font-bold text-green-600 text-lg tracking-wide mb-2"; rd.textContent = "Your order has been successfully delivered. Thank you for curating your space!"; } } else { rc.classList.remove('hidden'); rs.textContent = "Not Found"; rs.className = "font-poppins font-bold text-red-500 text-lg tracking-wide mb-2"; rd.textContent = "We couldn't find an active order with that reference ID."; } } catch(err) { window.showToast("Network Error", "fa-times", "text-red-500"); } b.innerHTML = oTxt; b.disabled = false;
-}
+
 
 async function handleTrackOrderGuest(e) {
     e.preventDefault(); const oid = document.getElementById('track-order-id-guest').value.trim(); if(!oid) return; const b = document.getElementById('btn-track-submit-guest'); const oTxt = b.innerHTML; b.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Searching...'; b.disabled = true;
@@ -1194,10 +1259,10 @@ window.generateGirlyInvoice = function(encodedOrder) {
         JSON.parse(o.items).forEach(i => { itemsHtml += `<tr><td style="padding:12px; border-bottom:1px solid #fce4e8; font-size:12px; color:#4a4a4a;">${i.name}</td><td style="padding:12px; border-bottom:1px solid #fce4e8; font-size:12px; color:#4a4a4a; text-align:center;">${i.qty}</td><td style="padding:12px; border-bottom:1px solid #fce4e8; font-size:12px; color:#4a4a4a; text-align:right;">₹${i.price}</td></tr>`; });
         
         // Fetch current date as Delivery Date
-        // Use the actual delivery date from the database, fallback to current date only if missing
-const deliveryDate = encodedOrder.delivery_date 
-    ? new Date(encodedOrder.delivery_date).toLocaleDateString('en-IN') 
-    : new Date().toLocaleDateString('en-IN');
+        // Use the actual delivery date from the database, fallback to order date if missing
+const deliveryDate = o.delivery_date 
+    ? new Date(o.delivery_date).toLocaleDateString('en-IN') 
+    : (o.date || new Date().toLocaleDateString('en-IN'));
         
         const printWindow = window.open('', '_blank');
         printWindow.document.write(`
