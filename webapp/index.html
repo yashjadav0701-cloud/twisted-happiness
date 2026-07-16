@@ -275,8 +275,23 @@
             </button>
         </header>
 
-        <div class="max-w-[1200px] mx-auto w-full px-4 sm:px-6 py-6 md:py-10 pb-40 grid grid-cols-1 lg:grid-cols-12 gap-6 md:gap-12 relative">
-            <div class="lg:col-span-8 flex flex-col gap-6 md:gap-8">
+        <style>
+            @media (min-width: 1024px) {
+                #checkout-price-sidebar {
+                    width: 320px !important;
+                    min-width: 320px !important;
+                    flex-shrink: 0 !important;
+                }
+            }
+            @media (min-width: 1280px) {
+                #checkout-price-sidebar {
+                    width: 380px !important;
+                    min-width: 380px !important;
+                }
+            }
+        </style>
+        <div class="max-w-[1200px] mx-auto w-full px-4 sm:px-6 py-6 md:py-10 pb-40 flex flex-col lg:flex-row gap-6 md:gap-12 relative items-start">
+            <div class="flex-1 min-w-0 flex flex-col gap-6 md:gap-8">
                 
                 <!-- Explicit Gated Stepper -->
                 <div class="flex items-center justify-between w-full relative mb-2 md:mb-4">
