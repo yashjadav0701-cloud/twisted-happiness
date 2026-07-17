@@ -7,13 +7,18 @@
     <title>Twisted Happiness | Studio Admin</title>
     <meta name="robots" content="noindex, nofollow">
     
-    <link href="./output.css" rel="stylesheet">
+    <!-- STRICT CACHE BUSTING -->
+    <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+    <meta http-equiv="Pragma" content="no-cache">
+    <meta http-equiv="Expires" content="0">
+    
+    <link href="./output.css?v=16.6" rel="stylesheet">
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
     <link href="https://fonts.googleapis.com/css2?family=Marcellus&family=Bitter:wght@400;600&family=Poppins:wght@500;600;700&family=Montserrat:wght@400;500;600;700&display=swap" rel="stylesheet">
 
     <!-- Essential Scripts -->
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-    <script src="./js/admin.js"></script>
+    <script src="./js/admin.js?v=16.6"></script>
 
     <style>
         .custom-scroll::-webkit-scrollbar { width: 4px; } 
@@ -178,6 +183,7 @@
                 <div class="flex gap-3">
                     <button type="button" id="subtab-active" class="text-white bg-luxury-dark font-bold text-[9px] uppercase tracking-[0.1em] px-6 py-3 rounded-full border border-luxury-dark transition-colors shadow-sm">Active Commissions</button>
                     <button type="button" id="subtab-completed" class="text-gray-500 bg-luxury-bg hover:text-luxury-dark font-bold text-[9px] uppercase tracking-[0.1em] px-6 py-3 rounded-full border border-luxury-blush transition-colors shadow-sm">The Archives</button>
+                    <button type="button" id="subtab-rejected" class="text-gray-500 bg-luxury-bg hover:text-luxury-dark font-bold text-[9px] uppercase tracking-[0.1em] px-6 py-3 rounded-full border border-luxury-blush transition-colors shadow-sm">Rejected</button>
                 </div>
                 <button type="button" onclick="window.exportOrdersCSV()" class="text-luxury-dark bg-white hover:bg-luxury-bg font-bold text-[9px] uppercase tracking-[0.1em] px-5 py-3 rounded-full border border-luxury-blush transition-colors shadow-sm flex items-center gap-2">
                     <i class="fas fa-file-csv text-green-600"></i> Export to CSV
@@ -189,6 +195,7 @@
                     <div class="text-center text-gray-400 py-10 text-[10px] uppercase tracking-[0.2em] font-medium"><i class="fas fa-spinner fa-spin mr-2"></i> Loading Desk...</div>
                 </div>
                 <div id="admin-completed-orders" class="flex flex-col gap-4 hidden"></div>
+                <div id="admin-rejected-orders" class="flex flex-col gap-4 hidden"></div>
             </div>
         </section>
     </div>

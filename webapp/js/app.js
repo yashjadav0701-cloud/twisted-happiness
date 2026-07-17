@@ -544,6 +544,10 @@ window.openProductPage = async function(id) {
         const p = products.find(x => String(x.id) === String(id));
         if (!p) return;
         
+        // Push state for native back-button navigation
+        currentModalLevel = 1; 
+        window.safePushState(1);
+        
         // 1. Map Text Details
         if(document.getElementById('modal-title')) document.getElementById('modal-title').textContent = p.name;
         if(document.getElementById('modal-main-category')) document.getElementById('modal-main-category').textContent = p.mainCategory;
@@ -577,54 +581,60 @@ window.openProductPage = async function(id) {
             else document.getElementById('art-badges-container').classList.add('hidden');
         }
 
-        // 4. Images & Native Carousel Setup (Amazon-Style Infinite Loop)
+        // 4. Images & Native Carousel Setup (Flawless Amazon Swipe)
         modalImages = [p.image1, p.image2, p.image3, p.image4, p.image5].filter(img => img && img.trim() !== '');
         if(modalImages.length === 0) modalImages = ['https://placehold.co/400x500/F8E9EA/423133'];
         
         const tr = document.getElementById('modal-carousel-track');
         if(tr) {
+            // We use scrollBehavior: auto natively, and manage scrolling manually to avoid jitter
             tr.className = "flex w-full h-full relative overflow-x-auto scrollbar-hide snap-x snap-mandatory touch-pan-x";
-            tr.style.scrollBehavior = 'smooth';
+            tr.style.scrollBehavior = 'auto';
             tr.innerHTML = '';
             
-            // Clone the LAST image and put it at the very beginning
-            if (modalImages.length > 1) { tr.innerHTML += `<img id="slide-clone-last" loading="lazy" decoding="async" src="${modalImages[modalImages.length-1]}" class="w-full h-full flex-shrink-0 object-cover cursor-zoom-in snap-center snap-always">`; }
+            // Clones for loop illusion
+            const firstClone = `<img id="slide-clone-first" loading="lazy" src="${modalImages[0]}" class="w-full h-full flex-shrink-0 object-cover snap-center snap-always">`;
+            const lastClone = `<img id="slide-clone-last" loading="lazy" src="${modalImages[modalImages.length-1]}" class="w-full h-full flex-shrink-0 object-cover snap-center snap-always">`;
             
-            // Render actual images (with strict snap-always)
+            if (modalImages.length > 1) tr.innerHTML += lastClone;
             modalImages.forEach((src, idx) => {
-                tr.innerHTML += `<img id="slide-${idx}" loading="lazy" decoding="async" src="${src}" class="w-full h-full flex-shrink-0 object-cover cursor-zoom-in snap-center snap-always" onclick="window.openLightboxFromCarousel()">`;
+                tr.innerHTML += `<img id="slide-${idx}" loading="lazy" src="${src}" class="w-full h-full flex-shrink-0 object-cover cursor-zoom-in snap-center snap-always" onclick="window.openLightboxFromCarousel()">`;
             });
+            if (modalImages.length > 1) tr.innerHTML += firstClone;
             
-            // Clone the FIRST image and put it at the very end
-            if (modalImages.length > 1) { tr.innerHTML += `<img id="slide-clone-first" loading="lazy" decoding="async" src="${modalImages[0]}" class="w-full h-full flex-shrink-0 object-cover cursor-zoom-in snap-center snap-always">`; }
-            
-            // Jump to the ACTUAL first image immediately on load
+            // Align to first real slide instantly
             requestAnimationFrame(() => {
-                tr.style.scrollBehavior = 'auto'; 
-                const realFirst = document.getElementById('slide-0');
-                if (realFirst) tr.scrollLeft = realFirst.offsetLeft;
-                setTimeout(() => { tr.style.scrollBehavior = 'smooth'; }, 50);
+                if (modalImages.length > 1) {
+                    const realFirst = document.getElementById('slide-0');
+                    if(realFirst) tr.scrollLeft = realFirst.offsetLeft;
+                }
             });
+
+            // Core logic: Teleport seamlessly on scroll
+            tr.onscroll = () => {
+                if (modalImages.length <= 1) return;
+                const maxScroll = tr.scrollWidth - tr.clientWidth;
+                
+                if (tr.scrollLeft === 0) {
+                    tr.scrollLeft = maxScroll - tr.clientWidth;
+                } else if (Math.ceil(tr.scrollLeft) >= maxScroll) {
+                    tr.scrollLeft = tr.clientWidth;
+                }
+            };
             
+            // IntersectionObserver strictly for thumbnails updates
             const observer = new IntersectionObserver((entries) => {
                 entries.forEach(entry => {
                     if(entry.isIntersecting) {
                         let targetIdx = -1;
-                        if (entry.target.id === 'slide-clone-first') {
-                            targetIdx = 0;
-                            // Silently teleport from the clone back to the start!
-                            setTimeout(() => { tr.style.scrollBehavior = 'auto'; tr.scrollLeft = document.getElementById('slide-0').offsetLeft; requestAnimationFrame(() => tr.style.scrollBehavior = 'smooth'); }, 150);
-                        } else if (entry.target.id === 'slide-clone-last') {
-                            targetIdx = modalImages.length - 1;
-                            // Silently teleport from the clone back to the end!
-                            setTimeout(() => { tr.style.scrollBehavior = 'auto'; tr.scrollLeft = document.getElementById(`slide-${targetIdx}`).offsetLeft; requestAnimationFrame(() => tr.style.scrollBehavior = 'smooth'); }, 150);
-                        } else {
-                            targetIdx = parseInt(entry.target.id.split('-')[1]);
-                        }
+                        if (entry.target.id === 'slide-clone-first') targetIdx = 0;
+                        else if (entry.target.id === 'slide-clone-last') targetIdx = modalImages.length - 1;
+                        else targetIdx = parseInt(entry.target.id.split('-')[1]);
+                        
                         if (targetIdx !== -1) { currentSlideIndex = targetIdx; updateActiveThumb(targetIdx, modalImages.length); }
                     }
                 });
-            }, { root: tr, threshold: 0.85 });
+            }, { root: tr, threshold: 0.6 });
             setTimeout(() => { document.querySelectorAll('#modal-carousel-track img').forEach(img => observer.observe(img)); }, 100);
         }
         currentSlideIndex = 0;

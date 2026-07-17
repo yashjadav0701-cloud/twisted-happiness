@@ -227,7 +227,7 @@ let adminInvSearch = ''; let adminInvFilter = 'All';
 function bindAdminEvents() {
     document.getElementById('admin-inv-search')?.addEventListener('input', (e) => { adminInvSearch = e.target.value.toLowerCase(); renderAdminProducts(); });
     document.getElementById('admin-inv-filter')?.addEventListener('change', (e) => { adminInvFilter = e.target.value; renderAdminProducts(); });
-    document.getElementById('admin-login-form')?.addEventListener('submit', attemptLogin); document.getElementById('btn-logout')?.addEventListener('click', logoutAdmin); document.getElementById('tab-inventory')?.addEventListener('click', () => switchAdminTab('inventory')); document.getElementById('tab-orders')?.addEventListener('click', () => switchAdminTab('orders')); document.getElementById('subtab-active')?.addEventListener('click', () => switchOrderTab('active')); document.getElementById('subtab-completed')?.addEventListener('click', () => switchOrderTab('completed')); document.getElementById('settings-form')?.addEventListener('submit', saveSettings); document.getElementById('inventory-form')?.addEventListener('submit', saveProduct); document.getElementById('p-image-file')?.addEventListener('change', handleFileSelection); document.getElementById('p-main-category')?.addEventListener('change', togglePaintingFields); document.getElementById('cancel-edit-btn')?.addEventListener('click', cancelEdit);
+    document.getElementById('admin-login-form')?.addEventListener('submit', attemptLogin); document.getElementById('btn-logout')?.addEventListener('click', logoutAdmin); document.getElementById('tab-inventory')?.addEventListener('click', () => switchAdminTab('inventory')); document.getElementById('tab-orders')?.addEventListener('click', () => switchAdminTab('orders')); document.getElementById('subtab-active')?.addEventListener('click', () => switchOrderTab('active')); document.getElementById('subtab-completed')?.addEventListener('click', () => switchOrderTab('completed')); document.getElementById('subtab-rejected')?.addEventListener('click', () => switchOrderTab('rejected')); document.getElementById('settings-form')?.addEventListener('submit', saveSettings); document.getElementById('inventory-form')?.addEventListener('submit', saveProduct); document.getElementById('p-image-file')?.addEventListener('change', handleFileSelection); document.getElementById('p-main-category')?.addEventListener('change', togglePaintingFields); document.getElementById('cancel-edit-btn')?.addEventListener('click', cancelEdit);
 }
 
 async function fetchDatabase() { 
@@ -395,15 +395,23 @@ function switchAdminTab(tab) {
 }
 
 function switchOrderTab(tab) {
-    const activeBtn = document.getElementById('subtab-active'), completedBtn = document.getElementById('subtab-completed'), activeSec = document.getElementById('admin-active-orders'), completedSec = document.getElementById('admin-completed-orders'), title = document.getElementById('order-section-title');
+    const activeBtn = document.getElementById('subtab-active'), completedBtn = document.getElementById('subtab-completed'), rejectedBtn = document.getElementById('subtab-rejected'), activeSec = document.getElementById('admin-active-orders'), completedSec = document.getElementById('admin-completed-orders'), rejectedSec = document.getElementById('admin-rejected-orders'), title = document.getElementById('order-section-title');
+    
+    const activeClass = "text-white bg-luxury-dark font-bold text-[9px] uppercase tracking-[0.1em] px-6 py-3 rounded-full shadow-sm transition-colors border border-luxury-dark";
+    const inactiveClass = "text-gray-500 bg-luxury-bg hover:text-luxury-dark font-bold text-[9px] uppercase tracking-[0.1em] px-6 py-3 rounded-full shadow-sm transition-colors border border-luxury-blush";
+    
+    if(activeBtn) activeBtn.className = tab === 'active' ? activeClass : inactiveClass;
+    if(completedBtn) completedBtn.className = tab === 'completed' ? activeClass.replace('bg-luxury-dark', 'bg-luxury-rose').replace('border-luxury-dark', 'border-luxury-rose') : inactiveClass;
+    if(rejectedBtn) rejectedBtn.className = tab === 'rejected' ? activeClass.replace('bg-luxury-dark', 'bg-red-500').replace('border-luxury-dark', 'border-red-500') : inactiveClass;
+    
+    if(activeSec) activeSec.classList.add('hidden'); if(completedSec) completedSec.classList.add('hidden'); if(rejectedSec) rejectedSec.classList.add('hidden');
+    
     if(tab === 'active') {
-        activeBtn.className = "text-white bg-luxury-dark font-bold text-[9px] uppercase tracking-[0.1em] px-6 py-3 rounded-full shadow-sm transition-colors";
-        completedBtn.className = "text-gray-500 bg-luxury-bg hover:text-luxury-dark font-bold text-[9px] uppercase tracking-[0.1em] px-6 py-3 rounded-full shadow-sm transition-colors";
-        activeSec.classList.remove('hidden'); completedSec.classList.add('hidden'); title.textContent = "Concierge Desk: Active Workspace";
-    } else {
-        completedBtn.className = "text-white bg-luxury-rose font-bold text-[9px] uppercase tracking-[0.1em] px-6 py-3 rounded-full shadow-sm transition-colors";
-        activeBtn.className = "text-gray-500 bg-luxury-bg hover:text-luxury-dark font-bold text-[9px] uppercase tracking-[0.1em] px-6 py-3 rounded-full shadow-sm transition-colors";
-        completedSec.classList.remove('hidden'); activeSec.classList.add('hidden'); title.textContent = "The Archives: Elegantly Delivered";
+        if(activeSec) activeSec.classList.remove('hidden'); title.textContent = "Concierge Desk: Active Workspace";
+    } else if(tab === 'completed') {
+        if(completedSec) completedSec.classList.remove('hidden'); title.textContent = "The Archives: Elegantly Delivered";
+    } else if(tab === 'rejected') {
+        if(rejectedSec) rejectedSec.classList.remove('hidden'); title.textContent = "Rejected Orders: Payment Failed";
     }
 }
 
@@ -414,7 +422,7 @@ async function fetchOrders() {
         const pendingCount = allOrders.filter(o => o.status === 'new' || o.status === 'pending').length; 
         const badge = document.getElementById('admin-order-badge');
         if (pendingCount > 0) { badge.textContent = pendingCount; badge.classList.remove('hidden'); } else { badge.classList.add('hidden'); }
-        updateAnalyticsDashboard(); requestAnimationFrame(() => { renderActiveOrders(); renderCompletedOrders(); });
+        updateAnalyticsDashboard(); requestAnimationFrame(() => { renderActiveOrders(); renderCompletedOrders(); renderRejectedOrders(); });
     } catch (err) { console.error("Error fetching orders", err); }
 }
 
@@ -462,7 +470,7 @@ function renderActiveOrders() {
 
         if (order.status === 'new' || order.status === 'pending') {
             statusBadge = `<span class="bg-yellow-100 text-yellow-700 text-[8px] font-bold uppercase tracking-widest px-2.5 py-1 rounded-md">Awaiting Verification</span>`;
-            actionButton = `<button type="button" onclick="window.th_purgeOrder('${order.id}')" class="px-4 py-2.5 rounded-full text-gray-400 border hover:text-red-500 font-bold text-[9px] uppercase tracking-widest">Deny (No Payment)</button><button type="button" onclick="window.th_startCrafting('${order.id}')" class="px-5 py-2.5 rounded-full bg-green-600 text-white font-bold text-[9px] uppercase tracking-widest hover:bg-white hover:text-green-600 transition-colors shadow-sm"><i class="fas fa-magic mr-1"></i> Verify & Start Crafting</button>`;
+            actionButton = `<button type="button" onclick="window.th_rejectOrder('${order.id}')" class="px-4 py-2.5 rounded-full text-gray-400 border hover:text-red-500 font-bold text-[9px] uppercase tracking-widest">Deny (No Payment)</button><button type="button" onclick="window.th_startCrafting('${order.id}')" class="px-5 py-2.5 rounded-full bg-green-600 text-white font-bold text-[9px] uppercase tracking-widest hover:bg-white hover:text-green-600 transition-colors shadow-sm"><i class="fas fa-magic mr-1"></i> Verify & Start Crafting</button>`;
         } else if (order.status === 'curating') {
             statusBadge = `<span class="bg-blue-100 text-blue-700 text-[8px] font-bold uppercase tracking-widest px-2.5 py-1 rounded-md">Artisan At Work</span>`;
             actionButton = `<button type="button" onclick="window.th_markOrderReady('${order.id}')" class="px-5 py-2.5 rounded-full bg-luxury-gold text-white font-bold text-[9px] uppercase tracking-widest hover:bg-white hover:text-luxury-gold shadow-sm"><i class="fas fa-paint-brush mr-2"></i> ✨ Masterpiece Crafted</button>`;
@@ -510,6 +518,39 @@ window.th_purgeOrder = async function(id) {
     showToast("Purging...", "fa-spinner fa-spin"); 
     try { await _supabase.from('orders').delete().eq('id', id); showToast("Erased Permanently", "fa-trash"); fetchOrders(); } catch(e) { showToast("Error", "fa-times", "text-red-500"); } 
 };
+
+window.th_rejectOrder = async function(id) {
+    if(!confirm("Reject this order? This will mark it as cancelled and notify the customer via WhatsApp.")) return;
+    const order = allOrders.find(o => o.id === id); if(!order) return;
+    showToast("Rejecting...", "fa-spinner fa-spin");
+    try { 
+        await _supabase.from('orders').update({ status: 'cancelled' }).eq('id', id); 
+        showToast("Order Rejected", "fa-times"); 
+        fetchOrders(); 
+        
+        const customerData = extractCustomerData(order.customer_reqs);
+        if (customerData.phone) {
+            let cleanPhone = customerData.phone.replace(/\D/g, ''); 
+            if (cleanPhone.startsWith('9191') && cleanPhone.length > 11) cleanPhone = cleanPhone.substring(2);
+            const rejectMsg = `Dear ${customerData.name},\n\nWe noticed a pending order (${customerData.orderId}) at *Twisted Happiness*, but we haven't received the payment verification yet.\n\nRegrettably, this order has been cancelled. If the amount was deducted from your account, please reply to this message with a screenshot of the transaction so we can restore your order manually.\n\nThank you for understanding!`;
+            window.open(`https://wa.me/${cleanPhone}?text=${encodeURIComponent(rejectMsg)}`, '_blank');
+        }
+    } catch(e) { showToast("Error rejecting order", "fa-times", "text-red-500"); }
+};
+
+function renderRejectedOrders() {
+    const container = document.getElementById('admin-rejected-orders'); if(!container) return; container.innerHTML = ''; 
+    const rejectedOrders = allOrders.filter(o => o.status === 'cancelled');
+    if (rejectedOrders.length === 0) { container.innerHTML = '<div class="text-center text-gray-400 py-10 text-[10px] uppercase tracking-[0.2em] font-medium"><i class="fas fa-times-circle text-2xl mb-3 opacity-50 block"></i> No rejected orders.</div>'; return; }
+    
+    rejectedOrders.forEach(order => {
+        const date = new Date(order.created_at).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' }); 
+        const customerData = extractCustomerData(order.customer_reqs); 
+        const visualItems = buildOrderItemsVisual(order.order_details);
+        
+        container.innerHTML += `<div class="border border-red-200 rounded-xl p-5 bg-red-50 shadow-sm relative overflow-hidden"><div class="flex justify-between items-start mb-3"><div><h4 class="font-logo font-normal text-lg text-red-600 mb-0.5">${customerData.name}</h4><span class="text-[8px] font-bold text-red-400 uppercase tracking-widest"><i class="fas fa-ban mr-1"></i> ${date} | ${customerData.orderId}</span></div><span class="bg-red-100 text-red-600 text-[8px] font-bold uppercase tracking-widest px-2.5 py-1 rounded-md border border-red-200">Cancelled / Rejected</span></div><div class="mb-3">${visualItems}</div><div class="flex justify-between items-center border-t border-red-200 pt-3 mt-2"><p class="text-[9px] font-bold text-red-400 uppercase tracking-widest">Total <span class="font-poppins text-red-600 text-[11px] ml-1">₹${order.total}</span></p><button type="button" onclick="window.th_purgeOrder('${order.id}')" class="text-red-500 hover:text-red-700 text-[10px] uppercase font-bold tracking-widest cursor-pointer transition-colors"><i class="fas fa-trash-alt mr-1"></i> Purge Permanently</button></div></div>`;
+    });
+}
 
 window.th_pushToShiprocket = async function(orderId, event) {
     const btn = event.currentTarget; const originalHtml = btn.innerHTML; btn.innerHTML = '<i class="fas fa-spinner fa-spin mr-1.5"></i> Syncing...'; btn.disabled = true;
