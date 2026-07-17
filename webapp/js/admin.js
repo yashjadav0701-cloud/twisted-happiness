@@ -305,7 +305,7 @@ function togglePaintingFields() {
 
 function renderAdminCategories() { const datalist = document.getElementById('sub-cat-list'), mainCat = document.getElementById('p-main-category').value; if(datalist) { const relevantProducts = products.filter(p => p.mainCategory === mainCat); const allSubs = [...new Set(relevantProducts.map(p => p.category).filter(c => c))]; datalist.innerHTML = ''; allSubs.forEach(cat => { const option = document.createElement('option'); option.value = cat; datalist.appendChild(option); }); } }
 
-function compressImageToBlob(file, maxSize = 1600) { 
+function compressImageToBlob(file, maxSize = 2400) { 
     return new Promise((resolve) => { 
         const reader = new FileReader(); reader.readAsDataURL(file); 
         reader.onload = (e) => { 
@@ -314,7 +314,8 @@ function compressImageToBlob(file, maxSize = 1600) {
                 const canvas = document.createElement('canvas'); let w = img.width, h = img.height; 
                 if (w > h && w > maxSize) { h *= maxSize / w; w = maxSize; } else if (h > maxSize) { w *= maxSize / h; h = maxSize; } 
                 canvas.width = w; canvas.height = h; canvas.getContext('2d').drawImage(img, 0, 0, w, h); 
-                canvas.toBlob((blob) => { resolve(blob); }, 'image/webp', 0.85); 
+                // Bumping quality to 0.95 to maintain high visual fidelity while slightly reducing file size
+                canvas.toBlob((blob) => { resolve(blob); }, 'image/webp', 0.95); 
             }; 
         }; 
     }); 
