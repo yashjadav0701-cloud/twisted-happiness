@@ -1110,12 +1110,12 @@ async function renderCustomerOrdersPipeline() {
                 <div class="mt-5 px-2 pb-2">
                     <div class="relative pl-6 border-l-2 ${step >= 4 ? 'border-green-500' : 'border-gray-200'} space-y-6 font-sans">
                         
-                        <!-- Step 1: Order Confirmed -->
+                        <!-- Step 1: Order Pending / Confirmed -->
                         <div class="relative">
-                            <div class="absolute -left-[31px] top-0 w-4 h-4 rounded-full border-2 border-white ${step >= 1 ? 'bg-green-500' : 'bg-gray-300'} shadow-sm z-10"></div>
-                            <h5 class="font-bold text-[13px] ${step >= 1 ? 'text-gray-900' : 'text-gray-400'}">Order Confirmed</h5>
+                            <div class="absolute -left-[31px] top-0 w-4 h-4 rounded-full border-2 border-white ${step === 1 ? 'bg-yellow-400' : (step >= 2 ? 'bg-green-500' : 'bg-gray-300')} shadow-sm z-10"></div>
+                            <h5 class="font-bold text-[13px] ${step === 1 ? 'text-yellow-600' : (step >= 2 ? 'text-gray-900' : 'text-gray-400')}">${step === 1 ? 'Order Pending' : 'Order Confirmed'}</h5>
                             <p class="text-[10px] text-gray-400 mb-1">${dt}</p>
-                            ${step >= 1 ? `<p class="text-[11px] text-gray-600 mt-1">Your order has been placed successfully and payment is verified.</p>` : ''}
+                            ${step === 1 ? `<p class="text-[11px] text-gray-600 mt-1">Awaiting payment verification by the artisan.</p>` : (step >= 2 ? `<p class="text-[11px] text-gray-600 mt-1">Your order has been placed successfully and payment is verified.</p>` : '')}
                         </div>
                         
                         <!-- Step 2: Crafting / Processed -->
