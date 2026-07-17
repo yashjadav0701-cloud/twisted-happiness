@@ -15,7 +15,7 @@ function safeJSONParse(key, fallback) {
 }
 
 let settings = safeJSONParse('th_settings', { storeName: "Twisted Happiness", instagram: "https://www.instagram.com/khushiified_art?igsh=aW1vZ2N4cTl2OWo=", whatsapp: "9909310501", upiId: "khushisj315@oksbi", countryCode: "+91" });
-let products = []; let allOrders = []; let selectedFilesData = []; let editModeId = null; let mainImageIndex = 0;
+let products = []; let allOrders = []; let selectedFilesData = []; let editModeId = null; let mainImageIndex = 0; let originalEditImages = [];
 
 function initApp() {
     try { 
@@ -362,7 +362,24 @@ async function saveProduct(e) {
     const payload = { name: name, main_category: mainCat, category: document.getElementById('p-category').value || 'General', price: cleanNumericPrice, prep_time: document.getElementById('p-prep').value || '3-5', specs: document.getElementById('p-specs').value || '', dimensions: (mainCat !== 'Pipe Cleaner Crafts') ? document.getElementById('p-dimensions').value : '', is_customizable: (mainCat !== 'Pipe Cleaner Crafts') ? document.getElementById('p-customizable').checked : false, image_url: uploadedUrls.length > 0 ? JSON.stringify(uploadedUrls) : undefined };
 
     let err;
-    if (editModeId) { if (uploadedUrls.length === 0) delete payload.image_url; const { error } = await _supabase.from('creations').update(payload).eq('id', editModeId); err = error; } 
+    if (editModeId) { 
+        if (uploadedUrls.length === 0) delete payload.image_url; 
+        
+        // Permanent Server Cleanup for Replaced Images
+        const finalUrls = uploadedUrls.map(u => u.data);
+        const orphanedFiles = [];
+        originalEditImages.forEach(oldUrl => {
+            if (!finalUrls.includes(oldUrl)) {
+                const fileName = oldUrl.substring(oldUrl.lastIndexOf('/') + 1);
+                if(fileName) orphanedFiles.push(fileName);
+            }
+        });
+        if (orphanedFiles.length > 0) {
+            await _supabase.storage.from('art-images').remove(orphanedFiles);
+        }
+
+        const { error } = await _supabase.from('creations').update(payload).eq('id', editModeId); err = error; 
+    } 
     else { const { error } = await _supabase.from('creations').insert([payload]); err = error; }
 
     if(!err) { showToast("Added to Collection!", "fa-check"); cancelEdit(); fetchDatabase(); } else { showToast("Error saving", "fa-times", "text-red-500"); console.error(err); }
@@ -373,19 +390,33 @@ window.th_triggerEdit = function(id) {
     const p = products.find(x => x.id === id); if(!p) return; editModeId = p.id; 
     document.getElementById('p-main-category').value = p.mainCategory || 'Pipe Cleaner Crafts'; togglePaintingFields();
     document.getElementById('p-name').value = p.name; document.getElementById('p-category').value = p.category; document.getElementById('p-price').value = p.price; document.getElementById('p-prep').value = p.prepTime || ''; document.getElementById('p-specs').value = p.specs; document.getElementById('p-dimensions').value = p.dimensions || ''; document.getElementById('p-customizable').checked = p.isCustomizable || false; document.getElementById('p-image-file').value = ''; 
-    selectedFilesData = [];
-    if(p.image1) selectedFilesData.push({name: 'img1', data: p.image1, isNew: false}); if(p.image2) selectedFilesData.push({name: 'img2', data: p.image2, isNew: false}); if(p.image3) selectedFilesData.push({name: 'img3', data: p.image3, isNew: false}); if(p.image4) selectedFilesData.push({name: 'img4', data: p.image4, isNew: false}); if(p.image5) selectedFilesData.push({name: 'img5', data: p.image5, isNew: false});
+    selectedFilesData = []; originalEditImages = [];
+    if(p.image1) { selectedFilesData.push({name: 'img1', data: p.image1, isNew: false}); originalEditImages.push(p.image1); }
+    if(p.image2) { selectedFilesData.push({name: 'img2', data: p.image2, isNew: false}); originalEditImages.push(p.image2); }
+    if(p.image3) { selectedFilesData.push({name: 'img3', data: p.image3, isNew: false}); originalEditImages.push(p.image3); }
+    if(p.image4) { selectedFilesData.push({name: 'img4', data: p.image4, isNew: false}); originalEditImages.push(p.image4); }
+    if(p.image5) { selectedFilesData.push({name: 'img5', data: p.image5, isNew: false}); originalEditImages.push(p.image5); }
     mainImageIndex = 0; renderImagePreviews();
     document.getElementById('form-title').innerHTML = `Editing: <span class="text-luxury-rose">${p.name}</span>`; document.getElementById('cancel-edit-btn').classList.remove('hidden'); document.getElementById('btn-save-product').innerHTML = 'Update Product'; window.scrollTo({top: 0, behavior: 'smooth'}); 
 };
 
 function cancelEdit() { 
-    editModeId = null; mainImageIndex = 0; document.getElementById('inventory-form').reset(); document.getElementById('p-main-category').value = 'Pipe Cleaner Crafts'; togglePaintingFields();
+    editModeId = null; mainImageIndex = 0; originalEditImages = []; document.getElementById('inventory-form').reset(); document.getElementById('p-main-category').value = 'Pipe Cleaner Crafts'; togglePaintingFields();
     selectedFilesData = []; renderImagePreviews(); document.getElementById('form-title').textContent = 'Add New Art Piece'; document.getElementById('cancel-edit-btn').classList.add('hidden'); document.getElementById('btn-save-product').innerHTML = 'Publish to Collection'; 
 }
 
 window.th_triggerDelete = async function(id) { 
     const p = products.find(x => x.id === id); if(!confirm(`Remove "${p.name}"?`)) return; showToast("Removing...", "fa-spinner fa-spin"); 
+    
+    // Purge images from storage before deleting the database row
+    const imgsToDelete = [p.image1, p.image2, p.image3, p.image4, p.image5]
+        .filter(Boolean)
+        .map(url => url.substring(url.lastIndexOf('/') + 1));
+        
+    if (imgsToDelete.length > 0) {
+        await _supabase.storage.from('art-images').remove(imgsToDelete);
+    }
+
     const { error } = await _supabase.from('creations').delete().eq('id', id);
     if(!error) { showToast("Piece Removed", "fa-trash"); fetchDatabase(); } else { showToast("Error removing piece", "fa-times", "text-red-500"); }
 };
