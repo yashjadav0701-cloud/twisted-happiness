@@ -592,14 +592,42 @@ function renderRejectedOrders() {
     });
 }
 
-window.th_pushToShiprocket = async function(orderId, event) {
-    const btn = event.currentTarget; const originalHtml = btn.innerHTML; btn.innerHTML = '<i class="fas fa-spinner fa-spin mr-1.5"></i> Syncing...'; btn.disabled = true;
+window.th_pushToShiprocket = function(orderId, event) {
+    document.getElementById('sr-order-id').value = orderId;
+    const m = document.getElementById('shiprocket-modal');
+    m.classList.remove('hidden'); requestAnimationFrame(() => m.classList.remove('opacity-0'));
+};
+
+window.th_confirmShiprocketSync = async function() {
+    const orderId = document.getElementById('sr-order-id').value;
+    const w = parseFloat(document.getElementById('sr-weight').value) || 0.5;
+    const l = parseInt(document.getElementById('sr-length').value) || 10;
+    const b = parseInt(document.getElementById('sr-breadth').value) || 10;
+    const h = parseInt(document.getElementById('sr-height').value) || 10;
+    
+    const btn = document.getElementById('btn-sr-sync'); 
+    const originalHtml = btn.innerHTML; 
+    btn.innerHTML = '<i class="fas fa-spinner fa-spin mr-1.5"></i> Syncing...'; btn.disabled = true;
+    
     try {
-        const { data, error } = await _supabase.functions.invoke('shiprocket', { body: { order_id: orderId } });
+        const { data, error } = await _supabase.functions.invoke('shiprocket', { 
+            body: { order_id: orderId, weight: w, length: l, breadth: b, height: h } 
+        });
+        
         if(error) { alert("Supabase Edge Function Error: " + error.message); throw error; }
         if(data && data.success === false) { alert("Shiprocket API Rejected the Sync:\n" + JSON.stringify(data.error || data.message || "Unknown error")); throw new Error(data.error); }
+        
         showToast("Pushed to Shiprocket 🚀", "fa-rocket", "text-[#22c55e]");
-    } catch (err) { console.error("Shiprocket API Error:", err); alert("Sync Failed: " + err.message); showToast("Failed to sync", "fa-times", "text-red-500"); }
+        
+        const m = document.getElementById('shiprocket-modal');
+        m.classList.add('opacity-0'); setTimeout(() => m.classList.add('hidden'), 300);
+        fetchOrders(); 
+    } catch (err) { 
+        console.error("Shiprocket API Error:", err); 
+        alert("Sync Failed: " + err.message); 
+        showToast("Failed to sync", "fa-times", "text-red-500"); 
+    }
+    
     btn.innerHTML = originalHtml; btn.disabled = false;
 };
 

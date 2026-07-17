@@ -12,13 +12,13 @@
     <meta http-equiv="Pragma" content="no-cache">
     <meta http-equiv="Expires" content="0">
     
-    <link href="./output.css?v=16.7" rel="stylesheet">
+    <link href="./output.css?v=16.9" rel="stylesheet">
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
     <link href="https://fonts.googleapis.com/css2?family=Marcellus&family=Bitter:wght@400;600&family=Poppins:wght@500;600;700&family=Montserrat:wght@400;500;600;700&display=swap" rel="stylesheet">
 
     <!-- Essential Scripts -->
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-    <script src="./js/admin.js?v=16.7"></script>
+    <script src="./js/admin.js?v=16.9"></script>
 
     <style>
         .custom-scroll::-webkit-scrollbar { width: 4px; } 
@@ -269,6 +269,39 @@
                 </div>
 
                 <button type="button" onclick="window.th_saveDiscountRule()" class="w-full bg-luxury-dark text-white hover:bg-luxury-rose py-3.5 rounded-xl font-bold text-[10px] uppercase tracking-widest transition-colors shadow-sm mt-4">Save Configuration</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- SHIPROCKET DIMENSIONS MODAL -->
+    <div id="shiprocket-modal" class="fixed inset-0 bg-luxury-dark/70 z-[3000] hidden flex items-center justify-center p-4 transition-opacity duration-300 opacity-0">
+        <div class="bg-white rounded-3xl w-full max-w-sm p-6 sm:p-8 shadow-2xl relative border border-luxury-blush">
+            <button type="button" onclick="document.getElementById('shiprocket-modal').classList.add('opacity-0'); setTimeout(() => document.getElementById('shiprocket-modal').classList.add('hidden'), 300);" class="absolute top-4 right-4 text-gray-400 w-8 h-8 bg-luxury-bg rounded-full flex items-center justify-center border border-luxury-blush hover:text-luxury-dark transition-colors"><i class="fas fa-times text-xs"></i></button>
+            <h2 class="font-logo font-normal text-2xl text-luxury-dark mb-1 text-center"><i class="fas fa-box-open text-luxury-rose mr-2"></i> Package Details</h2>
+            <p class="text-[9px] text-gray-400 font-bold uppercase tracking-widest text-center mb-6">Enter actual box dimensions</p>
+            
+            <input type="hidden" id="sr-order-id">
+            
+            <div class="space-y-5">
+                <div>
+                    <label class="block text-[9px] font-bold text-gray-400 uppercase tracking-widest mb-1.5 pl-1">Gross Weight (kg)</label>
+                    <input type="number" id="sr-weight" step="0.01" min="0.1" value="0.5" class="w-full px-4 py-3 bg-luxury-bg border border-luxury-blush rounded-xl outline-none text-[12px] font-bold text-luxury-dark focus:border-luxury-rose focus:ring-2 focus:ring-luxury-rose/30 transition-all">
+                </div>
+                <div class="grid grid-cols-3 gap-3">
+                    <div>
+                        <label class="block text-[9px] font-bold text-gray-400 uppercase tracking-widest mb-1.5 pl-1 text-center">L (cm)</label>
+                        <input type="number" id="sr-length" value="10" min="1" class="w-full px-3 py-3 bg-luxury-bg border border-luxury-blush rounded-xl outline-none text-[12px] font-bold text-luxury-dark focus:border-luxury-rose focus:ring-2 focus:ring-luxury-rose/30 transition-all text-center">
+                    </div>
+                    <div>
+                        <label class="block text-[9px] font-bold text-gray-400 uppercase tracking-widest mb-1.5 pl-1 text-center">W (cm)</label>
+                        <input type="number" id="sr-breadth" value="10" min="1" class="w-full px-3 py-3 bg-luxury-bg border border-luxury-blush rounded-xl outline-none text-[12px] font-bold text-luxury-dark focus:border-luxury-rose focus:ring-2 focus:ring-luxury-rose/30 transition-all text-center">
+                    </div>
+                    <div>
+                        <label class="block text-[9px] font-bold text-gray-400 uppercase tracking-widest mb-1.5 pl-1 text-center">H (cm)</label>
+                        <input type="number" id="sr-height" value="10" min="1" class="w-full px-3 py-3 bg-luxury-bg border border-luxury-blush rounded-xl outline-none text-[12px] font-bold text-luxury-dark focus:border-luxury-rose focus:ring-2 focus:ring-luxury-rose/30 transition-all text-center">
+                    </div>
+                </div>
+                <button type="button" id="btn-sr-sync" onclick="window.th_confirmShiprocketSync()" class="w-full bg-[#E0F2FE] text-[#1E3A8A] hover:bg-[#1E3A8A] hover:text-white py-3.5 rounded-full font-bold text-[10px] uppercase tracking-[0.1em] transition-colors shadow-sm mt-2"><i class="fas fa-rocket mr-1.5"></i> Confirm & Sync</button>
             </div>
         </div>
     </div>
