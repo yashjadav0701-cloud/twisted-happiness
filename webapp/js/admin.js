@@ -137,9 +137,9 @@ window.th_saveDiscountRule = function() {
     window.th_renderDiscountsList();
     window.th_closeDiscountModal();
     
-    // Auto-Sync to Cloud immediately
-    const form = document.getElementById('settings-form');
-    if(form) form.dispatchEvent(new Event('submit'));
+    // Bulletproof Auto-Sync (Simulates physical click)
+    const saveBtn = document.querySelector('#settings-form button[type="submit"]');
+    if(saveBtn) saveBtn.click();
 };
 
 window.th_deleteDiscount = function(index) {
@@ -149,9 +149,9 @@ window.th_deleteDiscount = function(index) {
     settings.promoCodes = JSON.stringify(arr);
     window.th_renderDiscountsList();
     
-    // Auto-Sync to Cloud immediately
-    const form = document.getElementById('settings-form');
-    if(form) form.dispatchEvent(new Event('submit'));
+    // Bulletproof Auto-Sync (Simulates physical click)
+    const saveBtn = document.querySelector('#settings-form button[type="submit"]');
+    if(saveBtn) saveBtn.click();
 };
 
 window.th_renderDiscountsList = function() {

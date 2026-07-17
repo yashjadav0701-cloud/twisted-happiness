@@ -430,8 +430,7 @@ function getActiveOffers() {
 function calculateCartDiscount(sub) { 
     let d = 0, cTier = null, nTier = null; 
     
-    // MUTUAL EXCLUSIVITY: If a manual coupon is applied, VIP offers are disabled.
-    if (activeCouponValue > 0) return { discount: 0, currentTier: null, nextTier: null, amountNeeded: 0 };
+    // VIP and Coupons now stack together!
     
     const offers = getActiveOffers();
     for (let i = 0; i < offers.length; i++) { 
@@ -836,7 +835,8 @@ function updateCheckoutUI() {
     if (activeCouponValue > 0) {
         if (window.activeCouponType === 'flat') { cd = activeCouponValue; } 
         else { cd = Math.round(ss * (activeCouponValue / 100)); }
-        if (cd > ss) { cd = 0; activeCouponValue = 0; activeCouponCode = ""; window.activeCouponType = null; const f = document.getElementById('checkout-promo-feedback'); if(f) { f.textContent = "Coupon removed (subtotal too low)."; f.className = "text-[9px] font-bold uppercase tracking-wide mt-1.5 text-red-500 block"; } const pi = document.getElementById('checkout-promo-input'); if(pi) pi.value = ''; }
+        // Ensure combined stacked discounts don't make the subtotal negative
+        if ((cd + vd) > ss) { cd = Math.max(0, ss - vd); }
     } 
     
     const rc = document.getElementById('qo-coupon-row'); 
@@ -860,33 +860,28 @@ function updateCheckoutUI() {
     const vipProgress = document.getElementById('vip-progress-container');
     const bestOfferUI = document.getElementById('active-best-offer');
     
-    // Hide VIP UI if a manual coupon is applied (Mutual Exclusivity)
-    if (activeCouponValue > 0) {
-        if(vipProgress) vipProgress.classList.add('hidden');
-        if(bestOfferUI) bestOfferUI.classList.add('hidden');
-    } else {
-        if (bestOfferUI) {
-            const allOffers = getActiveOffers();
-            if (allOffers.length > 0) {
-                bestOfferUI.classList.remove('hidden');
-                document.getElementById('best-offer-title').textContent = ct ? ct.name : "Available Offers";
-                document.getElementById('best-offer-desc').textContent = ct ? `Applied to your cart!` : `Spend ₹${nt ? nt.condVal - ss : 0} more to unlock.`;
-            } else {
-                bestOfferUI.classList.add('hidden');
-            }
+    // VIP UI remains visible and active alongside manual coupons
+    if (bestOfferUI) {
+        const allOffers = getActiveOffers();
+        if (allOffers.length > 0) {
+            bestOfferUI.classList.remove('hidden');
+            document.getElementById('best-offer-title').textContent = ct ? ct.name : "Available Offers";
+            document.getElementById('best-offer-desc').textContent = ct ? `Applied to your cart!` : `Spend ₹${nt ? nt.condVal - ss : 0} more to unlock.`;
+        } else {
+            bestOfferUI.classList.add('hidden');
         }
+    }
 
-        if (vipProgress) {
-            if (nt) {
-                const progressPercent = Math.min(100, (ss / nt.condVal) * 100);
-                vipProgress.innerHTML = `<div class="flex justify-between items-end mb-1"><span class="text-[9px] font-bold text-gray-500 uppercase tracking-widest">VIP Status</span><span class="text-[9px] font-bold text-luxury-rose uppercase tracking-widest">Add ₹${nt.condVal - ss} for ${nt.name} 🎀</span></div><div class="w-full bg-luxury-blush/30 h-1.5 rounded-full overflow-hidden"><div class="bg-luxury-rose h-full rounded-full transition-all duration-500" style="width: ${progressPercent}%"></div></div>`;
-                vipProgress.classList.remove('hidden');
-            } else if (ct) {
-                vipProgress.innerHTML = `<p class="text-[10px] font-bold text-luxury-rose uppercase tracking-widest text-center"><i class="fas fa-crown text-luxury-gold mr-1"></i> Maximum VIP Tier Unlocked!</p>`;
-                vipProgress.classList.remove('hidden');
-            } else {
-                vipProgress.classList.add('hidden');
-            }
+    if (vipProgress) {
+        if (nt) {
+            const progressPercent = Math.min(100, (ss / nt.condVal) * 100);
+            vipProgress.innerHTML = `<div class="flex justify-between items-end mb-1"><span class="text-[9px] font-bold text-gray-500 uppercase tracking-widest">VIP Status</span><span class="text-[9px] font-bold text-luxury-rose uppercase tracking-widest">Add ₹${nt.condVal - ss} for ${nt.name} 🎀</span></div><div class="w-full bg-luxury-blush/30 h-1.5 rounded-full overflow-hidden"><div class="bg-luxury-rose h-full rounded-full transition-all duration-500" style="width: ${progressPercent}%"></div></div>`;
+            vipProgress.classList.remove('hidden');
+        } else if (ct) {
+            vipProgress.innerHTML = `<p class="text-[10px] font-bold text-luxury-rose uppercase tracking-widest text-center"><i class="fas fa-crown text-luxury-gold mr-1"></i> Maximum VIP Tier Unlocked!</p>`;
+            vipProgress.classList.remove('hidden');
+        } else {
+            vipProgress.classList.add('hidden');
         }
     }
 
