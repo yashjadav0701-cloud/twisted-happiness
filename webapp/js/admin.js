@@ -305,59 +305,58 @@ function togglePaintingFields() {
 
 function renderAdminCategories() { const datalist = document.getElementById('sub-cat-list'), mainCat = document.getElementById('p-main-category').value; if(datalist) { const relevantProducts = products.filter(p => p.mainCategory === mainCat); const allSubs = [...new Set(relevantProducts.map(p => p.category).filter(c => c))]; datalist.innerHTML = ''; allSubs.forEach(cat => { const option = document.createElement('option'); option.value = cat; datalist.appendChild(option); }); } }
 
-function compressImageToBlob(file, maxDim = 2400) { 
+function compressImageToBlob(file) { 
     return new Promise((resolve) => { 
-        const MAX_BYTES = 500 * 1024; // Maximum size: 500 KB
-        const MIN_BYTES = 400 * 1024; // Minimum target: 400 KB
+        const MAX_BYTES = 500 * 1024; // 500 KB strict ceiling
+        const MIN_BYTES = 400 * 1024; // 400 KB strict floor
 
-        // RULE 1: If the image is already 500 KB or smaller, bypass compression entirely!
-        if (file.size <= MAX_BYTES) {
-            return resolve(file);
-        }
-
-        // RULE 2: If the image is over 500 KB, dynamically compress to hit the 400-500 KB sweet spot
-        const reader = new FileReader(); reader.readAsDataURL(file); 
+        const reader = new FileReader(); 
+        reader.readAsDataURL(file); 
         reader.onload = (e) => { 
             const img = new Image(); img.src = e.target.result; 
             img.onload = () => { 
-                const canvas = document.createElement('canvas'); let w = img.width, h = img.height; 
-                if (w > h && w > maxDim) { h *= maxDim / w; w = maxDim; } else if (h > maxDim) { w *= maxDim / h; h = maxDim; } 
-                canvas.width = w; canvas.height = h; 
-                const ctx = canvas.getContext('2d');
-                ctx.drawImage(img, 0, 0, w, h); 
-
-                let minQ = 0.1, maxQ = 1.0, currentQ = 0.8, bestBlob = null;
+                // Logarithmic binary search to scale dimensions and quality
+                let minPower = 0.01; 
+                let maxPower = 4.0; // Allows upscaling tiny files by 400%
+                let currentPower = 1.0; 
+                let bestBlob = null;
+                let bestDiff = Infinity;
 
                 const attemptCompression = (attemptsLeft) => {
-                    canvas.toBlob((blob) => {
-                        // If we run out of loops, return the best image we found under 500KB
-                        if (attemptsLeft === 0) return resolve(bestBlob || blob);
+                    if (attemptsLeft === 0) return resolve(bestBlob);
 
-                        if (blob.size > MAX_BYTES) {
-                            maxQ = currentQ; // File still too big, lower the quality ceiling
-                        } else if (blob.size < MIN_BYTES) {
-                            minQ = currentQ; // File got too small, raise the quality floor
-                        }
+                    const scale = Math.max(0.1, Math.min(currentPower, 3.5));
+                    const quality = Math.max(0.1, Math.min(currentPower, 1.0));
 
-                        // Always save the best valid blob under 500KB just in case
-                        if (blob.size <= MAX_BYTES && (!bestBlob || blob.size > bestBlob.size)) {
-                            bestBlob = blob; 
-                        }
+                    const canvas = document.createElement('canvas'); 
+                    const w = Math.round(img.width * scale);
+                    const h = Math.round(img.height * scale);
+                    
+                    canvas.width = w; canvas.height = h; 
+                    const ctx = canvas.getContext('2d');
+                    ctx.drawImage(img, 0, 0, w, h); 
 
-                        // THE SWEET SPOT: If we hit between 400KB and 500KB, resolve immediately!
+                    canvas.toBlob((blob) => { 
+                        const diff = Math.abs((MAX_BYTES + MIN_BYTES) / 2 - blob.size);
+                        if (diff < bestDiff) { bestDiff = diff; bestBlob = blob; }
+
                         if (blob.size >= MIN_BYTES && blob.size <= MAX_BYTES) {
                             return resolve(blob);
                         }
 
-                        // Calculate the next quality and loop again
-                        currentQ = (minQ + maxQ) / 2;
+                        if (blob.size > MAX_BYTES) {
+                            maxPower = currentPower; 
+                        } else if (blob.size < MIN_BYTES) {
+                            minPower = currentPower; 
+                        }
+
+                        currentPower = (minPower + maxPower) / 2;
                         attemptCompression(attemptsLeft - 1);
                         
-                    }, 'image/webp', currentQ);
+                    }, 'image/jpeg', quality);
                 };
                 
-                // Allow up to 8 compression loops to find the perfect size
-                attemptCompression(8); 
+                attemptCompression(12); // 12 iterations for precision
             }; 
         }; 
     }); 
