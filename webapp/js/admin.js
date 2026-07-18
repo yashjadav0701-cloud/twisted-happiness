@@ -305,17 +305,59 @@ function togglePaintingFields() {
 
 function renderAdminCategories() { const datalist = document.getElementById('sub-cat-list'), mainCat = document.getElementById('p-main-category').value; if(datalist) { const relevantProducts = products.filter(p => p.mainCategory === mainCat); const allSubs = [...new Set(relevantProducts.map(p => p.category).filter(c => c))]; datalist.innerHTML = ''; allSubs.forEach(cat => { const option = document.createElement('option'); option.value = cat; datalist.appendChild(option); }); } }
 
-function compressImageToBlob(file, maxSize = 2400) { 
+function compressImageToBlob(file, maxDim = 2400) { 
     return new Promise((resolve) => { 
+        const MAX_BYTES = 500 * 1024; // Maximum size: 500 KB
+        const MIN_BYTES = 400 * 1024; // Minimum target: 400 KB
+
+        // RULE 1: If the image is already 500 KB or smaller, bypass compression entirely!
+        if (file.size <= MAX_BYTES) {
+            return resolve(file);
+        }
+
+        // RULE 2: If the image is over 500 KB, dynamically compress to hit the 400-500 KB sweet spot
         const reader = new FileReader(); reader.readAsDataURL(file); 
         reader.onload = (e) => { 
             const img = new Image(); img.src = e.target.result; 
             img.onload = () => { 
                 const canvas = document.createElement('canvas'); let w = img.width, h = img.height; 
-                if (w > h && w > maxSize) { h *= maxSize / w; w = maxSize; } else if (h > maxSize) { w *= maxSize / h; h = maxSize; } 
-                canvas.width = w; canvas.height = h; canvas.getContext('2d').drawImage(img, 0, 0, w, h); 
-                // Bumping quality to 0.95 to maintain high visual fidelity while slightly reducing file size
-                canvas.toBlob((blob) => { resolve(blob); }, 'image/webp', 0.95); 
+                if (w > h && w > maxDim) { h *= maxDim / w; w = maxDim; } else if (h > maxDim) { w *= maxDim / h; h = maxDim; } 
+                canvas.width = w; canvas.height = h; 
+                const ctx = canvas.getContext('2d');
+                ctx.drawImage(img, 0, 0, w, h); 
+
+                let minQ = 0.1, maxQ = 1.0, currentQ = 0.8, bestBlob = null;
+
+                const attemptCompression = (attemptsLeft) => {
+                    canvas.toBlob((blob) => {
+                        // If we run out of loops, return the best image we found under 500KB
+                        if (attemptsLeft === 0) return resolve(bestBlob || blob);
+
+                        if (blob.size > MAX_BYTES) {
+                            maxQ = currentQ; // File still too big, lower the quality ceiling
+                        } else if (blob.size < MIN_BYTES) {
+                            minQ = currentQ; // File got too small, raise the quality floor
+                        }
+
+                        // Always save the best valid blob under 500KB just in case
+                        if (blob.size <= MAX_BYTES && (!bestBlob || blob.size > bestBlob.size)) {
+                            bestBlob = blob; 
+                        }
+
+                        // THE SWEET SPOT: If we hit between 400KB and 500KB, resolve immediately!
+                        if (blob.size >= MIN_BYTES && blob.size <= MAX_BYTES) {
+                            return resolve(blob);
+                        }
+
+                        // Calculate the next quality and loop again
+                        currentQ = (minQ + maxQ) / 2;
+                        attemptCompression(attemptsLeft - 1);
+                        
+                    }, 'image/webp', currentQ);
+                };
+                
+                // Allow up to 8 compression loops to find the perfect size
+                attemptCompression(8); 
             }; 
         }; 
     }); 
