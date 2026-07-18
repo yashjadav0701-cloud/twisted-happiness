@@ -20,7 +20,7 @@ let cart = safeJSONParse('th_cart', []);
 let localWishlist = safeJSONParse('th_wishlist', []);
 let savedAddresses = safeJSONParse('th_saved_addresses', []);
 
-let products = []; let currentMainCategory = 'All'; let activeSubCategories = []; let currentSortMode = 'newest'; let currentSearchQuery = ''; 
+let products = []; let currentMainCategory = 'All'; let activeSubCategories = []; let currentSortMode = 'random'; let currentSearchQuery = ''; 
 let searchTimeout = null; let modalImages = []; let currentSlideIndex = 0; let isAnimating = false; let currentLightboxIndex = 0; let isLightboxAnimating = false; let currentModalLevel = 0; let statePushed = false;
 let checkoutStep = 1; let pendingOrderPayload = null; window.buyNowPayload = null; let currentOrderReference = null; let currentDeliveryFee = 0; let activeCouponValue = 0; let activeCouponCode = "";
 let selectedAddressIndex = savedAddresses.length > 0 ? 0 : -1; let editingAddressIndex = null; let currentSessionUser = null; let authModalMode = "login"; 
@@ -524,7 +524,8 @@ function renderProducts(sq = '') {
     if(activeSubCategories.length > 0) f = f.filter(p => activeSubCategories.includes(p.category));
     if(currentSortMode === 'low') f.sort((a,b) => parseFloat(a.price) - parseFloat(b.price)); 
     if(currentSortMode === 'high') f.sort((a,b) => parseFloat(b.price) - parseFloat(a.price)); 
-    if(currentSortMode === 'newest') f.reverse(); 
+    // Randomly shuffles the array on page load
+    if(currentSortMode === 'random') f.sort(() => Math.random() - 0.5); 
 
     if(f.length === 0) { g.innerHTML = '<div class="col-span-full text-center py-20 text-gray-400 font-medium text-sm w-full"><i class="fas fa-box-open text-4xl block mb-3 opacity-30"></i> No creations found matching your search.</div>'; return; }
     const frag = document.createDocumentFragment();
