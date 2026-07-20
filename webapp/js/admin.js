@@ -858,11 +858,12 @@ window.th_clearFilters = function() {
 // ==========================================
 
 window.th_renderDashboard = function() {
-    if (!window.allOrders || !Array.isArray(window.allOrders)) return;
+    // FIX: Using the natively populated allOrders array
+    if (!allOrders || !Array.isArray(allOrders)) return;
     
-    // 1. Calculate Stats (From unfiltered allOrders)
+    // 1. Calculate Stats 
     let stats = { attention: 0, crafting: 0, ready: 0, transit: 0, completed: 0, codPending: 0 };
-    window.allOrders.forEach(o => {
+    allOrders.forEach(o => {
         const s = String(o.status).toLowerCase();
         if (s === 'new' || s === 'pending') stats.attention++;
         if (s === 'curating') stats.crafting++;
@@ -885,7 +886,7 @@ window.th_renderDashboard = function() {
     updateEl('stat-cod-pending', stats.codPending);
 
     // 2. Filter Orders
-    let filtered = window.allOrders.filter(order => {
+    let filtered = allOrders.filter(order => {
         if (th_adminState.search) {
             const sText = th_adminState.search;
             const cData = extractCustomerData(order);
@@ -939,7 +940,7 @@ window.th_renderDashboard = function() {
 
     // 5. Realtime Modal Refresh
     if (th_adminState.openModalId) {
-        const stillExists = window.allOrders.some(o => String(o.id).replace(/[^a-zA-Z0-9_-]/g, '') === th_adminState.openModalId);
+        const stillExists = allOrders.some(o => String(o.id).replace(/[^a-zA-Z0-9_-]/g, '') === th_adminState.openModalId);
         if (stillExists) {
             window.th_openOrderDetail(th_adminState.openModalId);
         } else {
