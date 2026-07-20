@@ -1,14 +1,10 @@
 [build]
-  # The command Netlify will run to compile your CSS and assets
   command = "npm install && npm run build"
-  
-  # The directory Netlify will serve to the public 
-  # (If your built index.html is in the root, use "." - if it outputs to a folder, change this to "dist" or "webapp")
   publish = "."
 
 # 🚨 SECURITY: Prevent Search Engines from indexing the Admin Studio
 [[headers]]
-  for = "/admin.html"
+  for = "/admin*.html"
   [headers.values]
     X-Robots-Tag = "noindex, nofollow"
     Cache-Control = "no-cache, no-store, must-revalidate"
@@ -24,14 +20,13 @@
   [headers.values]
     Cache-Control = "public, max-age=31536000, immutable"
 
-# Fallback routing for SPA (If you add actual routing later)
-# Netlify Configuration File
-
+# Admin redirect route
 [[redirects]]
   from = "/khushiified"
-  to = "/admin.html"
+  to = "/admin_2.html"
   status = 200
 
+# Fallback routing for the main site
 [[redirects]]
   from = "/*"
   to = "/index.html"
