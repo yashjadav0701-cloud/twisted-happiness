@@ -1333,7 +1333,8 @@ function filterMainCategory(cat) { currentMainCategory = cat; activeSubCategorie
 function filterSubCategory(cat) { activeSubCategories = cat === 'All' ? [] : [cat]; renderFilters(); renderProducts(currentSearchQuery); }
 
 function renderFilters() {
-    const mc = document.getElementById('main-category-filters'); const mCats = ['All', 'Pipe Cleaner Crafts', 'Canvas Paintings', 'Clay Art Paintings'];
+    const mc = document.getElementById('main-category-filters'); 
+    const mCats = ['All', ...new Set(products.map(p => p.mainCategory).filter(c => c))];
     if(mc) { mc.innerHTML = ''; mCats.forEach(c => { const btn = document.createElement('button'); btn.className = `text-[9px] sm:text-[10px] font-bold uppercase tracking-widest whitespace-nowrap px-4 py-2.5 border-b-[2px] transition-colors ${currentMainCategory === c ? 'text-luxury-rose border-luxury-rose' : 'text-gray-400 border-transparent hover:text-luxury-dark'}`; btn.textContent = c; btn.onclick = () => filterMainCategory(c); mc.appendChild(btn); }); }
     let subs = []; if(currentMainCategory === 'All') { subs = [...new Set(products.map(p => p.category).filter(c => c))]; } else { subs = [...new Set(products.filter(p => p.mainCategory === currentMainCategory).map(p => p.category).filter(c => c))]; } activeSubCategories = activeSubCategories.filter(c => subs.includes(c));
     const scm = document.getElementById('sub-category-filters-mob'); if(scm) { let hMob = `<option value="All">All Sub-Categories</option>`; subs.forEach(c => { const isS = activeSubCategories.length === 1 && activeSubCategories[0] === c; hMob += `<option value="${c}" ${isS ? 'selected' : ''}>${c}</option>`; }); scm.innerHTML = hMob; }
