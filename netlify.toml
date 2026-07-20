@@ -1,32 +1,46 @@
 [build]
-  command = "npm install && npm run build"
-  publish = "."
+  publish = "webapp"
 
-# 🚨 SECURITY: Prevent Search Engines from indexing the Admin Studio
+# ==========================================
+# SECURITY: Prevent search engines from indexing Admin Studio
+# ==========================================
+
 [[headers]]
   for = "/admin*.html"
+
   [headers.values]
     X-Robots-Tag = "noindex, nofollow"
     Cache-Control = "no-cache, no-store, must-revalidate"
 
-# Performance: Cache static assets (JS, CSS) for 1 year
+# ==========================================
+# PERFORMANCE: Cache static assets
+# ==========================================
+
 [[headers]]
   for = "/**/*.css"
+
   [headers.values]
     Cache-Control = "public, max-age=31536000, immutable"
 
 [[headers]]
   for = "/**/*.js"
+
   [headers.values]
     Cache-Control = "public, max-age=31536000, immutable"
 
-# Admin redirect route
+# ==========================================
+# ADMIN ROUTE
+# ==========================================
+
 [[redirects]]
   from = "/khushiified"
-  to = "/admin_2.html"
+  to = "/admin.html"
   status = 200
 
-# Fallback routing for the main site
+# ==========================================
+# MAIN WEBSITE FALLBACK
+# ==========================================
+
 [[redirects]]
   from = "/*"
   to = "/index.html"
