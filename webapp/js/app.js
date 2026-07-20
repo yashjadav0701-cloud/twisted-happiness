@@ -118,7 +118,7 @@ function applyDynamicSettings() {
 function setupSocialLinks() {
     const phone = (settings.whatsapp || "9909310501").replace(/\D/g, ''), code = (settings.countryCode || "91").replace(/\D/g, '');
     // Using encodeURIComponent on a string with Unicode escapes guarantees cross-browser emoji support
-    const msg = encodeURIComponent("Hello! 🌸 I am exploring your beautiful handcrafted collection at Twisted Happiness and have a quick query ✨");
+    const msg = encodeURIComponent("Hello! I am exploring your beautiful handcrafted collection at Twisted Happiness and have a quick query");
     const waLink = document.getElementById('footer-whatsapp'), floatLink = document.getElementById('floating-wa-btn');
     if(waLink) waLink.href = `https://wa.me/${code}${phone}?text=${msg}`;
     if(floatLink) floatLink.href = `https://wa.me/${code}${phone}?text=${msg}`;
@@ -161,56 +161,35 @@ function injectSkeletons() {
 function bindDOMEvents() {
     // 🎀 Emotional "Leaving" Prompt
     window.addEventListener('beforeunload', function (e) {
-        if (cart.length > 0 || window.buyNowPayload) {
+        // Safely check if cart exists and has items, or if a buyNowPayload exists
+        const hasCartItems = typeof cart !== 'undefined' && cart.length > 0;
+        const isBuyingNow = typeof window.buyNowPayload !== 'undefined' && window.buyNowPayload;
+
+        if (hasCartItems || isBuyingNow) {
             const msg = "Wait! Are you sure you want to leave me behind with your beautiful cart? 🥺🎀";
-            e.preventDefault();
-            e.returnValue = msg;
-            return msg;
-        }
-    });
-    
-    // 📱 Native Mobile Hardware Back Button Handling
-    window.addEventListener('popstate', (e) => {
-        const level = e.state ? e.state.level : 0;
-        
-        if (level < 2) {
-            if(window.forceCloseLightbox) window.forceCloseLightbox();
-            window.closePolicyModal('return-policy-modal', 'return-policy-box');
-            window.closePolicyModal('privacy-policy-modal', 'privacy-policy-box');
-            window.closePolicyModal('offers-modal', 'offers-box');
-            window.closePolicyModal('review-modal', 'review-box');
-            if(window.closeCustomerAuthModal) window.closeCustomerAuthModal();
-            if(window.closeTrackOrderModal) window.closeTrackOrderModal();
-        }
-        
-        if (level < 1) {
-            window.closeProductPage();
             
-            const chk = document.getElementById('checkout-overlay');
-            if (chk && !chk.classList.contains('hidden')) { chk.classList.remove('opacity-100'); chk.classList.add('opacity-0'); setTimeout(() => { chk.classList.add('hidden'); document.body.classList.remove('overflow-hidden'); }, 300); }
+            // Standard method to trigger the browser's leave prompt
+            e.preventDefault(); 
             
-            const prof = document.getElementById('customer-profile-overlay');
-            if (prof && !prof.classList.contains('hidden')) { prof.classList.remove('opacity-100'); prof.classList.add('opacity-0'); setTimeout(() => { prof.classList.add('hidden'); document.body.classList.remove('overflow-hidden'); }, 300); }
+            // Legacy support for older browsers
+            e.returnValue = msg; 
+            return msg; 
         }
     });
 
-    document.addEventListener('keydown', (e) => { if (e.ctrlKey && e.shiftKey && e.key.toLowerCase() === 'k') { e.preventDefault(); window.location.href = '/admin.html'; } });
-    document.getElementById('prof-pin')?.addEventListener('input', handlePincodeInput);
-    
-    // Quick enter key submission
-    document.getElementById('searchInputDesk')?.addEventListener('keypress', (e) => { if(e.key === 'Enter') e.target.blur(); });
-    document.getElementById('searchInputMob')?.addEventListener('keypress', (e) => { if(e.key === 'Enter') e.target.blur(); });
-    document.getElementById('checkout-promo-input')?.addEventListener('keypress', (e) => { if(e.key === 'Enter') { e.preventDefault(); window.applyCouponCode(); } });
-    
-    document.getElementById('searchInputDesk')?.addEventListener('input', (e) => syncSearch(e.target.value));
-    document.getElementById('searchInputMob')?.addEventListener('input', (e) => syncSearch(e.target.value));
-    document.getElementById('sortInputMob')?.addEventListener('change', (e) => setSortMode(e.target.value));
-    document.getElementById('sortInputDesk')?.addEventListener('change', (e) => setSortMode(e.target.value));
-    document.getElementById('sub-category-filters-mob')?.addEventListener('change', (e) => filterSubCategory(e.target.value));
-    document.getElementById('track-order-form-guest')?.addEventListener('submit', handleTrackOrderGuest);
-    document.getElementById('customer-auth-form')?.addEventListener('submit', handleAuthFormSubmit);
-    setupTouchCarousel(); setupLightboxTouch();
+    // 🛒 Example: Bind other standard e-commerce events below
+    /*
+    const checkoutButton = document.getElementById('checkout-btn');
+    if (checkoutButton) {
+        checkoutButton.addEventListener('click', function() {
+            // Checkout logic here
+        });
+    }
+    */
 }
+
+// Don't forget to call the function so the events actually attach!
+// bindDOMEvents();
 
 async function setupAuthSessionListener() {
     const { data: { session } } = await _supabase.auth.getSession();
