@@ -527,14 +527,32 @@ async function fetchOrders() {
         const { data, error } = await _supabase.from('orders').select('*').order('created_at', { ascending: false }); 
         if (error) throw error; 
         
+        // Globally assign data securely
         allOrders = data || [];
-        window.allOrders = allOrders; // <-- THIS IS THE MISSING LINK
         
         const pendingCount = allOrders.filter(o => o.status === 'new' || o.status === 'pending').length; 
         const badge = document.getElementById('admin-order-badge');
-        if (pendingCount > 0) { badge.textContent = pendingCount; badge.classList.remove('hidden'); } else { badge.classList.add('hidden'); }
-        updateAnalyticsDashboard(); requestAnimationFrame(() => { window.th_renderDashboard(); });
-    } catch (err) { console.error("Error fetching orders", err); }
+        if (badge) {
+            if (pendingCount > 0) { badge.textContent = pendingCount; badge.classList.remove('hidden'); } 
+            else { badge.classList.add('hidden'); }
+        }
+        
+        updateAnalyticsDashboard(); 
+        
+        // Force the UI to render directly, bypassing any missing object confusion
+        if (typeof window.th_renderDashboard === 'function') {
+            window.th_renderDashboard();
+        } else {
+            // Hard Failsafe: if Phase 9 engine fails, render natively
+            renderActiveOrders();
+            renderCompletedOrders();
+            renderRejectedOrders();
+        }
+    } catch (err) { 
+        console.error("Error fetching orders", err); 
+        const container = document.getElementById('admin-active-orders');
+        if (container) container.innerHTML = `<div class="text-center text-red-500 py-10 font-bold">Database connection failed.</div>`;
+    }
 }
 
 function updateAnalyticsDashboard() {
@@ -858,10 +876,14 @@ window.th_clearFilters = function() {
 // ==========================================
 
 window.th_renderDashboard = function() {
-    // FIX: Using the natively populated allOrders array
-    if (!allOrders || !Array.isArray(allOrders)) return;
+    // 1. Hard check: If no data, force clear the loading spinner anyway
+    if (!allOrders || !Array.isArray(allOrders)) {
+        const container = document.getElementById('admin-active-orders');
+        if(container) container.innerHTML = '<div class="text-center text-gray-400 py-10 text-[10px] uppercase tracking-[0.2em] font-medium"><i class="fas fa-inbox text-2xl mb-3 opacity-50 block"></i> No orders found.</div>';
+        return;
+    }
     
-    // 1. Calculate Stats 
+    // 2. Calculate Stats 
     let stats = { attention: 0, crafting: 0, ready: 0, transit: 0, completed: 0, codPending: 0 };
     allOrders.forEach(o => {
         const s = String(o.status).toLowerCase();
@@ -871,9 +893,7 @@ window.th_renderDashboard = function() {
         if (s === 'shipped' || s === 'out_for_delivery') stats.transit++;
         if (s === 'completed') {
             stats.completed++;
-            if (String(o.payment_method).toLowerCase() === 'cod' && String(o.payment_status).toLowerCase() !== 'paid') {
-                stats.codPending++;
-            }
+            if (String(o.payment_method).toLowerCase() === 'cod' && String(o.payment_status).toLowerCase() !== 'paid') stats.codPending++;
         }
     });
     
@@ -885,16 +905,16 @@ window.th_renderDashboard = function() {
     updateEl('stat-completed', stats.completed);
     updateEl('stat-cod-pending', stats.codPending);
 
-    // 2. Filter Orders
+    // 3. Filter Orders
     let filtered = allOrders.filter(order => {
-        if (th_adminState.search) {
+        if (typeof th_adminState !== 'undefined' && th_adminState.search) {
             const sText = th_adminState.search;
             const cData = extractCustomerData(order);
             const itemsStr = order.order_details ? String(order.order_details).toLowerCase() : '';
-            const searchStr = `${String(order.id)} ${cData.name || ''} ${cData.phone || ''} ${cData.email || ''} ${order.tracking_data || ''} ${itemsStr} ${order.customer_reqs || ''}`.toLowerCase();
+            const searchStr = `${String(order.id)} ${cData.name || ''} ${cData.phone || ''} ${order.tracking_data || ''} ${itemsStr}`.toLowerCase();
             if (!searchStr.includes(sText)) return false;
         }
-        if (th_adminState.status !== 'all') {
+        if (typeof th_adminState !== 'undefined' && th_adminState.status !== 'all') {
             const s = String(order.status).toLowerCase();
             const f = th_adminState.status;
             if (f === 'attention' && s !== 'new' && s !== 'pending') return false;
@@ -904,7 +924,7 @@ window.th_renderDashboard = function() {
             if (f === 'completed' && s !== 'completed') return false;
             if (f === 'rejected' && s !== 'cancelled' && s !== 'rejected') return false;
         }
-        if (th_adminState.payment !== 'all') {
+        if (typeof th_adminState !== 'undefined' && th_adminState.payment !== 'all') {
             const pm = String(order.payment_method).toLowerCase();
             const ps = String(order.payment_status).toLowerCase();
             const f = th_adminState.payment;
@@ -916,16 +936,18 @@ window.th_renderDashboard = function() {
         return true;
     });
 
-    // 3. Sort Orders
-    filtered.sort((a, b) => {
-        if (th_adminState.sort === 'newest') return new Date(b.created_at || 0) - new Date(a.created_at || 0);
-        if (th_adminState.sort === 'oldest') return new Date(a.created_at || 0) - new Date(b.created_at || 0);
-        if (th_adminState.sort === 'high') return (parseFloat(b.total) || 0) - (parseFloat(a.total) || 0);
-        if (th_adminState.sort === 'low') return (parseFloat(a.total) || 0) - (parseFloat(b.total) || 0);
-        return 0;
-    });
+    // 4. Sort Orders
+    if (typeof th_adminState !== 'undefined') {
+        filtered.sort((a, b) => {
+            if (th_adminState.sort === 'newest') return new Date(b.created_at || 0) - new Date(a.created_at || 0);
+            if (th_adminState.sort === 'oldest') return new Date(a.created_at || 0) - new Date(b.created_at || 0);
+            if (th_adminState.sort === 'high') return (parseFloat(b.total) || 0) - (parseFloat(a.total) || 0);
+            if (th_adminState.sort === 'low') return (parseFloat(a.total) || 0) - (parseFloat(b.total) || 0);
+            return 0;
+        });
+    }
 
-    // 4. Distribute cleanly to existing renderers
+    // 5. Distribute seamlessly
     let active = [], completed = [], rejected = [];
     filtered.forEach(o => {
         const s = String(o.status).toLowerCase();
@@ -934,18 +956,16 @@ window.th_renderDashboard = function() {
         else active.push(o);
     });
 
+    // THIS IS THE CRITICAL LINE THAT DELETES THE SPINNER
     renderActiveOrders(active);
     renderCompletedOrders(completed);
     renderRejectedOrders(rejected);
 
-    // 5. Realtime Modal Refresh
-    if (th_adminState.openModalId) {
+    // 6. Realtime Modal Refresh
+    if (typeof th_adminState !== 'undefined' && th_adminState.openModalId) {
         const stillExists = allOrders.some(o => String(o.id).replace(/[^a-zA-Z0-9_-]/g, '') === th_adminState.openModalId);
-        if (stillExists) {
-            window.th_openOrderDetail(th_adminState.openModalId);
-        } else {
-            window.th_closeOrderDetail();
-        }
+        if (stillExists) window.th_openOrderDetail(th_adminState.openModalId);
+        else window.th_closeOrderDetail();
     }
 };
 
