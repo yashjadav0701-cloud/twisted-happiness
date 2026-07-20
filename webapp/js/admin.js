@@ -975,8 +975,11 @@ window.th_renderDashboard = function() {
 
 window.th_openOrderDetail = function(orderId) {
     const safeId = String(orderId).replace(/[^a-zA-Z0-9_-]/g, '');
-    if (!window.allOrders) return;
-    const order = window.allOrders.find(o => String(o.id).replace(/[^a-zA-Z0-9_-]/g, '') === safeId);
+    
+    // FIX: Removed 'window.' so it can successfully find your database array
+    if (!allOrders) return;
+    const order = allOrders.find(o => String(o.id).replace(/[^a-zA-Z0-9_-]/g, '') === safeId);
+    
     if (!order) return;
     
     th_adminState.openModalId = safeId;
