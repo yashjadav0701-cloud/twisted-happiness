@@ -696,7 +696,17 @@ window.th_startCrafting = async function(id) {
         if (customerData.phone) {
             let cleanPhone = customerData.phone.replace(/\D/g, ''); 
             if (cleanPhone.startsWith('9191') && cleanPhone.length > 11) cleanPhone = cleanPhone.substring(2);
-            const acceptMsg = `Dear ${customerData.name},\n\nYour exquisite commission (${customerData.orderId}) from *Twisted Happiness* has been embraced, and our artisan has officially begun handcrafting your piece.\n\nIt will take approximately *${customerData.prepTime}* to prepare for dispatch.\n\nThank you for trusting us.`;
+            
+            let itemsText = "";
+            try {
+                const items = typeof order.order_details === 'string' ? JSON.parse(order.order_details) : order.order_details;
+                itemsText = items.map(i => `${i.qty}x ${i.name}`).join(', ');
+            } catch(e) { itemsText = "Your curated pieces"; }
+            
+            const payType = order.payment_method === 'cod' ? 'Cash on Delivery' : 'Prepaid (UPI)';
+            
+            const acceptMsg = `Hi ${customerData.name}! 🎀\n\nYour lovely order (${customerData.orderId}) at *Twisted Happiness* is confirmed! ✨\n\n🛍️ *Order Details:*\n• Items: ${itemsText}\n• Total: ₹${order.total}\n• Payment: ${payType}\n\nOur artisan has started handcrafting your piece. It will take approx *${customerData.prepTime}* to prepare for dispatch. 🌸\n\nThank you for choosing us! 💖`;
+            
             window.open(`https://wa.me/${cleanPhone}?text=${encodeURIComponent(acceptMsg)}`, '_blank');
         }
     } catch(e) { showToast("Error processing order", "fa-times", "text-red-500"); console.error(e); }
@@ -735,7 +745,13 @@ window.th_rejectOrder = async function(id) {
         if (customerData.phone) {
             let cleanPhone = customerData.phone.replace(/\D/g, ''); 
             if (cleanPhone.startsWith('9191') && cleanPhone.length > 11) cleanPhone = cleanPhone.substring(2);
-            const rejectMsg = `Dear ${customerData.name},\n\nWe noticed a pending order (${customerData.orderId}) at *Twisted Happiness*, but we haven't received the payment verification yet.\n\nRegrettably, this order has been cancelled. If the amount was deducted from your account, please reply to this message with a screenshot of the transaction so we can restore your order manually.\n\nThank you for understanding!`;
+            
+            let rejectMsg = "";
+            if (order.payment_method === 'cod') {
+                rejectMsg = `Hi ${customerData.name} 🌸\n\nRegrettably, we had to decline your Cash on Delivery order (${customerData.orderId}) at *Twisted Happiness*.\n\nIf you'd still like to get your hands on these pieces, please feel free to place a new order using our prepaid UPI option! ✨\n\nThank you for understanding! 🎀`;
+            } else {
+                rejectMsg = `Hi ${customerData.name} 🌸\n\nWe noticed a pending order (${customerData.orderId}) at *Twisted Happiness*, but we haven't received the payment verification yet.\n\nRegrettably, this order has been cancelled. If your payment was deducted, please reply with a screenshot so we can manually restore your beautiful order! ✨\n\nThank you for understanding! 🎀`;
+            }
             window.open(`https://wa.me/${cleanPhone}?text=${encodeURIComponent(rejectMsg)}`, '_blank');
         }
     } catch(e) { showToast("Error rejecting order", "fa-times", "text-red-500"); console.error(e); }
@@ -1028,7 +1044,7 @@ window.th_openOrderDetail = function(orderId) {
     
     let timelineHtml = `<div class="relative border-l-2 border-luxury-blush space-y-5 ml-2 font-sans">`;
     timelineHtml += `<div class="relative">${getDot(true)}<p class="text-[10px] font-bold uppercase tracking-widest ${s1 ? 'text-luxury-dark' : 'text-gray-400'}">Order Placed</p><p class="text-[9px] text-gray-400">${escapeHTML(dateStr)}</p></div>`;
-    timelineHtml += `<div class="relative">${getDot(s2)}<p class="text-[10px] font-bold uppercase tracking-widest ${s2 ? 'text-luxury-dark' : 'text-gray-400'}">Payment Verified</p></div>`;
+    timelineHtml += `<div class="relative">${getDot(s2)}<p class="text-[10px] font-bold uppercase tracking-widest ${s2 ? 'text-luxury-dark' : 'text-gray-400'}">${order.payment_method === 'cod' ? 'Order Approved' : 'Payment Verified'}</p></div>`;
     timelineHtml += `<div class="relative">${getDot(s3)}<p class="text-[10px] font-bold uppercase tracking-widest ${s3 ? 'text-luxury-dark' : 'text-gray-400'}">Artisan Crafting</p></div>`;
     timelineHtml += `<div class="relative">${getDot(s4)}<p class="text-[10px] font-bold uppercase tracking-widest ${s4 ? 'text-luxury-dark' : 'text-gray-400'}">Ready & Packaged</p></div>`;
     timelineHtml += `<div class="relative">${getDot(s5)}<p class="text-[10px] font-bold uppercase tracking-widest ${s5 ? 'text-luxury-dark' : 'text-gray-400'}">In Transit</p></div>`;
