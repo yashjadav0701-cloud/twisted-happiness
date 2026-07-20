@@ -706,7 +706,7 @@ window.th_startCrafting = async function(id) {
             const payType = order.payment_method === 'cod' ? 'Cash on Delivery' : 'Prepaid (UPI)';
             
             // Using Unicode escapes to prevent the "?" encoding error
-            const acceptMsg = `Hi ${customerData.name}! \uD83C\uDF80\n\nYour lovely order (${customerData.orderId}) at *Twisted Happiness* is confirmed! \u2728\n\n\uD83D\uDECD\uFE0F *Order Details:*\n\u2022 Items: ${itemsText}\n\u2022 Total: \u20B9${order.total}\n\u2022 Payment: ${payType}\n\nOur artisan has started handcrafting your piece. It will take approx *${customerData.prepTime}* to prepare for dispatch. \uD83C\uDF38\n\nThank you for choosing us! \uD83D\uDC96`;
+            const acceptMsg = `Hi ${customerData.name}! 🎀\n\nYour lovely order (${customerData.orderId}) at *Twisted Happiness* is confirmed! ✨\n\n🛍️ *Order Details:*\n• Items: ${itemsText}\n• Total: ₹${order.total}\n• Payment: ${payType}\n\nOur artisan has started handcrafting your piece. It will take approx *${customerData.prepTime}* to prepare for dispatch. 🌸\n\nThank you for choosing us! 💖`;
             
             window.open(`https://wa.me/${cleanPhone}?text=${encodeURIComponent(acceptMsg)}`, '_blank');
         }
@@ -749,9 +749,9 @@ window.th_rejectOrder = async function(id) {
             
             let rejectMsg = "";
             if (order.payment_method === 'cod') {
-                rejectMsg = `Hi ${customerData.name} \uD83C\uDF38\n\nRegrettably, we had to decline your Cash on Delivery order (${customerData.orderId}) at *Twisted Happiness*.\n\nIf you'd still like to get your hands on these pieces, please feel free to place a new order using our prepaid UPI option! \u2728\n\nThank you for understanding! \uD83C\uDF80`;
+                rejectMsg = `Hi ${customerData.name} 🌸\n\nRegrettably, we had to decline your Cash on Delivery order (${customerData.orderId}) at *Twisted Happiness*.\n\nIf you'd still like to get your hands on these pieces, please feel free to place a new order using our prepaid UPI option! ✨\n\nThank you for understanding! 🎀`;
             } else {
-                rejectMsg = `Hi ${customerData.name} \uD83C\uDF38\n\nWe noticed a pending order (${customerData.orderId}) at *Twisted Happiness*, but we haven't received the payment verification yet.\n\nRegrettably, this order has been cancelled. If your payment was deducted, please reply with a screenshot so we can manually restore your beautiful order! \u2728\n\nThank you for understanding! \uD83C\uDF80`;
+                rejectMsg = `Hi ${customerData.name} 🌸\n\nWe noticed a pending order (${customerData.orderId}) at *Twisted Happiness*, but we haven't received the payment verification yet.\n\nRegrettably, this order has been cancelled. If your payment was deducted, please reply with a screenshot so we can manually restore your beautiful order! ✨\n\nThank you for understanding! 🎀`;
             }
             window.open(`https://wa.me/${cleanPhone}?text=${encodeURIComponent(rejectMsg)}`, '_blank');
         }
