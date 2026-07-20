@@ -221,35 +221,49 @@
 
             
 
-            <!-- PHASE 9: FILTER TOOLBAR (HORIZONTAL SCROLL) -->
-<div class="max-w-4xl mx-auto bg-white border border-luxury-blush rounded-xl p-4 mb-6 shadow-sm flex flex-row overflow-x-auto gap-4 items-center whitespace-nowrap" style="scrollbar-width: none;">
-    <div class="w-56 shrink-0 relative">
-        <i class="fas fa-search absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-xs"></i>
-        <input type="text" id="admin-search" oninput="window.th_handleSearch(this.value)" placeholder="Search Name, Phone, ID..." class="w-full pl-9 pr-3 py-2 text-[11px] bg-luxury-bg border border-luxury-blush rounded-lg outline-none focus:border-luxury-rose text-luxury-dark font-medium">
+            <!-- PHASE 9: FILTER TOOLBAR (REDESIGNED STACKED UI) -->
+<div class="max-w-4xl mx-auto bg-white border border-luxury-blush rounded-2xl p-4 sm:p-5 mb-6 shadow-sm flex flex-col gap-4">
+    
+    <!-- Top Row: Full Width Search Bar -->
+    <div class="w-full relative group">
+        <i class="fas fa-search absolute left-4 top-1/2 -translate-y-1/2 text-luxury-rose/70 transition-colors group-focus-within:text-luxury-rose"></i>
+        <input type="text" id="admin-search" oninput="window.th_handleSearch(this.value)" placeholder="Search Patron Name, Phone, Order ID, or AWB..." class="w-full pl-10 pr-4 py-3 text-[12px] bg-luxury-bg border border-luxury-blush rounded-xl outline-none focus:border-luxury-rose focus:ring-2 focus:ring-luxury-rose/20 text-luxury-dark font-medium transition-all">
     </div>
-    <select id="admin-filter-status" onchange="window.th_handleFilter('status', this.value)" class="shrink-0 px-3 py-2 text-[10px] font-bold uppercase tracking-widest bg-white border border-luxury-blush rounded-lg outline-none text-luxury-dark cursor-pointer">
-        <option value="all">All Statuses</option>
-        <option value="attention">New / Pending</option>
-        <option value="curating">Crafting</option>
-        <option value="ready">Ready to Dispatch</option>
-        <option value="transit">In Transit</option>
-        <option value="completed">Completed</option>
-        <option value="rejected">Cancelled / Rejected</option>
-    </select>
-    <select id="admin-filter-payment" onchange="window.th_handleFilter('payment', this.value)" class="shrink-0 px-3 py-2 text-[10px] font-bold uppercase tracking-widest bg-white border border-luxury-blush rounded-lg outline-none text-luxury-dark cursor-pointer">
-        <option value="all">All Payments</option>
-        <option value="upi">UPI Only</option>
-        <option value="cod">COD Only</option>
-        <option value="paid">Paid</option>
-        <option value="pending">Pending</option>
-    </select>
-    <select id="admin-filter-sort" onchange="window.th_handleFilter('sort', this.value)" class="shrink-0 px-3 py-2 text-[10px] font-bold uppercase tracking-widest bg-white border border-luxury-blush rounded-lg outline-none text-luxury-dark cursor-pointer">
-        <option value="newest">Newest First</option>
-        <option value="oldest">Oldest First</option>
-        <option value="high">Highest Value</option>
-        <option value="low">Lowest Value</option>
-    </select>
-    <button type="button" onclick="window.th_clearFilters()" class="shrink-0 text-[9px] font-bold uppercase tracking-widest text-gray-500 hover:text-luxury-rose transition-colors ml-auto pr-2"><i class="fas fa-times"></i> Clear Filters</button>
+    
+    <!-- Bottom Row: Scrolling Filter Pills -->
+    <div class="flex flex-row overflow-x-auto gap-3 items-center whitespace-nowrap w-full pb-1" style="scrollbar-width: none;">
+        <select id="admin-filter-status" onchange="window.th_handleFilter('status', this.value)" class="shrink-0 px-4 py-2.5 text-[10px] font-bold uppercase tracking-widest bg-luxury-bg hover:bg-white border border-luxury-blush rounded-xl outline-none text-luxury-dark cursor-pointer focus:border-luxury-rose transition-colors shadow-sm">
+            <option value="all">All Statuses</option>
+            <option value="attention">New / Pending</option>
+            <option value="curating">Crafting</option>
+            <option value="ready">Ready to Dispatch</option>
+            <option value="transit">In Transit</option>
+            <option value="completed">Completed</option>
+            <option value="rejected">Cancelled / Rejected</option>
+        </select>
+        
+        <select id="admin-filter-payment" onchange="window.th_handleFilter('payment', this.value)" class="shrink-0 px-4 py-2.5 text-[10px] font-bold uppercase tracking-widest bg-luxury-bg hover:bg-white border border-luxury-blush rounded-xl outline-none text-luxury-dark cursor-pointer focus:border-luxury-rose transition-colors shadow-sm">
+            <option value="all">All Payments</option>
+            <option value="upi">UPI Only</option>
+            <option value="cod">COD Only</option>
+            <option value="paid">Paid</option>
+            <option value="pending">Pending</option>
+        </select>
+        
+        <select id="admin-filter-sort" onchange="window.th_handleFilter('sort', this.value)" class="shrink-0 px-4 py-2.5 text-[10px] font-bold uppercase tracking-widest bg-luxury-bg hover:bg-white border border-luxury-blush rounded-xl outline-none text-luxury-dark cursor-pointer focus:border-luxury-rose transition-colors shadow-sm">
+            <option value="newest">Newest First</option>
+            <option value="oldest">Oldest First</option>
+            <option value="high">Highest Value</option>
+            <option value="low">Lowest Value</option>
+        </select>
+        
+        <!-- Spacer pushes the clear button to the far right on large screens -->
+        <div class="flex-grow min-w-[20px]"></div> 
+        
+        <button type="button" onclick="window.th_clearFilters()" class="shrink-0 text-[10px] font-bold uppercase tracking-widest text-gray-400 hover:text-luxury-rose transition-colors flex items-center gap-1.5 pr-2">
+            <i class="fas fa-times text-sm"></i> Clear
+        </button>
+    </div>
 </div>
                 <!-- Workspace Container -->
                 <div class="max-w-4xl mx-auto bg-white p-5 sm:p-8 shadow-sm border border-luxury-blush rounded-2xl h-fit">
