@@ -12,6 +12,34 @@
     <meta http-equiv="Pragma" content="no-cache">
     <meta http-equiv="Expires" content="0">
     
+    <!-- 1. Tailwind Play CDN (Forces styles to render instantly on Netlify) -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <!-- 2. Tailwind Config for your custom Twisted Happiness theme -->
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        'luxury-bg': '#fcfafb',
+                        'luxury-dark': '#2c2424',
+                        'luxury-rose': '#D9778A',
+                        'luxury-blush': '#f4c6ce',
+                        'luxury-gold': '#d4af37'
+                    },
+                    fontFamily: {
+                        'logo': ['Marcellus', 'serif'],
+                        'bitter': ['Bitter', 'serif'],
+                        'poppins': ['Poppins', 'sans-serif'],
+                        'sans': ['Montserrat', 'sans-serif'],
+                        'body': ['Montserrat', 'sans-serif']
+                    }
+                }
+            }
+        }
+    </script>
+
+    <!-- 3. Your compiled CSS file (Kept as a backup if Netlify builds it successfully) -->
     <link href="./output.css?v=__VERSION__" rel="stylesheet">
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
     <link href="https://fonts.googleapis.com/css2?family=Marcellus&family=Bitter:wght@400;600&family=Poppins:wght@500;600;700&family=Montserrat:wght@400;500;600;700&display=swap" rel="stylesheet">
