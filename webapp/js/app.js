@@ -117,7 +117,8 @@ function applyDynamicSettings() {
 
 function setupSocialLinks() {
     const phone = (settings.whatsapp || "9909310501").replace(/\D/g, ''), code = (settings.countryCode || "91").replace(/\D/g, '');
-    const msg = "Hello!%20I%20am%20exploring%20your%20beautiful%20collection.";
+    // Using encodeURIComponent on a string with Unicode escapes guarantees cross-browser emoji support
+    const msg = encodeURIComponent("Hello! \uD83C\uDF38 I am exploring your beautiful handcrafted collection at Twisted Happiness and have a quick query \u2728");
     const waLink = document.getElementById('footer-whatsapp'), floatLink = document.getElementById('floating-wa-btn');
     if(waLink) waLink.href = `https://wa.me/${code}${phone}?text=${msg}`;
     if(floatLink) floatLink.href = `https://wa.me/${code}${phone}?text=${msg}`;
@@ -503,7 +504,7 @@ window.applyCouponCode = async function() {
 
     let ss = 0;
     const listToRender = window.buyNowPayload ? [window.buyNowPayload] : cart;
-    listToRender.forEach((item) => { ss += (Number(String(item.price || 0).replace(/[^0-9.,]/g, '')) * parseInt(item.qty || 1)); }); 
+    listToRender.forEach((item) => { ss += (Number(String(item.price || 0).replace(/[^0-9.]/g, '')) * parseInt(item.qty || 1)); }); 
 
     try {
         // Prepare auth header if user is signed in (needed for first_order logic)
@@ -1146,7 +1147,7 @@ window.confirmPaymentAndOrder = async function() {
     } catch(err) {
         console.error("Order Error:", err);
         window.showToast(err.message || "Error Securing Order", "fa-times", "text-red-500");
-        if(b) { b.innerHTML = 'I Have Completed Payment <i class="fas fa-check-circle"></i>'; b.disabled = false; }
+        if(b) { b.innerHTML = paymentMethod === 'cod' ? 'Confirm COD Order <i class="fas fa-box"></i>' : 'I Have Completed Payment <i class="fas fa-check-circle"></i>'; b.disabled = false; }
     }
 };
 
