@@ -1,0 +1,151 @@
+import { serve } from "https://deno.land/std@0.168.0/http/server.ts"
+import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
+
+const corsHeaders = {
+  'Access-Control-Allow-Origin': '*',
+  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
+}
+
+serve(async (req) => {
+  // Handle CORS preflight
+  if (req.method === 'OPTIONS') return new Response('ok', { headers: corsHeaders })
+
+  try {
+    // Extract custom dimensions sent from Admin Panel
+    const { order_id, weight = 0.5, length = 10, breadth = 10, height = 10 } = await req.json()
+    
+    const supabaseClient = createClient(
+      Deno.env.get('SUPABASE_URL') ?? '',
+      Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
+    )
+
+    const { data: orderData, error: dbError } = await supabaseClient.from('orders').select('*').eq('id', order_id).single()
+    if (dbError || !orderData) throw new Error("Order not found in database.");
+
+    // 1. Authenticate with Shiprocket
+    const shiprocketEmail = Deno.env.get('SHIPROCKET_EMAIL');
+    const shiprocketPassword = Deno.env.get('SHIPROCKET_PASSWORD');
+
+    if (!shiprocketEmail || !shiprocketPassword) {
+      throw new Error("Server Configuration Error: Shiprocket credentials are missing from the environment variables.");
+    }
+
+    const authRes = await fetch('https://apiv2.shiprocket.in/v1/external/auth/login', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        email: shiprocketEmail,
+        password: shiprocketPassword
+      })
+    });
+    
+    const authData = await authRes.json();
+    if (!authRes.ok || !authData.token) {
+        throw new Error("Shiprocket Login Failed: " + JSON.stringify(authData));
+    }
+    const token = authData.token;
+
+    // ✨ 2. STRICT STRUCTURED DATA PARSING ✨
+    let firstName, lastName, billingEmail, cleanPhone, pincode, state, city, finalAddress;
+
+    if (orderData.shipping_data && Object.keys(orderData.shipping_data).length > 0) {
+        const sd = orderData.shipping_data;
+        firstName = sd.first_name || "Customer";
+        lastName = sd.last_name || ".";
+        billingEmail = sd.email || "orders@twistedhappiness.com";
+        cleanPhone = (sd.phone || "0000000000").slice(-10);
+        pincode = sd.pincode || "387002";
+        state = sd.state || "Gujarat";
+        city = sd.city || "Nadiad";
+        finalAddress = [sd.address_1, sd.address_2].filter(Boolean).join(', ').substring(0, 80) || "No Address provided";
+    } else {
+        // LEGACY FALLBACK: Safe parsing for old orders created before structured architecture
+        const reqs = orderData.customer_reqs || "";
+        
+        const phoneMatch = reqs.match(/Ph:\s*([^|]+)/) || reqs.match(/Phone:\s*([^|]+)/);
+        cleanPhone = phoneMatch ? phoneMatch[1].replace(/\D/g, '').slice(-10) : "0000000000";
+
+        const nameMatch = reqs.match(/Patron:\s*([^|]+)/);
+        const fullName = nameMatch ? nameMatch[1].trim() : "Customer";
+        const nameParts = fullName.split(' ');
+        firstName = nameParts[0];
+        lastName = nameParts.length > 1 ? nameParts.slice(1).join(' ') : ".";
+
+        const emailMatch = reqs.match(/Email:\s*([^|]+)/);
+        billingEmail = emailMatch ? emailMatch[1].trim() : "orders@twistedhappiness.com";
+
+        const addressMatch = reqs.match(/Address:\s*([^|]+)/);
+        const fullAddressRaw = addressMatch ? addressMatch[1].trim() : "No Address provided";
+        
+        const addressParts = fullAddressRaw.split('-');
+        pincode = addressParts.length > 1 ? addressParts[1].trim().slice(0, 6) : "387002";
+        
+        const cityStateParts = addressParts[0].split(',').map((s: string) => s.trim());
+        state = cityStateParts.length > 1 ? cityStateParts.pop() : "Gujarat";
+        city = cityStateParts.length > 0 ? cityStateParts.pop() : "Nadiad";
+        finalAddress = cityStateParts.join(', ').substring(0, 80) || fullAddressRaw.substring(0, 80);
+    }
+
+    // UUID-SAFE: Use underscore (_) as the delimiter since UUIDs use hyphens (-)
+    const uniqueOrderId = orderData.id.toString() + "_" + Math.floor(Math.random() * 10000);
+    const mappedPaymentMethod = (orderData.payment_method === 'cod') ? 'COD' : 'Prepaid';
+
+    // 3. Format payload
+    const shiprocketPayload = {
+      order_id: uniqueOrderId, 
+      order_date: new Date().toISOString().split('T')[0],
+      pickup_location: "Home", 
+      billing_customer_name: firstName,
+      billing_last_name: lastName, 
+      billing_address: finalAddress,
+      billing_city: city,
+      billing_pincode: pincode,
+      billing_state: state,
+      billing_country: "India",
+      billing_email: billingEmail,
+      billing_phone: cleanPhone,
+      shipping_is_billing: true,
+      order_items: JSON.parse(orderData.order_details).map((item: any) => ({
+        name: item.name.substring(0, 50),
+        sku: item.id.toString(),
+        units: parseInt(item.qty) || 1,
+        selling_price: parseInt(item.price) || 0,
+        discount: 0,
+        tax: 0,
+        hsn: ""
+      })),
+      payment_method: mappedPaymentMethod,
+      sub_total: parseInt(orderData.subtotal) || parseInt(orderData.total),
+      length: length,
+      breadth: breadth,
+      height: height,
+      weight: weight
+    };
+
+    // 4. Push the order to Shiprocket
+    const orderRes = await fetch('https://apiv2.shiprocket.in/v1/external/orders/create/adhoc', {
+      method: 'POST',
+      headers: { 
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${token}`
+      },
+      body: JSON.stringify(shiprocketPayload)
+    });
+
+    const shiprocketResponse = await orderRes.json();
+    
+    // Shiprocket returns status_code: 1 on success.
+    if (!orderRes.ok || (shiprocketResponse.status_code && shiprocketResponse.status_code !== 1)) {
+         throw new Error(shiprocketResponse.message || JSON.stringify(shiprocketResponse));
+    }
+    
+    // 5. Success! Mark order as "Ready / Shipped" in your Supabase DB
+    await supabaseClient.from('orders').update({ status: 'ready' }).eq('id', order_id);
+    
+    return new Response(JSON.stringify({ success: true, shiprocketResponse }), { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 200 })
+
+  } catch (error: any) {
+    // CRITICAL FIX: We MUST return status 200 here so the frontend can read the JSON error message!
+    return new Response(JSON.stringify({ success: false, error: error.message }), { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 200 })
+  }
+})

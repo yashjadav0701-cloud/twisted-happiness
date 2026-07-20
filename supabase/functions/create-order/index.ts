@@ -1,0 +1,259 @@
+import { serve } from "https://deno.land/std@0.168.0/http/server.ts"
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2"
+
+serve(async (req) => {
+  // 1. Strict CORS Handling
+  // We use reflection for localhost and your production Netlify domains rather than wildcard '*'.
+  const reqOrigin = req.headers.get('origin') || ''
+  const isAllowedOrigin = reqOrigin.includes('localhost') || reqOrigin.includes('127.0.0.1') || reqOrigin.endsWith('.netlify.app')
+  const allowedOrigin = isAllowedOrigin ? reqOrigin : 'https://restricted-domain.netlify.app'
+  
+  const corsHeaders = {
+    'Access-Control-Allow-Origin': allowedOrigin,
+    'Access-Control-Allow-Methods': 'POST, OPTIONS',
+    'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
+  }
+
+  if (req.method === 'OPTIONS') return new Response('ok', { headers: corsHeaders })
+
+  try {
+    const authHeader = req.headers.get('Authorization')
+    if (!authHeader) throw new Error("Missing Authorization header. You must be signed in to checkout.")
+
+    const supabaseUrl = Deno.env.get('SUPABASE_URL') ?? ''
+    const serviceRoleKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
+    const anonKey = Deno.env.get('SUPABASE_ANON_KEY') ?? ''
+
+    // 2. Authenticate the User Securely via JWT
+    const supabaseAuthClient = createClient(supabaseUrl, anonKey, {
+      global: { headers: { Authorization: authHeader } }
+    })
+    
+    const { data: { user }, error: authError } = await supabaseAuthClient.auth.getUser()
+    if (authError || !user) throw new Error("Invalid or expired session. Please sign in again.")
+
+    // 3. Admin Client for Database Operations (Bypasses RLS safely after user validation)
+    const supabaseAdmin = createClient(supabaseUrl, serviceRoleKey)
+
+    const { items, address, orderReference, couponCode, notes, payment_method } = await req.json()
+    const pMethod = payment_method || 'upi' // Default fallback for older frontend clients
+
+    if (!items || !Array.isArray(items) || items.length === 0) throw new Error("Order cannot be empty")
+    if (!address || !address.pincode) throw new Error("A valid delivery address is required")
+
+    // 4. Strict Quantity Validation & Deduplication
+    const itemMap = new Map<string, number>()
+    for (const reqItem of items) {
+      if (!reqItem.id) throw new Error("Missing product ID in request")
+      const qty = Number(reqItem.qty)
+      
+      // Reject missing, NaN, zero, negative, fractional, or Infinity quantities.
+      if (!Number.isInteger(qty) || qty <= 0 || qty > 50) {
+        throw new Error(`Invalid quantity for product. Valid limits are 1 to 50 items.`)
+      }
+      itemMap.set(reqItem.id, (itemMap.get(reqItem.id) || 0) + qty)
+    }
+
+    const itemIds = Array.from(itemMap.keys())
+    const { data: dbProducts, error: pError } = await supabaseAdmin
+      .from('creations')
+      .select('*')
+      .in('id', itemIds)
+    
+    if (pError || !dbProducts || dbProducts.length === 0) throw new Error("Failed to verify inventory")
+
+    let subtotal = 0
+    let totalQty = 0
+    let minD = 999
+    const secureOrderDetails = []
+
+    for (const [id, qty] of itemMap.entries()) {
+        const dbProd = dbProducts.find((p: any) => p.id === id)
+        if (!dbProd) throw new Error(`Product ID ${id} is no longer available`)
+        
+        const cleanPriceStr = String(dbProd.price || 0).replace(/[^0-9.,]/g, '')
+        const cp = Number(cleanPriceStr)
+        
+        subtotal += (cp * qty)
+        totalQty += qty
+
+        let img = 'https://placehold.co/150/F8E9EA/423133'
+        try {
+            const parsed = typeof dbProd.image_url === 'string' ? JSON.parse(dbProd.image_url) : (dbProd.image_url || [])
+            img = (parsed && parsed.length > 0) ? (parsed[0].data || parsed[0]) : img
+        } catch(e) {}
+
+        secureOrderDetails.push({ id: dbProd.id, name: dbProd.name, price: cp, qty: qty, image: img })
+
+        const m = (dbProd.prep_time || '3').match(/\d+/g)
+        const pt = m && m.length > 0 ? parseInt(m[0]) : 3
+        if (pt < minD) minD = pt
+    }
+
+    if (minD === 999) minD = 3
+    const estPrepDays = minD * totalQty
+
+    // 5. Dynamic Delivery Engine
+    let deliveryFee = 0
+    if (subtotal < 2499 && subtotal > 0) {
+        let tw = 0
+        for (const [id, qty] of itemMap.entries()) {
+            const dbProd = dbProducts.find((p: any) => p.id === id)
+            const cat = dbProd.main_category || dbProd.category || ''
+            
+            let dw = 0.2, vw = 0.2
+            if (cat.includes('Canvas')) { dw = 1.5; vw = (45 * 35 * 5) / 5000; } 
+            else if (cat.includes('Clay')) { dw = 0.8; vw = (25 * 25 * 10) / 5000; } 
+            else { dw = 0.15; vw = (15 * 10 * 5) / 5000; } 
+            tw += Math.max(dw, vw) * qty
+        }
+        const ws = Math.ceil(tw / 0.5)
+        let z = 'D'
+        const pin = String(address.pincode)
+        if (pin.length >= 2) { 
+            const p2 = parseInt(pin.substring(0, 2))
+            const p3 = parseInt(pin.substring(0, 3))
+            if (p3 === 387 || p3 === 388) z = 'A'
+            else if ((p2 >= 36 && p2 <= 42) || p2 === 39) z = 'B'
+            else if (p2 === 19 || (p2 >= 78 && p2 <= 79)) z = 'E'
+        }
+        let br = 0, ar = 0
+        switch(z) { 
+            case 'A': br = 35; ar = 35; break; 
+            case 'B': br = 45; ar = 40; break; 
+            case 'E': br = 85; ar = 80; break; 
+            default: br = 55; ar = 50; break; 
+        }
+        deliveryFee = br + (ws > 1 ? ((ws - 1) * ar) : 0)
+    }
+
+    // 6. Premium Discount Engine
+    const { data: configData } = await supabaseAdmin.from('store_config').select('promo_codes').limit(1)
+    let promoCodes: any[] = []
+    try { promoCodes = JSON.parse(configData?.[0]?.promo_codes || '[]') } catch(e) {}
+
+    const now = new Date()
+    let vipDiscount = 0
+    let couponDiscount = 0
+    let appliedCouponText = ""
+
+    // A. Calculate VIP Offer
+    const offers = promoCodes.filter((d: any) => {
+        if (d.type !== 'offer' || !d.isActive) return false
+        if (d.expiry && new Date(d.expiry) < now) return false
+        return true
+    }).sort((a: any, b: any) => b.condVal - a.condVal)
+    
+    let cTier = null
+    for (const offer of offers) {
+        if (subtotal >= offer.condVal) { cTier = offer; break; }
+    }
+    if (cTier) {
+        if (cTier.discountType === 'percent') vipDiscount = Math.round(subtotal * (cTier.val / 100))
+        else if (cTier.discountType === 'flat') vipDiscount = cTier.val
+        if (cTier.maxDiscount && vipDiscount > cTier.maxDiscount) vipDiscount = cTier.maxDiscount
+    }
+
+    // B. Calculate Manual Coupon
+    if (couponCode) {
+        const matched = promoCodes.find((x: any) => x.code === String(couponCode).toUpperCase() && x.type === 'coupon')
+        if (matched && matched.isActive && (!matched.expiry || new Date(matched.expiry) >= now)) {
+            let isValid = true
+            if (matched.condType === 'min_spend' && subtotal < matched.condVal) isValid = false
+            if (matched.condType === 'first_order') {
+                const { count } = await supabaseAdmin.from('orders').select('*', { count: 'exact', head: true }).eq('user_id', user.id)
+                if (count && count > 0) isValid = false
+            }
+            
+            if (isValid) {
+                if (matched.discountType === 'flat') couponDiscount = matched.val
+                else couponDiscount = Math.round(subtotal * (matched.val / 100))
+                if (matched.maxDiscount && couponDiscount > matched.maxDiscount) couponDiscount = matched.maxDiscount
+                
+                // Stack capping rule to prevent negative subtotal
+                if ((vipDiscount + couponDiscount) > subtotal) {
+                    couponDiscount = Math.max(0, subtotal - vipDiscount)
+                }
+                appliedCouponText = ` | Coupon: ${matched.code} (-₹${couponDiscount})`
+            }
+        }
+    }
+
+    // C. Calculate UPI Discount Securely
+    let upiDiscount = 0
+    if (pMethod === 'upi' && subtotal > 300) {
+        // Cap UPI discount so the combined discounts never exceed the merchandise subtotal
+        const availableSubtotal = subtotal - vipDiscount - couponDiscount
+        upiDiscount = Math.min(50, Math.max(0, availableSubtotal))
+    }
+
+    const totalDiscountValue = vipDiscount + couponDiscount + upiDiscount
+    const finalTotal = Math.max(0, subtotal - totalDiscountValue) + deliveryFee
+
+    const discountBreakdown = {
+        vip_discount: vipDiscount,
+        coupon_discount: couponDiscount,
+        coupon_code: appliedCouponText ? String(couponCode).toUpperCase() : null,
+        upi_discount: upiDiscount
+    }
+
+    // 7. Securely Construct customer_reqs string on the server
+    let rawPhone = String(address.phone).replace(/\D/g, '')
+    if (rawPhone.startsWith('91') && rawPhone.length > 10) rawPhone = rawPhone.substring(2)
+    const formattedPhone = "+91 " + rawPhone
+
+    let fullAddress = `${address.address_1}, ${address.address_2 ? address.address_2 + ', ' : ''}${address.city}, ${address.state} - ${address.pincode}`
+    
+    let secureCustomerReqs = `ID: ${orderReference} | Ph: ${formattedPhone} | Patron: ${address.first_name} ${address.last_name || ''} | Email: ${address.email} | Address: ${fullAddress} | Purpose: ${notes.type || 'Standard Order'} | Notes: ${notes.colors || 'No notes'} | Delivery Fee: ₹${deliveryFee}`
+    
+    if (notes.gift) secureCustomerReqs += ` | Gift Message: "${notes.gift}"`
+    if (appliedCouponText) secureCustomerReqs += appliedCouponText
+    if (notes.dimensions) secureCustomerReqs += ` | Size: ${notes.dimensions}`
+    secureCustomerReqs += ` | Est. Prep: ${estPrepDays} Days`
+
+    // 8. Build Secure Final Payload and Insert
+    const secureShippingData = {
+        first_name: address.first_name,
+        last_name: address.last_name || '.',
+        email: address.email,
+        phone: rawPhone,
+        address_1: address.address_1,
+        address_2: address.address_2 || '',
+        city: address.city,
+        state: address.state,
+        pincode: address.pincode
+    }
+
+    const secureOrderPayload = {
+        order_details: JSON.stringify(secureOrderDetails),
+        subtotal: subtotal,
+        discount: totalDiscountValue,
+        total: finalTotal,
+        customer_reqs: secureCustomerReqs, // Preserved for frontend Admin UI
+        shipping_data: secureShippingData, // Dedicated, uncorrupted JSON for Shiprocket
+        discount_breakdown: discountBreakdown, // Track stacked discounts securely
+        payment_method: pMethod,
+        payment_status: 'pending',
+        payment_transaction_id: null,
+        status: 'new', // Hardcoded initial status cannot be spoofed by browser
+        user_id: user.id // Extracted securely from JWT
+    }
+
+    const { data: insertedOrder, error: insertError } = await supabaseAdmin
+      .from('orders')
+      .insert([secureOrderPayload])
+      .select()
+      .single()
+
+    if (insertError) throw new Error("Failed to secure order: " + insertError.message)
+
+    return new Response(JSON.stringify({ success: true, order: insertedOrder }), {
+      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+    })
+  } catch (error: any) {
+    return new Response(JSON.stringify({ error: error.message }), {
+      status: 400,
+      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+    })
+  }
+})

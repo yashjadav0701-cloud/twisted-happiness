@@ -23,6 +23,39 @@ let savedAddresses = safeJSONParse('th_saved_addresses', []);
 let products = []; let currentMainCategory = 'All'; let activeSubCategories = []; let currentSortMode = 'random'; let currentSearchQuery = ''; 
 let searchTimeout = null; let modalImages = []; let currentSlideIndex = 0; let isAnimating = false; let currentLightboxIndex = 0; let isLightboxAnimating = false; let currentModalLevel = 0; let statePushed = false;
 let checkoutStep = 1; let pendingOrderPayload = null; window.buyNowPayload = null; let currentOrderReference = null; let currentDeliveryFee = 0; let activeCouponValue = 0; let activeCouponCode = "";
+let paymentMethod = 'upi'; let currentUpiDiscount = 0;
+
+window.setPaymentMethod = function(method) {
+    paymentMethod = method;
+    
+    // Update UI Buttons securely
+    const btnUpi = document.getElementById('btn-pay-upi');
+    const btnCod = document.getElementById('btn-pay-cod');
+    const upiContainer = document.getElementById('upi-details-container');
+    const codContainer = document.getElementById('cod-details-container');
+    const btnConfirm = document.getElementById('btn-confirm-payment');
+
+    const activeClass = "flex-1 py-3 rounded-xl text-[10px] font-bold uppercase tracking-widest transition-all bg-white border border-luxury-rose text-luxury-rose shadow-sm";
+    const inactiveClass = "flex-1 py-3 rounded-xl text-[10px] font-bold uppercase tracking-widest transition-all bg-transparent border border-transparent text-gray-500 hover:text-luxury-dark";
+
+    if (method === 'cod') {
+        if(btnCod) btnCod.className = activeClass;
+        if(btnUpi) btnUpi.className = inactiveClass;
+        if(upiContainer) { upiContainer.classList.add('hidden'); upiContainer.classList.remove('flex'); }
+        if(codContainer) { codContainer.classList.remove('hidden'); codContainer.classList.add('flex'); }
+        if(btnConfirm) btnConfirm.innerHTML = 'Confirm COD Order <i class="fas fa-box"></i>';
+    } else {
+        if(btnUpi) btnUpi.className = activeClass;
+        if(btnCod) btnCod.className = inactiveClass;
+        if(codContainer) { codContainer.classList.add('hidden'); codContainer.classList.remove('flex'); }
+        if(upiContainer) { upiContainer.classList.remove('hidden'); upiContainer.classList.add('flex'); }
+        if(btnConfirm) btnConfirm.innerHTML = 'I Have Completed Payment <i class="fas fa-check-circle"></i>';
+    }
+    
+    // Force backend-authoritative math recalculation (removes UPI discount for COD)
+    updateCheckoutUI(); 
+    if (checkoutStep === 3) window.preparePaymentGateway();
+};
 let selectedAddressIndex = savedAddresses.length > 0 ? 0 : -1; let editingAddressIndex = null; let currentSessionUser = null; let authModalMode = "login"; 
 // Bouquet builder removed 
 
@@ -424,7 +457,12 @@ function getDiscountPercent(idStr) { let h = 0; for (let i = 0; i < idStr.length
 function getActiveOffers() {
     let all = [];
     try { all = JSON.parse(settings.promoCodes || '[]'); } catch(e) {}
-    return all.filter(d => d.type === 'offer' && d.isActive).sort((a, b) => b.condVal - a.condVal);
+    const now = new Date();
+    return all.filter(d => {
+        if (d.type !== 'offer' || !d.isActive) return false;
+        if (d.expiry && new Date(d.expiry) < now) return false;
+        return true;
+    }).sort((a, b) => b.condVal - a.condVal);
 }
 
 function calculateCartDiscount(sub) { 
@@ -444,6 +482,7 @@ function calculateCartDiscount(sub) {
     if (cTier) { 
         if (cTier.discountType === 'percent') d = Math.round(sub * (cTier.val / 100)); 
         else if (cTier.discountType === 'flat') d = cTier.val; 
+        if (cTier.maxDiscount && d > cTier.maxDiscount) d = cTier.maxDiscount;
     } 
     return { discount: d, currentTier: cTier, nextTier: nTier, amountNeeded: nTier ? nTier.condVal - sub : 0 }; 
 }
@@ -835,7 +874,10 @@ function updateCheckoutUI() {
     let cd = 0;
     if (activeCouponValue > 0) {
         if (window.activeCouponType === 'flat') { cd = activeCouponValue; } 
-        else { cd = Math.round(ss * (activeCouponValue / 100)); }
+        else { 
+            cd = Math.round(ss * (activeCouponValue / 100)); 
+            if (window.activeCouponMax && cd > window.activeCouponMax) cd = window.activeCouponMax;
+        }
         // Ensure combined stacked discounts don't make the subtotal negative
         if ((cd + vd) > ss) { cd = Math.max(0, ss - vd); }
     } 
@@ -846,7 +888,31 @@ function updateCheckoutUI() {
         else { rc.classList.add('hidden'); } 
     }
     
-    const ft = ss - vd - cd + currentDeliveryFee, pd = ts - ss, tos = pd + vd + cd;
+    // Calculate UPI Discount (₹50 off for UPI payments > ₹300, capped by remaining subtotal)
+    currentUpiDiscount = 0;
+    if (paymentMethod === 'upi' && ss > 300) {
+        currentUpiDiscount = Math.min(50, Math.max(0, ss - vd - cd));
+    }
+    
+    // Dynamically manage the UPI discount row UI to match existing design
+    let upiRow = document.getElementById('qo-upi-row');
+    if (currentUpiDiscount > 0) {
+        if (!upiRow && rc) {
+            upiRow = document.createElement('div');
+            upiRow.id = 'qo-upi-row';
+            upiRow.className = "flex justify-between items-center mt-2";
+            upiRow.innerHTML = `<span class="text-[11px] font-bold text-green-600 uppercase tracking-widest"><i class="fas fa-bolt text-luxury-gold mr-1"></i> UPI Discount</span><span id="qo-upi-discount" class="font-poppins font-bold text-[13px] text-green-600"></span>`;
+            rc.parentNode.insertBefore(upiRow, rc.nextSibling);
+        }
+        if (upiRow) {
+            document.getElementById('qo-upi-discount').textContent = `- ₹${currentUpiDiscount}`;
+            upiRow.classList.remove('hidden');
+        }
+    } else if (upiRow) {
+        upiRow.classList.add('hidden');
+    }
+    
+    const ft = Math.max(0, ss - vd - cd - currentUpiDiscount) + currentDeliveryFee, pd = ts - ss, tos = pd + vd + cd + currentUpiDiscount;
     
     if(document.getElementById('qo-item-count')) document.getElementById('qo-item-count').textContent = ti; 
     if(document.getElementById('qo-original-value')) document.getElementById('qo-original-value').textContent = `₹${ts}`; 
@@ -967,7 +1033,20 @@ window.preparePaymentGateway = function() {
     listToRender.forEach((i) => { const cp = Number(String(i.price || 0).replace(/[^0-9.,]/g, '')), q = parseInt(i.qty || 1); ss += (cp * q); its.push({ id: i.id, name: i.name, price: cp, qty: q, image: i.image || i.image1 }); }); 
     tpt = calculateTotalPrepTime(listToRender);
     const ta = savedAddresses[selectedAddressIndex]; currentDeliveryFee = calculateDynamicDelivery(ss, ta.pincode, cart);
-    const { discount: vd } = calculateCartDiscount(ss); let cd = activeCouponValue > 0 ? Math.round(ss * (activeCouponValue / 100)) : 0; const ft = ss - vd - cd + currentDeliveryFee; 
+    const { discount: vd } = calculateCartDiscount(ss); 
+    let cd = 0;
+    if (activeCouponValue > 0) {
+        if (window.activeCouponType === 'flat') cd = activeCouponValue;
+        else {
+            cd = Math.round(ss * (activeCouponValue / 100));
+            if (window.activeCouponMax && cd > window.activeCouponMax) cd = window.activeCouponMax;
+        }
+    }
+    if ((cd + vd) > ss) cd = Math.max(0, ss - vd);
+    
+    currentUpiDiscount = (paymentMethod === 'upi' && ss > 300) ? Math.min(50, Math.max(0, ss - vd - cd)) : 0;
+    const ft = Math.max(0, ss - vd - cd - currentUpiDiscount) + currentDeliveryFee; 
+    
     let rawPhone = ta.phone.replace(/\D/g, '');
 if (rawPhone.startsWith('91') && rawPhone.length > 10) rawPhone = rawPhone.substring(2);
 const scc = (settings.countryCode || '+91'), fcp = scc + " " + rawPhone; let fa = `${ta.address_1}, ${ta.address_2 ? ta.address_2 + ', ' : ''}${ta.city}, ${ta.state} - ${ta.pincode}`;
@@ -976,11 +1055,48 @@ const scc = (settings.countryCode || '+91'), fcp = scc + " " + rawPhone; let fa 
     let ad = `ID: ${currentOrderReference} | Ph: ${fcp} | Patron: ${ta.first_name} ${ta.last_name || ''} | Email: ${ta.email} | Address: ${fa} | Purpose: ${t} | Notes: ${c} | Delivery Fee: ₹${currentDeliveryFee}`; 
     if(giftNote) ad += ` | Gift Message: "${giftNote}"`;
     if(activeCouponValue > 0) ad += ` | Coupon: ${activeCouponCode} (-₹${cd})`; 
+    if(currentUpiDiscount > 0) ad += ` | UPI Discount: (-₹${currentUpiDiscount})`;
     if(dims && document.getElementById('comm-dimensions-wrapper') && !document.getElementById('comm-dimensions-wrapper').classList.contains('hidden')) ad += ` | Size: ${dims}`; 
     ad += ` | Est. Prep: ${tpt}`;
     const fmt = Number(ft).toFixed(2), uId = (settings.upiId || "khushisj315@oksbi").trim(), uLnk = `upi://pay?pa=${uId}&pn=Twisted_Happiness&am=${fmt}&cu=INR&tn=${currentOrderReference}`;
-    pendingOrderPayload = { order_details: JSON.stringify(its), subtotal: ss, discount: vd, total: ft, customer_reqs: ad, status: 'new', user_id: currentSessionUser ? currentSessionUser.id : null };
-    setTimeout(() => { checkoutStep = 3; if(document.getElementById('checkout-payment-amount')) document.getElementById('checkout-payment-amount').textContent = `₹${fmt}`; const vb = document.getElementById('btn-confirm-payment'); if(vb) { vb.innerHTML = 'I Have Completed Payment <i class="fas fa-check-circle"></i>'; vb.disabled = false; } if (isMobileDevice()) { if(document.getElementById('payment-mobile-btn')) document.getElementById('payment-mobile-btn').href = uLnk; document.getElementById('payment-mobile-container')?.classList.remove('hidden'); document.getElementById('payment-qr-container')?.classList.add('hidden'); } else { const qrUrl = `https://quickchart.io/qr?size=250&margin=2&text=${encodeURIComponent(uLnk)}`; if(document.getElementById('payment-qr-img')) document.getElementById('payment-qr-img').src = qrUrl; document.getElementById('payment-qr-container')?.classList.remove('hidden'); document.getElementById('payment-mobile-container')?.classList.add('hidden'); } updateCheckoutUI(); document.getElementById('checkout-overlay')?.scrollTo({top: 0, behavior: 'smooth'}); hideInteractionLoader(); }, 1500); 
+    pendingOrderPayload = {
+    order_details: JSON.stringify(its),
+    subtotal: ss,
+    discount: vd + cd + currentUpiDiscount,
+    total: ft,
+    customer_reqs: ad,
+    status: 'pending',
+    user_id: currentSessionUser ? currentSessionUser.id : null,
+    payment_method: paymentMethod
+};
+    setTimeout(() => { 
+        checkoutStep = 3; 
+        if(document.getElementById('checkout-payment-amount')) document.getElementById('checkout-payment-amount').textContent = `₹${fmt}`; 
+        
+        const vb = document.getElementById('btn-confirm-payment'); 
+        if(vb) { 
+            vb.innerHTML = paymentMethod === 'cod' ? 'Confirm COD Order <i class="fas fa-box"></i>' : 'I Have Completed Payment <i class="fas fa-check-circle"></i>'; 
+            vb.disabled = false; 
+        } 
+        
+        // Generate QR / Deep link ONLY if UPI is selected
+        if (paymentMethod === 'upi') {
+            if (isMobileDevice()) { 
+                if(document.getElementById('payment-mobile-btn')) document.getElementById('payment-mobile-btn').href = uLnk; 
+                document.getElementById('payment-mobile-container')?.classList.remove('hidden'); 
+                document.getElementById('payment-qr-container')?.classList.add('hidden'); 
+            } else { 
+                const qrUrl = `https://quickchart.io/qr?size=250&margin=2&text=${encodeURIComponent(uLnk)}`; 
+                if(document.getElementById('payment-qr-img')) document.getElementById('payment-qr-img').src = qrUrl; 
+                document.getElementById('payment-qr-container')?.classList.remove('hidden'); 
+                document.getElementById('payment-mobile-container')?.classList.add('hidden'); 
+            }
+        }
+        
+        updateCheckoutUI(); 
+        document.getElementById('checkout-overlay')?.scrollTo({top: 0, behavior: 'smooth'}); 
+        hideInteractionLoader(); 
+    }, 1500); 
 };
 
 window.confirmPaymentAndOrder = async function() {
@@ -1003,7 +1119,13 @@ window.confirmPaymentAndOrder = async function() {
         address: currentAddress,
         orderReference: currentOrderReference,
         couponCode: typeof activeCouponCode !== 'undefined' ? activeCouponCode : '',
-        notes: { type: commType, colors: commColors, dimensions: dims, gift: giftNote }
+        notes: {
+            type: commType,
+            colors: commColors,
+            dimensions: dims,
+            gift: giftNote
+        },
+        payment_method: paymentMethod
     };
 
     try {
@@ -1154,7 +1276,11 @@ async function renderCustomerOrdersPipeline() {
             } 
             
             // Restoring the missing HTML append line and closing loop bracket
-            html += `<div class="border border-luxury-blush rounded-xl p-4 sm:p-6 mb-4 bg-white shadow-sm hover:border-luxury-rose/50 transition-colors"><div class="flex justify-between items-start border-b border-luxury-blush pb-4 mb-4"><div><h4 class="font-bold text-[12px] text-luxury-dark uppercase tracking-widest mb-1">Order ${exId}</h4><p class="text-[10px] text-gray-500">${dt}</p></div><div class="text-right"><span class="font-poppins font-bold text-luxury-dark text-[14px]">₹${o.total}</span></div></div><div class="flex gap-2 overflow-x-auto scrollbar-hide py-1 mb-2">${itemsHtml}</div>${progressBarHtml}${invoiceBtnHtml}</div>`;
+            const payBadgeHtml = o.payment_method === 'cod' 
+                ? `<span class="bg-blue-50 text-blue-600 border border-blue-200 px-2 py-0.5 rounded text-[8px] font-bold uppercase tracking-widest ml-2 inline-block shadow-sm">COD</span>` 
+                : `<span class="bg-green-50 text-green-600 border border-green-200 px-2 py-0.5 rounded text-[8px] font-bold uppercase tracking-widest ml-2 inline-block shadow-sm">UPI</span>`;
+                
+            html += `<div class="border border-luxury-blush rounded-xl p-4 sm:p-6 mb-4 bg-white shadow-sm hover:border-luxury-rose/50 transition-colors"><div class="flex justify-between items-start border-b border-luxury-blush pb-4 mb-4"><div><h4 class="font-bold text-[12px] text-luxury-dark uppercase tracking-widest mb-1 flex items-center">Order ${exId} ${payBadgeHtml}</h4><p class="text-[10px] text-gray-500">${dt}</p></div><div class="text-right"><span class="font-poppins font-bold text-luxury-dark text-[14px]">₹${o.total}</span></div></div><div class="flex gap-2 overflow-x-auto scrollbar-hide py-1 mb-2">${itemsHtml}</div>${progressBarHtml}${invoiceBtnHtml}</div>`;
         });
         
         c.innerHTML = html; 

@@ -1,0 +1,54 @@
+import { serve } from "https://deno.land/std@0.168.0/http/server.ts"
+import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
+
+serve(async (req) => {
+  try {
+    // 1. Webhook Authentication
+    const webhookSecret = req.headers.get('x-webhook-secret') || req.headers.get('x-api-key');
+    const expectedSecret = Deno.env.get('SHIPROCKET_WEBHOOK_SECRET');
+    
+    if (!expectedSecret || webhookSecret !== expectedSecret) {
+      return new Response(JSON.stringify({ error: "Unauthorized" }), { status: 401, headers: { 'Content-Type': 'application/json' } });
+    }
+
+    const payload = await req.json()
+    const orderIdStr = payload.order_id || payload.channel_order_id
+    const status = payload.current_status // E.g., 'DELIVERED', 'OUT FOR DELIVERY', 'SHIPPED'
+    const awb = payload.awb
+    
+    if (!orderIdStr) throw new Error("Missing order identifier");
+    
+    // UUID-SAFE: Split at the underscore to correctly extract the complete hyphenated UUID
+    let exactDbId = String(orderIdStr).split('_')[0];
+    
+    // LEGACY COMPATIBILITY: Handle old Shiprocket orders dispatched before the underscore architecture.
+    // Old format: 550e8400-e29b-41d4-a716-446655440000-1234 (6 parts separated by 5 hyphens)
+    if (!orderIdStr.includes('_') && exactDbId.split('-').length === 6) {
+        exactDbId = exactDbId.split('-').slice(0, 5).join('-');
+    }
+
+    // Map Shiprocket Status to your Database Status
+    let dbStatus = 'shipped'
+    if (status === 'DELIVERED') dbStatus = 'completed'
+    else if (status === 'OUT FOR DELIVERY') dbStatus = 'out_for_delivery'
+    else if (status === 'CANCELED' || status === 'RTO INITIATED') dbStatus = 'cancelled'
+
+    // Connect to your database
+    const supabaseUrl = Deno.env.get('SUPABASE_URL')
+    const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')
+    const supabase = createClient(supabaseUrl!, supabaseKey!)
+
+    // Update the order in real-time securely using exact UUID match
+    await supabase
+      .from('orders')
+      .update({ 
+         status: dbStatus,
+         tracking_data: JSON.stringify({ awb: awb, current_status: status })
+      })
+      .eq('id', exactDbId)
+
+    return new Response("Webhook processed successfully", { status: 200 })
+  } catch (error) {
+    return new Response("Error processing webhook", { status: 400 })
+  }
+})
