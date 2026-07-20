@@ -118,7 +118,7 @@ function applyDynamicSettings() {
 function setupSocialLinks() {
     const phone = (settings.whatsapp || "9909310501").replace(/\D/g, ''), code = (settings.countryCode || "91").replace(/\D/g, '');
     // Using encodeURIComponent on a string with Unicode escapes guarantees cross-browser emoji support
-    const msg = encodeURIComponent("Hello! 🌸 I am exploring your beautiful handcrafted collection at Twisted Happiness and have a quick query ✨");
+    const msg = encodeURIComponent("Hello! I am exploring your beautiful handcrafted collection at Twisted Happiness and have a quick query");
     const waLink = document.getElementById('footer-whatsapp'), floatLink = document.getElementById('floating-wa-btn');
     if(waLink) waLink.href = `https://wa.me/${code}${phone}?text=${msg}`;
     if(floatLink) floatLink.href = `https://wa.me/${code}${phone}?text=${msg}`;
