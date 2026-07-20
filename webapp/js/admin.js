@@ -525,7 +525,11 @@ function switchOrderTab(tab) {
 async function fetchOrders() {
     try {
         const { data, error } = await _supabase.from('orders').select('*').order('created_at', { ascending: false }); 
-        if (error) throw error; allOrders = data || [];
+        if (error) throw error; 
+        
+        allOrders = data || [];
+        window.allOrders = allOrders; // <-- THIS IS THE MISSING LINK
+        
         const pendingCount = allOrders.filter(o => o.status === 'new' || o.status === 'pending').length; 
         const badge = document.getElementById('admin-order-badge');
         if (pendingCount > 0) { badge.textContent = pendingCount; badge.classList.remove('hidden'); } else { badge.classList.add('hidden'); }
