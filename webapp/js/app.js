@@ -356,6 +356,12 @@ window.th_deleteAddress = async function(addressId) {
         const { error } = await _supabase.from('addresses').delete().eq('id', addressId).eq('user_id', currentSessionUser.id);
         if (error) throw error;
         await syncCloudAddresses();
+        
+        // Fix: Reset selectedAddressIndex safely if it's out of bounds
+        if (selectedAddressIndex >= savedAddresses.length) {
+            selectedAddressIndex = savedAddresses.length > 0 ? 0 : -1;
+        }
+        
         renderProfileAddressBook();
         window.showToast("Address deleted", "fa-trash");
     } catch(e) {
@@ -366,72 +372,60 @@ window.th_deleteAddress = async function(addressId) {
 
 window.th_saveProfileAddress = async function(e) {
     if(e) e.preventDefault();
-    const a = { first_name: document.getElementById('padd-fname').value.trim(), last_name: document.getElementById('padd-lname').value.trim(), email: currentSessionUser ? currentSessionUser.email : '', phone: document.getElementById('padd-phone').value.trim(), address_1: document.getElementById('padd-add1').value.trim(), address_2: document.getElementById('padd-add2').value.trim(), city: document.getElementById('padd-city').value.trim(), state: document.getElementById('padd-state').value.trim(), pincode: document.getElementById('padd-pin').value.trim() };
-    if(!a.first_name || !a.phone || !a.address_1 || !a.city || !a.pincode) { window.showToast("Please fill all required fields", "fa-exclamation-circle", "text-red-500"); return false; }
+    const a = { 
+        first_name: document.getElementById('padd-fname').value.trim(), 
+        last_name: document.getElementById('padd-lname').value.trim(), 
+        email: currentSessionUser ? currentSessionUser.email : '', 
+        phone: document.getElementById('padd-phone').value.trim(), 
+        address_1: document.getElementById('padd-add1').value.trim(), 
+        address_2: document.getElementById('padd-add2').value.trim(), 
+        city: document.getElementById('padd-city').value.trim(), 
+        state: document.getElementById('padd-state').value.trim(), 
+        pincode: document.getElementById('padd-pin').value.trim() 
+    };
+    
+    if(!a.first_name || !a.phone || !a.address_1 || !a.city || !a.pincode) { 
+        window.showToast("Please fill all required fields", "fa-exclamation-circle", "text-red-500"); 
+        return false; 
+    }
+    
     showInteractionLoader("Saving Address...");
-    if (currentSessionUser) { try { a.user_id = currentSessionUser.id; let err; if (editingAddressIndex !== null) { const { error } = await _supabase.from('addresses').update(a).eq('id', savedAddresses[editingAddressIndex].id).eq('user_id', currentSessionUser.id); err = error; } else { const { error } = await _supabase.from('addresses').insert([a]); err = error; } if (err) throw err; await syncCloudAddresses(); renderProfileAddressBook(); } catch (err) { alert("Failed to save address: " + err.message); hideInteractionLoader(); return false; } } 
-    else { if (editingAddressIndex !== null) { savedAddresses[editingAddressIndex] = a; } else { savedAddresses.push(a); } localStorage.setItem('th_saved_addresses', JSON.stringify(savedAddresses)); renderProfileAddressBook(); }
-    editingAddressIndex = null; document.getElementById('profile-add-address-form').reset(); document.getElementById('profile-add-address-form').classList.add('hidden'); hideInteractionLoader(); window.showToast("Address Saved", "fa-check"); return true;
-};
-
-window.th_saveProfileAddress = async function(e) {
-    if(e) e.preventDefault();
-    const a = { first_name: document.getElementById('padd-fname').value.trim(), last_name: document.getElementById('padd-lname').value.trim(), email: currentSessionUser ? currentSessionUser.email : '', phone: document.getElementById('padd-phone').value.trim(), address_1: document.getElementById('padd-add1').value.trim(), address_2: document.getElementById('padd-add2').value.trim(), city: document.getElementById('padd-city').value.trim(), state: document.getElementById('padd-state').value.trim(), pincode: document.getElementById('padd-pin').value.trim() };
-    if(!a.first_name || !a.phone || !a.address_1 || !a.city || !a.pincode) { window.showToast("Please fill all required fields", "fa-exclamation-circle", "text-red-500"); return false; }
-    showInteractionLoader("Saving Address...");
-    if (currentSessionUser) { try { a.user_id = currentSessionUser.id; let err; if (editingAddressIndex !== null) { const { error } = await _supabase.from('addresses').update(a).eq('id', savedAddresses[editingAddressIndex].id).eq('user_id', currentSessionUser.id); err = error; } else { const { error } = await _supabase.from('addresses').insert([a]); err = error; } if (err) throw err; await syncCloudAddresses(); renderProfileAddressBook(); } catch (err) { alert("Failed to save address: " + err.message); hideInteractionLoader(); return false; } } 
-    else { if (editingAddressIndex !== null) { savedAddresses[editingAddressIndex] = a; } else { savedAddresses.push(a); } localStorage.setItem('th_saved_addresses', JSON.stringify(savedAddresses)); renderProfileAddressBook(); }
-    editingAddressIndex = null; document.getElementById('profile-add-address-form').reset(); document.getElementById('profile-add-address-form').classList.add('hidden'); hideInteractionLoader(); window.showToast("Address Saved", "fa-check"); return true;
-};
-
-window.th_saveProfileAddress = async function(e) {
-    if(e) e.preventDefault();
-    const a = { first_name: document.getElementById('padd-fname').value.trim(), last_name: document.getElementById('padd-lname').value.trim(), email: currentSessionUser ? currentSessionUser.email : '', phone: document.getElementById('padd-phone').value.trim(), address_1: document.getElementById('padd-add1').value.trim(), address_2: document.getElementById('padd-add2').value.trim(), city: document.getElementById('padd-city').value.trim(), state: document.getElementById('padd-state').value.trim(), pincode: document.getElementById('padd-pin').value.trim() };
-    if(!a.first_name || !a.phone || !a.address_1 || !a.city || !a.pincode) { window.showToast("Please fill all required fields", "fa-exclamation-circle", "text-red-500"); return false; }
-    showInteractionLoader("Saving Address...");
-    if (currentSessionUser) { try { a.user_id = currentSessionUser.id; let err; if (editingAddressIndex !== null) { const { error } = await _supabase.from('addresses').update(a).eq('id', savedAddresses[editingAddressIndex].id).eq('user_id', currentSessionUser.id); err = error; } else { const { error } = await _supabase.from('addresses').insert([a]); err = error; } if (err) throw err; await syncCloudAddresses(); renderProfileAddressBook(); } catch (err) { alert("Failed to save address: " + err.message); hideInteractionLoader(); return false; } } 
-    else { if (editingAddressIndex !== null) { savedAddresses[editingAddressIndex] = a; } else { savedAddresses.push(a); } localStorage.setItem('th_saved_addresses', JSON.stringify(savedAddresses)); renderProfileAddressBook(); }
-    editingAddressIndex = null; document.getElementById('profile-add-address-form').reset(); document.getElementById('profile-add-address-form').classList.add('hidden'); hideInteractionLoader(); window.showToast("Address Saved", "fa-check"); return true;
-};
-
-window.th_saveProfileAddress = async function(e) {
-    if(e) e.preventDefault();
-    const a = { first_name: document.getElementById('padd-fname').value.trim(), last_name: document.getElementById('padd-lname').value.trim(), email: currentSessionUser ? currentSessionUser.email : '', phone: document.getElementById('padd-phone').value.trim(), address_1: document.getElementById('padd-add1').value.trim(), address_2: document.getElementById('padd-add2').value.trim(), city: document.getElementById('padd-city').value.trim(), state: document.getElementById('padd-state').value.trim(), pincode: document.getElementById('padd-pin').value.trim() };
-    if(!a.first_name || !a.phone || !a.address_1 || !a.city || !a.pincode) { window.showToast("Please fill all required fields", "fa-exclamation-circle", "text-red-500"); return false; }
-    showInteractionLoader("Saving Address...");
-    if (currentSessionUser) { try { a.user_id = currentSessionUser.id; let err; if (editingAddressIndex !== null) { const { error } = await _supabase.from('addresses').update(a).eq('id', savedAddresses[editingAddressIndex].id).eq('user_id', currentSessionUser.id); err = error; } else { const { error } = await _supabase.from('addresses').insert([a]); err = error; } if (err) throw err; await syncCloudAddresses(); renderProfileAddressBook(); } catch (err) { alert("Failed to save address: " + err.message); hideInteractionLoader(); return false; } } 
-    else { if (editingAddressIndex !== null) { savedAddresses[editingAddressIndex] = a; } else { savedAddresses.push(a); } localStorage.setItem('th_saved_addresses', JSON.stringify(savedAddresses)); renderProfileAddressBook(); }
-    editingAddressIndex = null; document.getElementById('profile-add-address-form').reset(); document.getElementById('profile-add-address-form').classList.add('hidden'); hideInteractionLoader(); window.showToast("Address Saved", "fa-check"); return true;
-};
-
-window.th_saveProfileAddress = async function(e) {
-    if(e) e.preventDefault();
-    const a = { first_name: document.getElementById('padd-fname').value.trim(), last_name: document.getElementById('padd-lname').value.trim(), email: currentSessionUser ? currentSessionUser.email : '', phone: document.getElementById('padd-phone').value.trim(), address_1: document.getElementById('padd-add1').value.trim(), address_2: document.getElementById('padd-add2').value.trim(), city: document.getElementById('padd-city').value.trim(), state: document.getElementById('padd-state').value.trim(), pincode: document.getElementById('padd-pin').value.trim() };
-    if(!a.first_name || !a.phone || !a.address_1 || !a.city || !a.pincode) { window.showToast("Please fill all required fields", "fa-exclamation-circle", "text-red-500"); return false; }
-    showInteractionLoader("Saving Address...");
-    if (currentSessionUser) { try { a.user_id = currentSessionUser.id; let err; if (editingAddressIndex !== null) { const { error } = await _supabase.from('addresses').update(a).eq('id', savedAddresses[editingAddressIndex].id).eq('user_id', currentSessionUser.id); err = error; } else { const { error } = await _supabase.from('addresses').insert([a]); err = error; } if (err) throw err; await syncCloudAddresses(); renderProfileAddressBook(); } catch (err) { alert("Failed to save address: " + err.message); hideInteractionLoader(); return false; } } 
-    else { if (editingAddressIndex !== null) { savedAddresses[editingAddressIndex] = a; } else { savedAddresses.push(a); } localStorage.setItem('th_saved_addresses', JSON.stringify(savedAddresses)); renderProfileAddressBook(); }
-    editingAddressIndex = null; document.getElementById('profile-add-address-form').reset(); document.getElementById('profile-add-address-form').classList.add('hidden'); hideInteractionLoader(); window.showToast("Address Saved", "fa-check"); return true;
-};
-
-window.th_saveProfileAddress = async function(e) {
-    if(e) e.preventDefault();
-    const a = { first_name: document.getElementById('padd-fname').value.trim(), last_name: document.getElementById('padd-lname').value.trim(), email: currentSessionUser ? currentSessionUser.email : '', phone: document.getElementById('padd-phone').value.trim(), address_1: document.getElementById('padd-add1').value.trim(), address_2: document.getElementById('padd-add2').value.trim(), city: document.getElementById('padd-city').value.trim(), state: document.getElementById('padd-state').value.trim(), pincode: document.getElementById('padd-pin').value.trim() };
-    if(!a.first_name || !a.phone || !a.address_1 || !a.city || !a.pincode) { window.showToast("Please fill all required fields", "fa-exclamation-circle", "text-red-500"); return false; }
-    showInteractionLoader("Saving Address...");
-    if (currentSessionUser) { try { a.user_id = currentSessionUser.id; let err; if (editingAddressIndex !== null) { const { error } = await _supabase.from('addresses').update(a).eq('id', savedAddresses[editingAddressIndex].id).eq('user_id', currentSessionUser.id); err = error; } else { const { error } = await _supabase.from('addresses').insert([a]); err = error; } if (err) throw err; await syncCloudAddresses(); renderProfileAddressBook(); } catch (err) { alert("Failed to save address: " + err.message); hideInteractionLoader(); return false; } } 
-    else { if (editingAddressIndex !== null) { savedAddresses[editingAddressIndex] = a; } else { savedAddresses.push(a); } localStorage.setItem('th_saved_addresses', JSON.stringify(savedAddresses)); renderProfileAddressBook(); }
-    editingAddressIndex = null; document.getElementById('profile-add-address-form').reset(); document.getElementById('profile-add-address-form').classList.add('hidden'); hideInteractionLoader(); window.showToast("Address Saved", "fa-check"); return true;
-};
-
-window.th_saveProfileAddress = async function(e) {
-    if(e) e.preventDefault();
-    const a = { first_name: document.getElementById('padd-fname').value.trim(), last_name: document.getElementById('padd-lname').value.trim(), email: currentSessionUser ? currentSessionUser.email : '', phone: document.getElementById('padd-phone').value.trim(), address_1: document.getElementById('padd-add1').value.trim(), address_2: document.getElementById('padd-add2').value.trim(), city: document.getElementById('padd-city').value.trim(), state: document.getElementById('padd-state').value.trim(), pincode: document.getElementById('padd-pin').value.trim() };
-    if(!a.first_name || !a.phone || !a.address_1 || !a.city || !a.pincode) { window.showToast("Please fill all required fields", "fa-exclamation-circle", "text-red-500"); return false; }
-    showInteractionLoader("Saving Address...");
-    if (currentSessionUser) { try { a.user_id = currentSessionUser.id; let err; if (editingAddressIndex !== null) { const { error } = await _supabase.from('addresses').update(a).eq('id', savedAddresses[editingAddressIndex].id).eq('user_id', currentSessionUser.id); err = error; } else { const { error } = await _supabase.from('addresses').insert([a]); err = error; } if (err) throw err; await syncCloudAddresses(); renderProfileAddressBook(); } catch (err) { alert("Failed to save address: " + err.message); hideInteractionLoader(); return false; } } 
-    else { if (editingAddressIndex !== null) { savedAddresses[editingAddressIndex] = a; } else { savedAddresses.push(a); } localStorage.setItem('th_saved_addresses', JSON.stringify(savedAddresses)); renderProfileAddressBook(); }
-    editingAddressIndex = null; document.getElementById('profile-add-address-form').reset(); document.getElementById('profile-add-address-form').classList.add('hidden'); hideInteractionLoader(); window.showToast("Address Saved", "fa-check"); return true;
+    
+    if (currentSessionUser) { 
+        try { 
+            a.user_id = currentSessionUser.id; 
+            let err; 
+            if (editingAddressIndex !== null) { 
+                const { error } = await _supabase.from('addresses').update(a).eq('id', savedAddresses[editingAddressIndex].id).eq('user_id', currentSessionUser.id); 
+                err = error; 
+            } else { 
+                const { error } = await _supabase.from('addresses').insert([a]); 
+                err = error; 
+            } 
+            if (err) throw err; 
+            await syncCloudAddresses(); 
+            renderProfileAddressBook(); 
+        } catch (err) { 
+            alert("Failed to save address: " + err.message); 
+            hideInteractionLoader(); 
+            return false; 
+        } 
+    } else { 
+        if (editingAddressIndex !== null) { 
+            savedAddresses[editingAddressIndex] = a; 
+        } else { 
+            savedAddresses.push(a); 
+        } 
+        localStorage.setItem('th_saved_addresses', JSON.stringify(savedAddresses)); 
+        renderProfileAddressBook(); 
+    }
+    
+    editingAddressIndex = null; 
+    document.getElementById('profile-add-address-form').reset(); 
+    document.getElementById('profile-add-address-form').classList.add('hidden'); 
+    hideInteractionLoader(); 
+    window.showToast("Address Saved", "fa-check"); 
+    return true;
 };
 
 window.closeCustomerProfile = function() { const o = document.getElementById('customer-profile-overlay'); requestAnimationFrame(() => { o.classList.remove('opacity-100'); o.classList.add('opacity-0'); setTimeout(() => { o.classList.add('hidden'); document.body.classList.remove('overflow-hidden'); }, 300); }); };
@@ -1067,7 +1061,8 @@ const scc = (settings.countryCode || '+91'), fcp = scc + " " + rawPhone; let fa 
     customer_reqs: ad,
     status: 'pending',
     user_id: currentSessionUser ? currentSessionUser.id : null,
-    payment_method: paymentMethod
+    payment_method: paymentMethod,
+    payment_status: paymentMethod === 'cod' ? 'pending' : 'paid'
 };
     setTimeout(() => { 
         checkoutStep = 3; 
@@ -1125,7 +1120,9 @@ window.confirmPaymentAndOrder = async function() {
             dimensions: dims,
             gift: giftNote
         },
-        payment_method: paymentMethod
+        payment_method: paymentMethod,
+        payment_status: paymentMethod === 'cod' ? 'pending' : 'paid',
+        status: 'pending'
     };
 
     try {
@@ -1355,14 +1352,30 @@ async function fetchCityStateFromPin(pincode) {
     const loader = document.getElementById('pin-loader'), cityInput = document.getElementById('prof-city'), stateInput = document.getElementById('prof-state');
     if (loader) loader.classList.remove('hidden');
     try {
-        const response = await fetch(`https://api.postalpincode.in/pincode/${pincode}`); const data = await response.json();
-        if (data && data[0].Status === "Success") {
+        const response = await fetch(`https://api.postalpincode.in/pincode/${pincode}`); 
+        const data = await response.json();
+        
+        // Fix: Ensure PostOffice exists and has elements
+        if (data && data[0].Status === "Success" && data[0].PostOffice && data[0].PostOffice.length > 0) {
             const postOffice = data[0].PostOffice[0];
-            cityInput.value = postOffice.District || postOffice.Region; stateInput.value = postOffice.State;
-            cityInput.classList.add('bg-green-50', 'border-green-200'); stateInput.classList.add('bg-green-50', 'border-green-200');
-            setTimeout(() => { cityInput.classList.remove('bg-green-50', 'border-green-200'); stateInput.classList.remove('bg-green-50', 'border-green-200'); }, 1500);
-        } else { window.showToast("Invalid Pincode entered.", "fa-exclamation-circle", "text-red-500"); cityInput.value = ''; stateInput.value = ''; }
-    } catch (error) { window.showToast("Network error while fetching location.", "fa-wifi", "text-yellow-500"); } finally { if (loader) loader.classList.add('hidden'); }
+            cityInput.value = postOffice.District || postOffice.Region; 
+            stateInput.value = postOffice.State;
+            cityInput.classList.add('bg-green-50', 'border-green-200'); 
+            stateInput.classList.add('bg-green-50', 'border-green-200');
+            setTimeout(() => { 
+                cityInput.classList.remove('bg-green-50', 'border-green-200'); 
+                stateInput.classList.remove('bg-green-50', 'border-green-200'); 
+            }, 1500);
+        } else { 
+            window.showToast("Invalid Pincode entered.", "fa-exclamation-circle", "text-red-500"); 
+            cityInput.value = ''; 
+            stateInput.value = ''; 
+        }
+    } catch (error) { 
+        window.showToast("Network error while fetching location.", "fa-wifi", "text-yellow-500"); 
+    } finally { 
+        if (loader) loader.classList.add('hidden'); 
+    }
 }
 
 window.prepareReviewForm = async function() {
@@ -1423,20 +1436,30 @@ window.th_submitReview = async function(pid, rating, comment) {
 window.generateGirlyInvoice = function(encodedOrder) {
     try {
         const o = JSON.parse(decodeURIComponent(encodedOrder));
-        let itemsHtml = '';
-        JSON.parse(o.items).forEach(i => { itemsHtml += `<tr><td style="padding:12px; border-bottom:1px solid #fce4e8; font-size:12px; color:#4a4a4a;">${i.name}</td><td style="padding:12px; border-bottom:1px solid #fce4e8; font-size:12px; color:#4a4a4a; text-align:center;">${i.qty}</td><td style="padding:12px; border-bottom:1px solid #fce4e8; font-size:12px; color:#4a4a4a; text-align:right;">₹${i.price}</td></tr>`; });
         
-        // Fetch current date as Delivery Date
-        // Use the actual delivery date from the database, fallback to order date if missing
-const deliveryDate = o.delivery_date 
-    ? new Date(o.delivery_date).toLocaleDateString('en-IN') 
-    : (o.date || new Date().toLocaleDateString('en-IN'));
+        // Security: Escape HTML to prevent XSS in print window
+        const escapeHTML = (str) => String(str ?? '').replace(/[&<>'"]/g, m => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', "'": '&#39;', '"': '&quot;' })[m]);
+        
+        let itemsHtml = '';
+        JSON.parse(o.items).forEach(i => { 
+            itemsHtml += `<tr>
+                <td style="padding:12px; border-bottom:1px solid #fce4e8; font-size:12px; color:#4a4a4a;">${escapeHTML(i.name)}</td>
+                <td style="padding:12px; border-bottom:1px solid #fce4e8; font-size:12px; color:#4a4a4a; text-align:center;">${escapeHTML(i.qty)}</td>
+                <td style="padding:12px; border-bottom:1px solid #fce4e8; font-size:12px; color:#4a4a4a; text-align:right;">₹${escapeHTML(i.price)}</td>
+            </tr>`; 
+        });
+        
+        const deliveryDate = o.delivery_date 
+            ? new Date(o.delivery_date).toLocaleDateString('en-IN') 
+            : (o.date || new Date().toLocaleDateString('en-IN'));
+            
+        const safeReqs = escapeHTML(o.reqs).replace(/ \| /g, '<br>');
         
         const printWindow = window.open('', '_blank');
         printWindow.document.write(`
         <html>
         <head>
-            <title>Invoice - ${o.id}</title>
+            <title>Invoice - ${escapeHTML(o.id)}</title>
             <link href="https://fonts.googleapis.com/css2?family=Marcellus&family=Poppins:wght@400;600;700&display=swap" rel="stylesheet">
             <style>
                 body { font-family: 'Poppins', sans-serif; background-color: #fffafb; margin: 0; padding: 40px; color: #333; }
@@ -1462,17 +1485,17 @@ const deliveryDate = o.delivery_date
                 </div>
                 <div class="details-row">
                     <div>
-                        <span class="highlight">Order Ref:</span> ${o.id}<br>
-                        <span class="highlight">Order Date:</span> ${o.date}<br>
-                        <span class="highlight">Delivery Date:</span> ${deliveryDate}
+                        <span class="highlight">Order Ref:</span> ${escapeHTML(o.id)}<br>
+                        <span class="highlight">Order Date:</span> ${escapeHTML(o.date)}<br>
+                        <span class="highlight">Delivery Date:</span> ${escapeHTML(deliveryDate)}
                     </div>
-                    <div style="text-align: right; max-width: 250px;"><span class="highlight">Delivered To:</span><br>${o.reqs.replace(/ \| /g, '<br>')}</div>
+                    <div style="text-align: right; max-width: 250px;"><span class="highlight">Delivered To:</span><br>${safeReqs}</div>
                 </div>
                 <table>
                     <thead><tr><th>Item Description</th><th style="text-align:center;">Qty</th><th style="text-align:right;">Price</th></tr></thead>
                     <tbody>${itemsHtml}</tbody>
                 </table>
-                <div class="total-row">Grand Total: ₹${o.total}</div>
+                <div class="total-row">Grand Total: ₹${escapeHTML(o.total)}</div>
                 <div class="footer">Thank you for curating your space with us! Made with <span class="heart">♥</span> in India.<br><br><i>This is a computer-generated official receipt.</i></div>
             </div>
             <script>window.onload = function() { setTimeout(function(){ window.print(); }, 500); }</script>

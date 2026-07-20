@@ -643,8 +643,13 @@ function renderActiveOrders(customOrders) {
         const safeId = String(order.id).replace(/[^a-zA-Z0-9_-]/g, '');
 
         if (order.status === 'new' || order.status === 'pending') {
-            statusBadge = `<span class="bg-yellow-100 text-yellow-700 text-[8px] font-bold uppercase tracking-widest px-2.5 py-1 rounded-md">Awaiting Verification</span>`;
-            actionButton = `<button type="button" onclick="window.th_rejectOrder('${safeId}')" class="px-4 py-2.5 rounded-full text-gray-400 border hover:text-red-500 font-bold text-[9px] uppercase tracking-widest">Deny (No Payment)</button><button type="button" onclick="window.th_startCrafting('${safeId}')" class="px-5 py-2.5 rounded-full bg-green-600 text-white font-bold text-[9px] uppercase tracking-widest hover:bg-white hover:text-green-600 transition-colors shadow-sm"><i class="fas fa-magic mr-1"></i> Verify & Start Crafting</button>`;
+            if (order.payment_method === 'cod') {
+                statusBadge = `<span class="bg-blue-100 text-blue-700 text-[8px] font-bold uppercase tracking-widest px-2.5 py-1 rounded-md">COD - Awaiting Approval</span>`;
+                actionButton = `<button type="button" onclick="window.th_rejectOrder('${safeId}')" class="px-4 py-2.5 rounded-full text-gray-400 border hover:text-red-500 font-bold text-[9px] uppercase tracking-widest">Decline Order</button><button type="button" onclick="window.th_startCrafting('${safeId}')" class="px-5 py-2.5 rounded-full bg-green-600 text-white font-bold text-[9px] uppercase tracking-widest hover:bg-white hover:text-green-600 transition-colors shadow-sm"><i class="fas fa-magic mr-1"></i> Accept & Start Crafting</button>`;
+            } else {
+                statusBadge = `<span class="bg-yellow-100 text-yellow-700 text-[8px] font-bold uppercase tracking-widest px-2.5 py-1 rounded-md">Awaiting Verification</span>`;
+                actionButton = `<button type="button" onclick="window.th_rejectOrder('${safeId}')" class="px-4 py-2.5 rounded-full text-gray-400 border hover:text-red-500 font-bold text-[9px] uppercase tracking-widest">Deny (No Payment)</button><button type="button" onclick="window.th_startCrafting('${safeId}')" class="px-5 py-2.5 rounded-full bg-green-600 text-white font-bold text-[9px] uppercase tracking-widest hover:bg-white hover:text-green-600 transition-colors shadow-sm"><i class="fas fa-magic mr-1"></i> Verify & Start Crafting</button>`;
+            }
         } else if (order.status === 'curating') {
             statusBadge = `<span class="bg-blue-100 text-blue-700 text-[8px] font-bold uppercase tracking-widest px-2.5 py-1 rounded-md">Artisan At Work</span>`;
             actionButton = `<button type="button" onclick="window.th_markOrderReady('${safeId}')" class="px-5 py-2.5 rounded-full bg-luxury-gold text-white font-bold text-[9px] uppercase tracking-widest hover:bg-white hover:text-luxury-gold shadow-sm"><i class="fas fa-paint-brush mr-2"></i> ✨ Masterpiece Crafted</button>`;
