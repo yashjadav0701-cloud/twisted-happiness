@@ -1,11 +1,10 @@
 [build]
-  command = "node build.js"
-  publish = "dist"
-  # The command Netlify will run to compile your CSS
-  command = "npm run build"
+  # The command Netlify will run to compile your CSS and assets
+  command = "npm install && npm run build"
   
-  # The directory Netlify will serve to the public
-  publish = "webapp"
+  # The directory Netlify will serve to the public 
+  # (If your built index.html is in the root, use "." - if it outputs to a folder, change this to "dist" or "webapp")
+  publish = "."
 
 # 🚨 SECURITY: Prevent Search Engines from indexing the Admin Studio
 [[headers]]
