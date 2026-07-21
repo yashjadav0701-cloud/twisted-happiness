@@ -16,6 +16,7 @@ function safeJSONParse(key, fallback) {
 
 let settings = safeJSONParse('th_settings', { storeName: "Twisted Happiness", instagram: "https://www.instagram.com/khushiified_art?igsh=aW1vZ2N4cTl2OWo=", whatsapp: "9909310501", upiId: "khushisj315@oksbi", countryCode: "+91" });
 let products = []; let allOrders = []; let selectedFilesData = []; let editModeId = null; let mainImageIndex = 0; let originalEditImages = [];
+let mainCategoriesData = []; let subcategoriesData = [];
 
 function initApp() {
     try { 
@@ -283,11 +284,34 @@ async function fetchDatabase() {
             };
         });
         
-        if(document.getElementById('main-cat-list')) document.getElementById('main-cat-list').innerHTML = [...new Set(products.map(p => p.mainCategory).filter(Boolean))].map(c => `<option value="${c}">`).join('');
-        if(document.getElementById('sub-cat-list')) document.getElementById('sub-cat-list').innerHTML = [...new Set(products.map(p => p.category).filter(Boolean))].map(c => `<option value="${c}">`).join('');
-        if(document.getElementById('admin-inv-filter')) document.getElementById('admin-inv-filter').innerHTML = `<option value="All">All Categories</option>` + [...new Set(products.map(p => p.mainCategory).filter(Boolean))].map(c => `<option value="${c}">${c}</option>`).join('');
+        // Fetch new category architecture (Ordered by last entered first)
+        const { data: mainCats } = await _supabase.from('main_categories').select('*').order('created_at', { ascending: false });
+        if(mainCats) mainCategoriesData = mainCats;
+        const { data: subCats } = await _supabase.from('subcategories').select('*').order('created_at', { ascending: false });
+        if(subCats) subcategoriesData = subCats;
 
-        renderAdminProducts(); renderAdminCategories();
+        // Populate Main Category Dropdown
+        const mainSelect = document.getElementById('p-main-category');
+        if(mainSelect) {
+            mainSelect.innerHTML = '<option value="" disabled selected>Select Main Category...</option>' + 
+                mainCategoriesData.map(c => `<option value="${c.id}">${escapeHTML(c.name)}</option>`).join('');
+            mainSelect.value = ""; // Enforce no default selection
+        }
+        
+        // Populate Filter
+        if(document.getElementById('admin-inv-filter')) {
+            document.getElementById('admin-inv-filter').innerHTML = `<option value="All">All Categories</option>` + 
+                mainCategoriesData.map(c => `<option value="${c.name}">${escapeHTML(c.name)}</option>`).join('');
+        }
+
+        renderAdminProducts();
+        
+        // Event listener for subcategory creation attached dynamically here to ensure it's ready
+        const btnAddSub = document.getElementById('btn-add-subcategory');
+        if(btnAddSub && !btnAddSub.dataset.bound) {
+            btnAddSub.dataset.bound = "true";
+            btnAddSub.addEventListener('click', handleAddSubcategory);
+        }
 
     } catch (error) { 
         console.error("Admin DB Fetch Error:", error); 
@@ -316,20 +340,129 @@ function renderAdminProducts() {
         const cleanPrice = Number(String(p.price || 0).replace(/[^0-9.,]/g, '')); 
         const adminImg = (typeof p.image1 === 'string' && p.image1.trim() !== '') ? p.image1 : 'https://placehold.co/100/F8E9EA/423133';
         const item = document.createElement('div'); 
-        item.className = "flex justify-between items-center bg-white p-3 hover:bg-luxury-bg transition-colors duration-400 border border-luxury-blush rounded-xl shadow-sm";
-        item.innerHTML = `<div class="flex gap-3 items-center w-full min-w-0"><img loading="lazy" decoding="async" src="${adminImg}" alt="${p.name}" class="w-12 h-12 shrink-0 object-cover bg-luxury-bg border border-luxury-blush rounded-lg"><div class="flex flex-col justify-center min-w-0 flex-grow"><h4 class="font-bitter text-[12px] font-semibold text-luxury-dark leading-tight truncate mb-0.5" title="${p.name}">${p.name}</h4><div class="flex justify-between items-center w-full pr-2"><p class="font-poppins text-[10px] text-luxury-rose font-bold">₹${cleanPrice}</p><span class="text-[8px] text-gray-400 uppercase tracking-widest truncate max-w-[80px] ml-2">${p.mainCategory}</span></div></div></div><div class="flex gap-2 items-center pl-2 shrink-0 border-l border-luxury-blush/60"><button type="button" onclick="window.th_triggerEdit('${p.id}')" class="text-gray-400 hover:text-luxury-rose text-sm cursor-pointer w-7 h-7 rounded-full bg-white border border-luxury-blush flex items-center justify-center transition-colors"><i class="fas fa-pen text-[9px]"></i></button><button type="button" onclick="window.th_triggerDelete('${p.id}')" class="text-gray-400 hover:text-red-500 text-sm cursor-pointer w-7 h-7 rounded-full bg-white border border-luxury-blush flex items-center justify-center transition-colors"><i class="fas fa-trash text-[9px]"></i></button></div>`;
+        item.className = "flex justify-between items-center bg-white p-4 hover:shadow-luxury transition-all duration-500 ease-luxury border-[0.5px] border-luxury-blush rounded-[1.5rem] shadow-sm mb-2 group";
+        item.innerHTML = `<div class="flex gap-4 items-center w-full min-w-0"><img loading="lazy" decoding="async" src="${adminImg}" alt="${p.name}" class="w-14 h-14 shrink-0 object-cover bg-luxury-bg border-[0.5px] border-luxury-blush rounded-xl"><div class="flex flex-col justify-center min-w-0 flex-grow"><h4 class="font-sans text-[12px] font-bold uppercase tracking-[0.1em] text-luxury-dark leading-tight truncate mb-1" title="${p.name}">${p.name}</h4><div class="flex justify-between items-center w-full pr-2"><p class="font-poppins text-[12px] text-luxury-dark font-black tracking-tight">₹${cleanPrice}</p><span class="text-[8px] text-gray-400 uppercase tracking-[0.2em] font-bold truncate max-w-[100px] ml-2">${p.mainCategory}</span></div></div></div><div class="flex gap-2 items-center pl-3 shrink-0 border-l-[0.5px] border-luxury-blush"><button type="button" onclick="window.th_triggerEdit('${p.id}')" class="text-gray-400 hover:text-luxury-rose text-sm cursor-pointer w-9 h-9 rounded-full bg-luxury-bg group-hover:bg-white border-[0.5px] border-luxury-blush flex items-center justify-center transition-all shadow-sm active:scale-95"><i class="fas fa-pen text-[10px]"></i></button><button type="button" onclick="window.th_triggerDelete('${p.id}')" class="text-gray-400 hover:text-red-500 text-sm cursor-pointer w-9 h-9 rounded-full bg-luxury-bg group-hover:bg-white border-[0.5px] border-luxury-blush flex items-center justify-center transition-all shadow-sm active:scale-95"><i class="fas fa-trash text-[10px]"></i></button></div>`;
         fragment.appendChild(item);
     }); 
     list.appendChild(fragment);
 }
 
 function togglePaintingFields() {
-    const val = document.getElementById('p-main-category').value, container = document.getElementById('painting-fields-container');
-    if(val === 'Canvas Paintings' || val === 'Clay Art Paintings') { container.classList.remove('hidden'); } else { container.classList.add('hidden'); document.getElementById('p-dimensions').value = ''; document.getElementById('p-customizable').checked = false; }
-    document.getElementById('p-category').value = ''; renderAdminCategories(); 
+    const select = document.getElementById('p-main-category');
+    const container = document.getElementById('painting-fields-container');
+    
+    // Find text name from ID since value is now UUID
+    const catObj = mainCategoriesData.find(c => c.id === select.value);
+    const catText = catObj ? catObj.name : '';
+
+    // Strictly locked to Painted Whispers only
+    if(catText === 'Painted Whispers') { 
+        container.classList.remove('hidden'); 
+    } else { 
+        container.classList.add('hidden'); 
+        document.getElementById('p-dimensions').value = ''; 
+    }
+    renderAdminCategories(); 
 }
 
-function renderAdminCategories() { const datalist = document.getElementById('sub-cat-list'), mainCat = document.getElementById('p-main-category').value; if(datalist) { const relevantProducts = products.filter(p => p.mainCategory === mainCat); const allSubs = [...new Set(relevantProducts.map(p => p.category).filter(c => c))]; datalist.innerHTML = ''; allSubs.forEach(cat => { const option = document.createElement('option'); option.value = cat; datalist.appendChild(option); }); } }
+function renderAdminCategories(preSelectSubText = null) {
+    const mainSelect = document.getElementById('p-main-category');
+    const subInput = document.getElementById('p-category');
+    const dataList = document.getElementById('sub-category-list');
+    if(!subInput || !mainSelect || !dataList) return;
+    
+    const mainId = mainSelect.value;
+    if(!mainId) {
+        subInput.value = '';
+        subInput.placeholder = 'Select Main First';
+        subInput.disabled = true;
+        dataList.innerHTML = '';
+        return;
+    }
+    
+    const mainCatObj = mainCategoriesData.find(c => String(c.id) === String(mainId));
+    const mainCatText = mainCatObj ? mainCatObj.name : '';
+
+    let relevantSubs = subcategoriesData.filter(s => String(s.main_category_id) === String(mainId));
+    
+    // Harvest legacy subcategories directly from existing products
+    const legacySubs = [...new Set(products.filter(p => p.mainCategory === mainCatText && p.category).map(p => p.category))];
+    
+    const mergedOptions = [...relevantSubs.map(s => s.name)];
+    legacySubs.forEach(legacyName => {
+        if (legacyName && !mergedOptions.some(name => name.toLowerCase() === legacyName.toLowerCase())) {
+            mergedOptions.push(legacyName);
+        }
+    });
+
+    if(mergedOptions.length === 0) {
+        subInput.placeholder = 'Type to create a subcategory...';
+    } else {
+        subInput.placeholder = 'Type or select subcategory...';
+    }
+    
+    // Populate the combobox datalist natively
+    dataList.innerHTML = mergedOptions.map(name => `<option value="${escapeHTML(name)}">`).join('');
+    
+    subInput.disabled = false;
+    
+    if(preSelectSubText) {
+        subInput.value = preSelectSubText;
+    } else {
+        subInput.value = ""; 
+    }
+}
+
+async function handleAddSubcategory() {
+    const mainId = document.getElementById('p-main-category').value;
+    if(!mainId) return window.showToast("Please select a Main Category first.", "fa-exclamation-circle", "text-red-500");
+    
+    const container = document.getElementById('p-category').parentElement;
+    
+    // Unhide the injected input if it already exists
+    if (document.getElementById('inline-add-sub')) {
+        document.getElementById('inline-add-sub').classList.remove('hidden');
+        document.getElementById('new-sub-input').focus();
+        return;
+    }
+    
+    const inlineDiv = document.createElement('div');
+    inlineDiv.id = 'inline-add-sub';
+    inlineDiv.className = 'w-full mt-3 flex gap-2 animate-fade-in';
+    inlineDiv.innerHTML = `
+        <input type="text" id="new-sub-input" placeholder="Type new subcategory name..." class="flex-grow bg-white border border-luxury-blush rounded-xl px-3 py-2.5 text-[11px] font-medium text-luxury-dark outline-none focus:border-luxury-rose focus:ring-1 focus:ring-luxury-rose/30 transition-all shadow-sm">
+        <button type="button" id="btn-save-sub" class="bg-luxury-rose text-white w-10 h-10 shrink-0 rounded-xl flex items-center justify-center hover:bg-[#D9778A] transition-colors shadow-sm"><i class="fas fa-check"></i></button>
+        <button type="button" onclick="document.getElementById('inline-add-sub').classList.add('hidden')" class="bg-gray-100 text-gray-500 w-10 h-10 shrink-0 rounded-xl flex items-center justify-center hover:bg-gray-200 transition-colors shadow-sm"><i class="fas fa-times"></i></button>
+    `;
+    container.appendChild(inlineDiv);
+    
+    document.getElementById('btn-save-sub').addEventListener('click', async () => {
+        const name = document.getElementById('new-sub-input').value.trim();
+        if(!name) return;
+        
+        const btn = document.getElementById('btn-save-sub');
+        btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
+        
+        try {
+            const { data, error } = await _supabase.from('subcategories').insert([{ main_category_id: mainId, name: name }]).select();
+            if(error) {
+                if(error.code === '23505') window.showToast("Subcategory already exists", "fa-info-circle");
+                else throw error;
+            } else if(data && data.length > 0) {
+                subcategoriesData.unshift(data[0]); // Unshift ensures it appears first immediately in memory!
+                renderAdminCategories(data[0].id);
+                window.showToast("Subcategory Added", "fa-check");
+                document.getElementById('new-sub-input').value = '';
+                document.getElementById('inline-add-sub').classList.add('hidden');
+            }
+        } catch(err) {
+            console.error(err); window.showToast("Failed to create", "fa-times", "text-red-500");
+        }
+        btn.innerHTML = '<i class="fas fa-check"></i>';
+    });
+    
+    document.getElementById('new-sub-input').focus();
+}
 
 function compressImageToBlob(file) { 
     return new Promise((resolve) => { 
@@ -425,8 +558,48 @@ async function saveProduct(e) {
         } else { uploadedUrls.push({ data: item.data }); }
     }
 
-    const cleanNumericPrice = parseFloat(document.getElementById('p-price').value) || 0, mainCat = document.getElementById('p-main-category').value;
-    const payload = { name: name, main_category: mainCat, category: document.getElementById('p-category').value || 'General', price: cleanNumericPrice, prep_time: document.getElementById('p-prep').value || '3-5', specs: document.getElementById('p-specs').value || '', dimensions: (mainCat !== 'Pipe Cleaner Crafts') ? document.getElementById('p-dimensions').value : '', is_customizable: (mainCat !== 'Pipe Cleaner Crafts') ? document.getElementById('p-customizable').checked : false, image_url: uploadedUrls.length > 0 ? JSON.stringify(uploadedUrls) : undefined };
+    const mainSelect = document.getElementById('p-main-category');
+    const subInput = document.getElementById('p-category');
+    const cleanNumericPrice = parseFloat(document.getElementById('p-price').value) || 0;
+    
+    const mainId = mainSelect.value;
+    const mainCatObj = mainCategoriesData.find(c => String(c.id) === String(mainId));
+    const mainCatText = mainCatObj ? mainCatObj.name : 'Pipe Cleaner Crafts';
+
+    let subCatText = subInput.value.trim() || 'General';
+    let subCatId = null;
+    
+    // Check if the typed subcategory already exists
+    const existingSub = subcategoriesData.find(s => s.name.toLowerCase() === subCatText.toLowerCase() && String(s.main_category_id) === String(mainId));
+    
+    if (existingSub) {
+        subCatId = existingSub.id;
+        subCatText = existingSub.name; // Preserve proper database casing
+    } else {
+        // Auto-create new subcategory securely in the background
+        try {
+            const { data: newSub, error: subErr } = await _supabase.from('subcategories').insert([{ main_category_id: mainId, name: subCatText }]).select();
+            if (!subErr && newSub && newSub.length > 0) {
+                subCatId = newSub[0].id;
+                subcategoriesData.unshift(newSub[0]); // Update local cache instantly
+            }
+        } catch (err) { console.warn("Background subcategory sync skipped.", err); }
+    }
+
+    const payload = { 
+        name: name, 
+        main_category_id: mainId,
+        subcategory_id: subCatId,
+        main_category: mainCatText, 
+        category: subCatText, 
+        price: cleanNumericPrice, 
+        prep_time: document.getElementById('p-prep').value || '3-5', 
+        specs: document.getElementById('p-specs').value || '', 
+        // Force dimensions to only apply to Painted Whispers (Customization managed on frontend)
+        dimensions: (mainCatText === 'Painted Whispers') ? document.getElementById('p-dimensions').value : '', 
+        is_customizable: false, 
+        image_url: uploadedUrls.length > 0 ? JSON.stringify(uploadedUrls) : undefined 
+    };
 
     let err;
     if (editModeId) { 
@@ -455,8 +628,19 @@ async function saveProduct(e) {
 
 window.th_triggerEdit = function(id) { 
     const p = products.find(x => x.id === id); if(!p) return; editModeId = p.id; 
-    document.getElementById('p-main-category').value = p.mainCategory || 'Pipe Cleaner Crafts'; togglePaintingFields();
-    document.getElementById('p-name').value = p.name; document.getElementById('p-category').value = p.category; document.getElementById('p-price').value = p.price; document.getElementById('p-prep').value = p.prepTime || ''; document.getElementById('p-specs').value = p.specs; document.getElementById('p-dimensions').value = p.dimensions || ''; document.getElementById('p-customizable').checked = p.isCustomizable || false; document.getElementById('p-image-file').value = ''; 
+    let mainIdToSet = p.main_category_id;
+    if(!mainIdToSet && p.mainCategory) {
+        const found = mainCategoriesData.find(c => c.name === p.mainCategory);
+        if(found) mainIdToSet = found.id;
+    }
+
+    document.getElementById('p-main-category').value = mainIdToSet || ''; 
+    renderAdminCategories(p.category || ''); 
+    togglePaintingFields();
+    
+    document.getElementById('p-name').value = p.name; document.getElementById('p-price').value = p.price; document.getElementById('p-prep').value = p.prepTime || ''; document.getElementById('p-specs').value = p.specs; 
+    document.getElementById('p-dimensions').value = p.dimensions || ''; 
+    document.getElementById('p-image-file').value = ''; 
     selectedFilesData = []; originalEditImages = [];
     if(p.image1) { selectedFilesData.push({name: 'img1', data: p.image1, isNew: false}); originalEditImages.push(p.image1); }
     if(p.image2) { selectedFilesData.push({name: 'img2', data: p.image2, isNew: false}); originalEditImages.push(p.image2); }
@@ -468,7 +652,9 @@ window.th_triggerEdit = function(id) {
 };
 
 function cancelEdit() { 
-    editModeId = null; mainImageIndex = 0; originalEditImages = []; document.getElementById('inventory-form').reset(); document.getElementById('p-main-category').value = 'Pipe Cleaner Crafts'; togglePaintingFields();
+    editModeId = null; mainImageIndex = 0; originalEditImages = []; document.getElementById('inventory-form').reset(); 
+    document.getElementById('p-main-category').value = ''; renderAdminCategories(); togglePaintingFields();
+    if(document.getElementById('p-dimensions')) { document.getElementById('p-dimensions').value = ''; }
     selectedFilesData = []; renderImagePreviews(); document.getElementById('form-title').textContent = 'Add New Art Piece'; document.getElementById('cancel-edit-btn').classList.add('hidden'); document.getElementById('btn-save-product').innerHTML = 'Publish to Collection'; 
 }
 
@@ -623,7 +809,12 @@ function buildOrderItemsVisual(orderDetailsData) {
     try { 
         const items = typeof orderDetailsData === 'string' ? JSON.parse(orderDetailsData) : orderDetailsData; 
         html = `<div class="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-3">`;
-        items.forEach(i => { const img = escapeHTML(i.image || 'https://placehold.co/100/F8E9EA/423133'); html += `<div class="flex items-center gap-3 bg-white p-2 rounded-lg border border-luxury-blush shadow-sm"><img src="${img}" class="w-12 h-12 object-cover rounded-md border border-luxury-blush bg-luxury-bg"><div><p class="text-[11px] font-bitter font-semibold text-luxury-dark line-clamp-1">${escapeHTML(i.name)}</p><p class="text-[9px] font-poppins font-bold text-luxury-rose">${escapeHTML(i.qty)}x <span class="text-gray-400 font-medium">₹${escapeHTML(i.price)}</span></p></div></div>`; }); html += `</div>`;
+        items.forEach(i => { 
+            const img = escapeHTML(i.image || 'https://placehold.co/100/F8E9EA/423133'); 
+            const customSpecsHtml = i.customSpecs ? `<p class="text-[8px] font-bold text-luxury-rose mb-1.5 bg-[#FFF0F2] inline-block px-2 py-1 rounded-md border-[0.5px] border-luxury-rose/30 leading-tight truncate max-w-full uppercase tracking-wider">${escapeHTML(i.customSpecs)}</p>` : '';
+            html += `<div class="flex items-center gap-4 bg-white p-3 rounded-2xl border-[0.5px] border-luxury-blush shadow-sm"><img src="${img}" class="w-14 h-14 object-cover rounded-xl border-[0.5px] border-luxury-blush bg-luxury-bg shrink-0"><div class="min-w-0 flex-grow"><p class="text-[11px] font-sans font-bold uppercase tracking-[0.1em] text-luxury-dark line-clamp-1 mb-1">${escapeHTML(i.name)}</p>${customSpecsHtml}<p class="text-[10px] font-poppins font-bold text-luxury-dark">${escapeHTML(i.qty)}x <span class="text-luxury-rose">₹${escapeHTML(i.price)}</span></p></div></div>`; 
+        }); 
+        html += `</div>`;
     } catch { html = `<p class="font-bitter text-luxury-dark text-[13px] whitespace-pre-wrap font-semibold mb-2 leading-relaxed">${escapeHTML((orderDetailsData || '').trim())}</p>`; }
     return html;
 }
@@ -642,27 +833,26 @@ function renderActiveOrders(customOrders) {
         // STRICT ID SANITIZATION FOR INLINE JS EXECUTION
         const safeId = String(order.id).replace(/[^a-zA-Z0-9_-]/g, '');
 
-        if (order.status === 'new' || order.status === 'pending') {
-            if (order.payment_method === 'cod') {
-                statusBadge = `<span class="bg-blue-100 text-blue-700 text-[8px] font-bold uppercase tracking-widest px-2.5 py-1 rounded-md">COD - Awaiting Approval</span>`;
-                actionButton = `<button type="button" onclick="window.th_rejectOrder('${safeId}')" class="px-4 py-2.5 rounded-full text-gray-400 border hover:text-red-500 font-bold text-[9px] uppercase tracking-widest">Decline Order</button><button type="button" onclick="window.th_startCrafting('${safeId}')" class="px-5 py-2.5 rounded-full bg-green-600 text-white font-bold text-[9px] uppercase tracking-widest hover:bg-white hover:text-green-600 transition-colors shadow-sm"><i class="fas fa-magic mr-1"></i> Accept & Start Crafting</button>`;
-            } else {
-                statusBadge = `<span class="bg-yellow-100 text-yellow-700 text-[8px] font-bold uppercase tracking-widest px-2.5 py-1 rounded-md">Awaiting Verification</span>`;
-                actionButton = `<button type="button" onclick="window.th_rejectOrder('${safeId}')" class="px-4 py-2.5 rounded-full text-gray-400 border hover:text-red-500 font-bold text-[9px] uppercase tracking-widest">Deny (No Payment)</button><button type="button" onclick="window.th_startCrafting('${safeId}')" class="px-5 py-2.5 rounded-full bg-green-600 text-white font-bold text-[9px] uppercase tracking-widest hover:bg-white hover:text-green-600 transition-colors shadow-sm"><i class="fas fa-magic mr-1"></i> Verify & Start Crafting</button>`;
-            }
-        } else if (order.status === 'curating') {
-            statusBadge = `<span class="bg-blue-100 text-blue-700 text-[8px] font-bold uppercase tracking-widest px-2.5 py-1 rounded-md">Artisan At Work</span>`;
-            actionButton = `<button type="button" onclick="window.th_markOrderReady('${safeId}')" class="px-5 py-2.5 rounded-full bg-luxury-gold text-white font-bold text-[9px] uppercase tracking-widest hover:bg-white hover:text-luxury-gold shadow-sm"><i class="fas fa-paint-brush mr-2"></i> ✨ Masterpiece Crafted</button>`;
-        } else if (order.status === 'ready') {
-            statusBadge = `<span class="bg-purple-100 text-purple-700 text-[8px] font-bold uppercase tracking-widest px-2.5 py-1 rounded-md">Awaiting Dispatch</span>`;
-            actionButton = `<button type="button" onclick="window.th_pushToShiprocket('${safeId}', event)" class="px-5 py-2.5 rounded-full bg-[#E0F2FE] text-[#1E3A8A] font-bold text-[9px] uppercase tracking-widest shadow-sm"><i class="fas fa-rocket mr-1.5"></i> Push to Shiprocket</button>`;
-        } else if (order.status === 'shipped' || order.status === 'out_for_delivery') {
-            statusBadge = `<span class="bg-blue-100 text-blue-700 text-[8px] font-bold uppercase tracking-widest px-2.5 py-1 rounded-md">Shipped via Shiprocket</span>`;
-            actionButton = `<span class="text-[10px] text-blue-500 font-bold uppercase tracking-widest"><i class="fas fa-truck-fast"></i> Auto-Syncing Tracking</span>`;
+        if (order.payment_method === 'cod') {
+            statusBadge = `<span class="bg-blue-50 border-[0.5px] border-blue-200 text-blue-700 text-[8px] font-bold uppercase tracking-[0.2em] px-3 py-1.5 rounded-lg shadow-sm">COD - Awaiting</span>`;
+            actionButton = `<button type="button" onclick="window.th_rejectOrder('${safeId}')" class="px-5 py-3.5 rounded-full text-gray-400 border-[0.5px] border-luxury-blush bg-white hover:bg-red-50 hover:border-red-200 hover:text-red-500 font-bold text-[9px] uppercase tracking-[0.2em] active:scale-95 transition-all shadow-sm">Decline</button><button type="button" onclick="window.th_startCrafting('${safeId}')" class="px-6 py-3.5 rounded-full bg-green-600 text-white font-bold text-[9px] uppercase tracking-[0.2em] hover:bg-[#166534] transition-colors shadow-float active:scale-95"><i class="fas fa-magic mr-2"></i> Accept & Craft</button>`;
+        } else {
+            statusBadge = `<span class="bg-yellow-50 border-[0.5px] border-yellow-200 text-yellow-700 text-[8px] font-bold uppercase tracking-[0.2em] px-3 py-1.5 rounded-lg shadow-sm">Verifying</span>`;
+            actionButton = `<button type="button" onclick="window.th_rejectOrder('${safeId}')" class="px-5 py-3.5 rounded-full text-gray-400 border-[0.5px] border-luxury-blush bg-white hover:bg-red-50 hover:border-red-200 hover:text-red-500 font-bold text-[9px] uppercase tracking-[0.2em] active:scale-95 transition-all shadow-sm">Deny</button><button type="button" onclick="window.th_startCrafting('${safeId}')" class="px-6 py-3.5 rounded-full bg-green-600 text-white font-bold text-[9px] uppercase tracking-[0.2em] hover:bg-[#166534] transition-colors shadow-float active:scale-95"><i class="fas fa-magic mr-2"></i> Verify & Craft</button>`;
         }
+    } else if (order.status === 'curating') {
+        statusBadge = `<span class="bg-luxury-bg border-[0.5px] border-luxury-gold/50 text-luxury-gold text-[8px] font-bold uppercase tracking-[0.2em] px-3 py-1.5 rounded-lg shadow-sm">Artisan At Work</span>`;
+        actionButton = `<button type="button" onclick="window.th_markOrderReady('${safeId}')" class="px-6 py-3.5 rounded-full bg-luxury-gold text-white font-bold text-[9px] uppercase tracking-[0.2em] hover:bg-[#b5952f] shadow-float active:scale-95 transition-all"><i class="fas fa-paint-brush mr-2"></i> Masterpiece Crafted</button>`;
+    } else if (order.status === 'ready') {
+        statusBadge = `<span class="bg-purple-50 border-[0.5px] border-purple-200 text-purple-700 text-[8px] font-bold uppercase tracking-[0.2em] px-3 py-1.5 rounded-lg shadow-sm">Awaiting Dispatch</span>`;
+        actionButton = `<button type="button" onclick="window.th_pushToShiprocket('${safeId}', event)" class="px-6 py-3.5 rounded-full bg-[#E0F2FE] border-[0.5px] border-[#bae6fd] text-[#1E3A8A] font-bold text-[9px] uppercase tracking-[0.2em] shadow-float active:scale-95 transition-all hover:bg-[#bae6fd]"><i class="fas fa-rocket mr-2"></i> Push to Shiprocket</button>`;
+    } else if (order.status === 'shipped' || order.status === 'out_for_delivery') {
+        statusBadge = `<span class="bg-blue-50 border-[0.5px] border-blue-200 text-blue-700 text-[8px] font-bold uppercase tracking-[0.2em] px-3 py-1.5 rounded-lg shadow-sm">In Transit</span>`;
+        actionButton = `<span class="text-[10px] text-blue-500 font-bold uppercase tracking-widest bg-blue-50 border-[0.5px] border-blue-100 px-4 py-2 rounded-xl shadow-inner-soft"><i class="fas fa-truck-fast mr-2"></i> Auto-Syncing</span>`;
+    }
 
-        container.innerHTML += `<div class="border border-luxury-blush rounded-xl p-5 bg-luxury-bg shadow-sm relative overflow-hidden group hover:border-luxury-rose/50 transition-colors"><div class="absolute top-0 left-0 w-1.5 h-full ${order.status === 'new' || order.status === 'pending' ? 'bg-yellow-400' : (order.status === 'curating' ? 'bg-luxury-gold' : 'bg-luxury-rose')}"></div><div class="flex justify-between items-start mb-4"><div><h4 class="font-logo font-normal text-xl text-luxury-dark mb-0.5">${escapeHTML(customerData.name)}</h4><span class="text-[8px] font-bold text-gray-400 uppercase tracking-widest"><i class="far fa-clock mr-1"></i> ${escapeHTML(date)} | ${escapeHTML(customerData.orderId)}</span></div>${statusBadge}</div><div class="mb-2">${visualItems}</div>${finTrackHtml}<div class="bg-white border border-luxury-blush p-3 mt-3 rounded-lg text-gray-500 text-[10px] sm:text-[11px] leading-relaxed font-sans shadow-inner whitespace-pre-wrap">${customerData.address ? `<div class="mb-2 pb-2 border-b border-luxury-blush"><i class="fas fa-map-marker-alt text-luxury-rose mr-1"></i> <strong>Address:</strong> ${escapeHTML(customerData.address)}</div>` : ''}${escapeHTML(order.customer_reqs || 'No legacy notes.')}</div><div class="flex flex-col xl:flex-row xl:justify-between xl:items-center border-t border-luxury-blush pt-4 mt-4 gap-4"><div><p class="text-[8px] font-bold text-gray-400 uppercase tracking-widest mb-0.5">Final Invoice Total</p><p class="font-poppins font-extrabold text-luxury-dark text-xl">₹${escapeHTML(order.total)}</p></div><div class="flex gap-2 w-full xl:w-auto justify-start xl:justify-end flex-wrap"><button type="button" onclick="window.th_openOrderDetail('${safeId}')" class="px-4 py-2.5 rounded-full bg-white border border-luxury-blush text-luxury-dark hover:text-luxury-rose hover:border-luxury-rose/50 font-bold text-[9px] uppercase tracking-widest transition-colors shadow-sm"><i class="fas fa-search-plus mr-1"></i> Inspect</button>${actionButton}</div></div></div>`;
-    });
+        container.innerHTML += `<div class="border-[0.5px] border-luxury-blush rounded-[2rem] p-6 sm:p-8 bg-white shadow-sm relative overflow-hidden group hover:shadow-luxury hover:border-luxury-rose/50 transition-all duration-500 ease-luxury"><div class="absolute top-0 left-0 w-1.5 h-full ${order.status === 'new' || order.status === 'pending' ? 'bg-yellow-400' : (order.status === 'curating' ? 'bg-luxury-gold' : 'bg-luxury-rose')}"></div><div class="flex justify-between items-start mb-6"><div><h4 class="font-logo font-normal text-2xl text-luxury-dark mb-1">${escapeHTML(customerData.name)}</h4><span class="text-[9px] font-bold text-gray-400 uppercase tracking-[0.2em]"><i class="far fa-clock mr-1"></i> ${escapeHTML(date)} | <span class="text-luxury-rose">${escapeHTML(customerData.orderId)}</span></span></div>${statusBadge}</div><div class="mb-3">${visualItems}</div>${finTrackHtml}<div class="bg-luxury-bg border-[0.5px] border-luxury-blush p-5 mt-4 rounded-2xl text-gray-500 text-[11px] leading-relaxed font-medium shadow-inner-soft whitespace-pre-wrap">${customerData.address ? `<div class="mb-3 pb-3 border-b-[0.5px] border-luxury-blush"><i class="fas fa-map-marker-alt text-luxury-rose mr-2"></i> <strong class="text-luxury-dark uppercase tracking-widest text-[9px]">Address:</strong><br><span class="mt-1 block">${escapeHTML(customerData.address)}</span></div>` : ''}<strong class="text-luxury-dark uppercase tracking-widest text-[9px]">Notes:</strong><br><span class="mt-1 block text-luxury-rose italic">${escapeHTML(order.customer_reqs || 'No patron notes.')}</span></div><div class="flex flex-col xl:flex-row xl:justify-between xl:items-center border-t-[0.5px] border-luxury-blush pt-6 mt-6 gap-4"><div><p class="text-[9px] font-bold text-gray-400 uppercase tracking-[0.2em] mb-1">Final Invoice Total</p><p class="font-poppins font-black tracking-tight text-luxury-dark text-2xl">₹${escapeHTML(order.total)}</p></div><div class="flex gap-3 w-full xl:w-auto justify-start xl:justify-end flex-wrap"><button type="button" onclick="window.th_openOrderDetail('${safeId}')" class="px-6 py-3.5 rounded-full bg-white border-[0.5px] border-luxury-blush text-luxury-dark hover:text-luxury-rose hover:border-luxury-rose/50 font-bold text-[9px] uppercase tracking-[0.2em] transition-all shadow-sm active:scale-95"><i class="fas fa-search-plus mr-2"></i> Inspect</button>${actionButton}</div></div></div>`;
+    };
 }
 
 function renderCompletedOrders(customOrders) {
@@ -700,7 +890,7 @@ window.th_startCrafting = async function(id) {
             let itemsText = "";
             try {
                 const items = typeof order.order_details === 'string' ? JSON.parse(order.order_details) : order.order_details;
-                itemsText = items.map(i => `${i.qty}x ${i.name}`).join(', ');
+                itemsText = items.map(i => `${i.qty}x ${i.name}${i.customSpecs ? ` (${i.customSpecs})` : ''}`).join(', ');
             } catch(e) { itemsText = "Your curated pieces"; }
             
             const payType = order.payment_method === 'cod' ? 'Cash on Delivery' : 'Prepaid (UPI)';
@@ -835,7 +1025,13 @@ window.exportOrdersCSV = function() {
         const pMethod = (o.payment_method || 'upi').toUpperCase();
         const pStatus = (o.payment_status || 'pending').toUpperCase();
         let itemsString = "";
-        try { const items = JSON.parse(o.order_details); itemsString = items.map(i => `${i.qty}x ${i.name}`).join('; '); } catch(e) { itemsString = "Custom Request / Parsing Error"; }
+        try { 
+            const items = JSON.parse(o.order_details); 
+            itemsString = items.map(i => {
+                let specStr = i.customSpecs ? ` [${i.customSpecs}]` : '';
+                return `${i.qty}x ${i.name}${specStr}`;
+            }).join('; '); 
+        } catch(e) { itemsString = "Custom Request / Parsing Error"; }
         return `${safeCSV(o.id)},${safeCSV(date)},${safeCSV(o.status.toUpperCase())},${safeCSV(pMethod)},${safeCSV(pStatus)},${safeCSV(cData.name)},${safeCSV(cData.phone)},${safeCSV(o.total)},${safeCSV(itemsString)}`;
     });
     

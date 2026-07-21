@@ -21,10 +21,10 @@
             theme: {
                 extend: {
                     colors: {
-                        'luxury-bg': '#fcfafb',
-                        'luxury-dark': '#2c2424',
+                        'luxury-bg': '#fcfcfc',
+                        'luxury-dark': '#231f20',
                         'luxury-rose': '#D9778A',
-                        'luxury-blush': '#f4c6ce',
+                        'luxury-blush': '#fce4e8',
                         'luxury-gold': '#d4af37'
                     },
                     fontFamily: {
@@ -33,6 +33,14 @@
                         'poppins': ['Poppins', 'sans-serif'],
                         'sans': ['Montserrat', 'sans-serif'],
                         'body': ['Montserrat', 'sans-serif']
+                    },
+                    boxShadow: {
+                        'luxury': '0 20px 50px -10px rgba(217,119,138,0.15)',
+                        'float': '0 25px 50px -12px rgba(35,31,32,0.15)',
+                        'inner-soft': 'inset 0 2px 10px rgba(217,119,138,0.05)'
+                    },
+                    transitionTimingFunction: {
+                        'luxury': 'cubic-bezier(0.23, 1, 0.32, 1)'
                     }
                 }
             }
@@ -101,22 +109,32 @@
                 </div>
 
                 <form id="inventory-form" class="space-y-4">
-                    <div>
-                        <label class="block font-bold mb-1.5 text-gray-400 text-[9px] uppercase tracking-[0.1em]">Main Category</label>
-                        <input type="text" id="p-main-category" list="main-cat-list" required placeholder="Select or type new..." class="w-full bg-luxury-bg border border-luxury-blush rounded-xl px-4 py-3 text-[12px] font-medium outline-none focus:ring-2 focus:ring-luxury-rose/30">
-                        <datalist id="main-cat-list"></datalist>
-                    </div>
                     <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        <div><label class="block font-bold mb-1.5 text-gray-400 text-[9px] uppercase tracking-[0.1em]">Product Name</label><input type="text" id="p-name" required class="w-full bg-luxury-bg border border-luxury-blush rounded-xl px-4 py-3 text-[12px] font-medium font-bitter outline-none focus:ring-2 focus:ring-luxury-rose/30"></div>
-                        <div><label class="block font-bold mb-1.5 text-gray-400 text-[9px] uppercase tracking-[0.1em]">Sub-Category</label><input type="text" id="p-category" list="sub-cat-list" placeholder="Select or type new..." class="w-full bg-luxury-bg border border-luxury-blush rounded-xl px-4 py-3 text-[12px] font-medium outline-none focus:ring-2 focus:ring-luxury-rose/30"><datalist id="sub-cat-list"></datalist></div>
+                        <div>
+                            <label class="block font-bold mb-1.5 text-gray-400 text-[9px] uppercase tracking-[0.1em]">Main Category</label>
+                            <select id="p-main-category" required class="w-full bg-luxury-bg border border-luxury-blush rounded-xl px-4 py-3 text-[12px] font-medium outline-none focus:ring-2 focus:ring-luxury-rose/30 cursor-pointer text-luxury-dark">
+                                <option value="" disabled selected>Select Main Category...</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label class="block font-bold mb-1.5 text-gray-400 text-[9px] uppercase tracking-[0.1em]">Sub-Category</label>
+                            <input type="text" id="p-category" list="sub-category-list" autocomplete="off" required disabled placeholder="Select Main First" class="w-full bg-luxury-bg border border-luxury-blush rounded-xl px-4 py-3 text-[12px] font-medium outline-none focus:ring-2 focus:ring-luxury-rose/30 text-luxury-dark disabled:opacity-50 transition-colors shadow-sm">
+                            <datalist id="sub-category-list"></datalist>
+                        </div>
+                    </div>
+                    <div>
+                        <label class="block font-bold mb-1.5 text-gray-400 text-[9px] uppercase tracking-[0.1em]">Product Name</label>
+                        <input type="text" id="p-name" required class="w-full bg-luxury-bg border border-luxury-blush rounded-xl px-4 py-3 text-[12px] font-medium font-bitter outline-none focus:ring-2 focus:ring-luxury-rose/30">
                     </div>
                     <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                         <div><label class="block font-bold mb-1.5 text-gray-400 text-[9px] uppercase tracking-[0.1em]">Selling Price (₹)</label><input type="number" id="p-price" required min="1" class="w-full bg-luxury-bg border border-luxury-blush rounded-xl px-4 py-3 text-[12px] font-medium font-poppins outline-none focus:ring-2 focus:ring-luxury-rose/30"></div>
                         <div><label class="block font-bold mb-1.5 text-gray-400 text-[9px] uppercase tracking-[0.1em]">Prep Time (Days)</label><input type="text" id="p-prep" required class="w-full bg-luxury-bg border border-luxury-blush rounded-xl px-4 py-3 text-[12px] font-medium outline-none focus:ring-2 focus:ring-luxury-rose/30" placeholder="e.g. 3-5"></div>
                     </div>
-                    <div id="painting-fields-container" class="grid grid-cols-1 md:grid-cols-2 gap-4 hidden p-4 bg-gradient-to-r from-luxury-blush/50 to-transparent border border-luxury-blush rounded-xl">
-                        <div><label class="block font-bold mb-1.5 text-luxury-rose text-[9px] uppercase tracking-[0.1em]">Dimensions</label><input type="text" id="p-dimensions" class="w-full bg-white border border-luxury-blush rounded-lg px-4 py-2.5 text-[11px] font-medium outline-none focus:ring-2 focus:ring-luxury-rose/30"></div>
-                        <div class="flex items-center mt-6"><label class="flex items-center gap-2 cursor-pointer"><input type="checkbox" id="p-customizable" class="w-4 h-4 accent-luxury-rose rounded border-gray-300 focus:ring-luxury-rose"><span class="text-[11px] font-bold text-luxury-dark">Allow Custom Sizes</span></label></div>
+                    <div id="painting-fields-container" class="grid grid-cols-1 gap-4 hidden p-4 bg-gradient-to-r from-luxury-blush/50 to-transparent border border-luxury-blush rounded-xl">
+                        <div>
+                            <label class="block font-bold mb-1.5 text-luxury-rose text-[9px] uppercase tracking-[0.1em]">Base Canvas Dimensions (Inches)</label>
+                            <input type="text" id="p-dimensions" placeholder="e.g. 16 x 20" class="w-full bg-white border border-luxury-blush rounded-lg px-4 py-2.5 text-[11px] font-medium outline-none focus:ring-2 focus:ring-luxury-rose/30">
+                        </div>
                     </div>
                     <div>
                         <label class="block font-bold mb-2 text-luxury-dark text-[9px] uppercase tracking-[0.1em]">Imagery (Max 5)</label>
